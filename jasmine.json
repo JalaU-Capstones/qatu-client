@@ -1,0 +1,11 @@
+{
+  "srcDir": "src",
+  "srcFiles": [],
+  "specDir": "src",
+  "specFiles": ["**/*.spec.js"],
+  "helpers": [],
+  "random": true,
+  "browser": {
+    "name": "headlessChrome"
+  }
+}
