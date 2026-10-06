@@ -10,3 +10,4 @@ coverage/
 !.vscode/extensions.json
 pnpm-debug.log*
 jasmine-browser-runner/
+.pnpm-store/

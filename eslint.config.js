@@ -31,7 +31,15 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/', 'dist/', 'coverage/', '.docs/', '.husky/', '.github/'],
+    ignores: [
+      'node_modules/',
+      'dist/',
+      'coverage/',
+      '.docs/',
+      '.husky/',
+      '.github/',
+      '.pnpm-store/',
+    ],
   },
   prettierConfig,
 ];
