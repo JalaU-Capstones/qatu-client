@@ -6,11 +6,16 @@ Frontend client for the Qatu Marketplace, a digital marketplace for buyers and s
 
 ## Tech Stack
 
-- HTML5, CSS3, Vanilla JS (ES2022)
-- Vite
-- MVVM Architecture
-- Jasmine (Testing)
-- ESLint + Prettier + Husky + Commitlint
+| Component     | Technology                               | ADR     |
+| ------------- | ---------------------------------------- | ------- |
+| Language      | HTML5, CSS3, Vanilla JavaScript (ES2022) | —       |
+| Build Tool    | Vite                                     | ADR-007 |
+| Architecture  | MVVM                                     | —       |
+| CSS Framework | Bulma CSS                                | ADR-008 |
+| Testing       | Jasmine                                  | ADR-006 |
+| HTTP Client   | Fetch API                                | —       |
+| Linting       | ESLint                                   | —       |
+| Formatting    | Prettier                                 | —       |
 
 ## Prerequisites
 
@@ -34,9 +39,11 @@ See [.docs/ARCHITECTURE.md](.docs/ARCHITECTURE.md) for details on the MVVM folde
 
 ## Documentation
 
-- [Architecture](.docs/ARCHITECTURE.md)
-- [Troubleshooting](.docs/TROUBLESHOOTING.md)
-- [Git Rules](.docs/GIT_RULES.md)
+Detailed documentation is available in the `.docs/` directory:
+
+- [Architecture](.docs/ARCHITECTURE.md) — MVVM pattern, components, folder structure, cross-cutting concerns, and testing strategy.
+- [Troubleshooting](.docs/TROUBLESHOOTING.md) — Common issues with pnpm, Node.js, Vite, Bulma, Jasmine, Husky, ESLint, and Supabase.
+- [Git Rules](.docs/GIT_RULES.md) — Branching strategy (GitFlow), commit message convention (Conventional Commits), merge request guidelines, and remote configuration.
 
 ## License
 
