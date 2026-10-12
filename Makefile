@@ -1,10 +1,11 @@
-.PHONY: help install dev build preview lint lint-fix format format-check test test-watch test-coverage clean
+.PHONY: help install dev build tokens-build preview lint lint-fix format format-check test test-watch test-coverage clean
 
 help:
 	@echo "Available targets:"
 	@echo "  install        - Install dependencies with pnpm"
 	@echo "  dev            - Start Vite development server"
 	@echo "  build          - Production build with Vite"
+	@echo "  tokens-build   - Build design tokens with Style Dictionary"
 	@echo "  preview        - Preview production build"
 	@echo "  lint           - Run ESLint"
 	@echo "  lint-fix       - Run ESLint with auto-fix"
@@ -23,6 +24,9 @@ dev:
 
 build:
 	pnpm run build
+
+tokens-build:
+	pnpm tokens:build
 
 preview:
 	pnpm run preview

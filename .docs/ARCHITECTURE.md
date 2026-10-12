@@ -67,6 +67,19 @@ src/
 - **Validation:** `models/validation/` is used for form validation.
 - **Styling:** Bulma is imported globally, with overrides in `views/styles/`.
 
+### Styling Architecture
+
+Styles are layered in the following order:
+
+1. **Bulma CSS** — Base component framework.
+2. **Design tokens (`tokens.css`)** — Generated from Figma via Style Dictionary.
+3. **Semantic tokens (`semantic.css`)** — Map primitives to semantic names, define light and dark themes.
+4. **Fonts (`fonts.css`)** — Font face definitions.
+5. **Bulma overrides (`bulma-overrides.css`)** — Align Bulma variables with Qatu tokens.
+6. **Custom styles (`main.css`)** — Project-specific utilities and component styles.
+
+The full design system is documented in `Architecture/UI-Design-System` in the Wiki.
+
 ## 2.6 Testing Strategy per Component
 
 - **Models:** Unit tests with Jasmine, mocking Fetch API calls.

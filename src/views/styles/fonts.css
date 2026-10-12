@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --q-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --q-font-mono: 'Menlo', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+
+body {
+  font-family: var(--q-font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--q-fg-primary);
+  background-color: var(--q-bg-page);
+}
