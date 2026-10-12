@@ -1,0 +1,41 @@
+/**
+ * Semantic tokens and theme definitions.
+ * These tokens decouple component styles from primitive token names.
+ */
+
+:root,
+[data-theme='light'] {
+  --q-bg-page: var(--q-ds-white);
+  --q-bg-surface: var(--q-color-gray-50);
+  --q-bg-elevated: var(--q-ds-white);
+  --q-fg-primary: var(--q-color-gray-950);
+  --q-fg-secondary: var(--q-ds-gray-800);
+  --q-fg-muted: var(--q-ds-gray-600);
+  --q-border-default: var(--q-ds-gray-1000);
+  --q-border-strong: var(--q-ds-gray-500);
+  --q-color-primary: var(--q-ds-blue-600);
+  --q-color-primary-hover: var(--q-ds-blue-700);
+  --q-color-primary-active: var(--q-ds-blue-800);
+  --q-color-success: var(--q-ds-green-600);
+  --q-color-warning: var(--q-ds-amber-600);
+  --q-color-error: var(--q-ds-red-600);
+  --q-color-focus: var(--q-ds-blue-900);
+}
+
+[data-theme='dark'] {
+  --q-bg-page: var(--q-ds-background-100);
+  --q-bg-surface: var(--q-ds-gray-100);
+  --q-bg-elevated: var(--q-ds-gray-200);
+  --q-fg-primary: var(--q-ds-gray-1000);
+  --q-fg-secondary: var(--q-ds-gray-900);
+  --q-fg-muted: var(--q-ds-gray-700);
+  --q-border-default: var(--q-ds-gray-400);
+  --q-border-strong: var(--q-ds-gray-300);
+  --q-color-primary: var(--q-ds-blue-600);
+  --q-color-primary-hover: var(--q-ds-blue-700);
+  --q-color-primary-active: var(--q-ds-blue-800);
+  --q-color-success: var(--q-ds-green-600);
+  --q-color-warning: var(--q-ds-amber-600);
+  --q-color-error: var(--q-ds-red-600);
+  --q-color-focus: var(--q-ds-blue-900);
+}
