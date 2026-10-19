@@ -1,0 +1,153 @@
+/**
+ * Categories section styling
+ * Aligned with Qatu design tokens and Figma mockup
+ */
+
+.q-categories {
+  width: 100%;
+  max-width: var(--q-geist-page-width, 1200px);
+  margin: 0 auto;
+  padding: var(--q-geist-space-16x, 64px) var(--q-geist-page-margin, 24px);
+  box-sizing: border-box;
+}
+
+.q-categories__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--q-geist-space-6x, 24px);
+  gap: var(--q-geist-space-4x, 16px);
+}
+
+.q-categories__title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-categories__title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: var(--q-text-2xl, 24px);
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary, #171717);
+  margin: 0 0 var(--q-geist-space, 4px) 0;
+  line-height: var(--q-leading-tight, 1.25);
+}
+
+.q-categories__subtitle {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: var(--q-text-sm, 14px);
+  color: var(--q-fg-muted, #666666);
+  margin: 0;
+  line-height: var(--q-leading-normal, 1.5);
+}
+
+a.q-categories__see-all {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: var(--q-text-sm, 14px);
+  font-weight: var(--q-font-weight-medium, 500);
+  color: var(--q-fg-primary, #171717);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--q-default-transition-duration, 150ms)
+    var(--q-default-transition-timing-function, ease);
+}
+
+a.q-categories__see-all:hover {
+  color: var(--q-color-primary, #0070f3);
+}
+
+.q-categories__grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--q-geist-space-3x, 12px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.q-categories__item {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+a.q-category-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--q-bg-page, #ffffff);
+  border: 1px solid var(--q-border-default, #ededed);
+  border-radius: var(--q-radius-lg, 8px);
+  padding: var(--q-geist-space-4x, 16px);
+  text-decoration: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--q-default-transition-duration, 150ms)
+      var(--q-default-transition-timing-function, ease),
+    box-shadow var(--q-default-transition-duration, 150ms)
+      var(--q-default-transition-timing-function, ease);
+}
+
+a.q-category-card:hover {
+  border-color: var(--q-border-strong, #171717);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+a.q-category-card:focus-visible {
+  outline: 2px solid var(--q-color-focus, #0070f3);
+  outline-offset: 2px;
+}
+
+.q-category-card__image-placeholder {
+  height: 110px;
+  background-color: var(--q-bg-surface, #f9fafb);
+  border-radius: var(--q-radius-md, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--q-geist-space-3x, 12px);
+  color: var(--q-fg-muted, #999999);
+  font-size: var(--q-text-lg, 18px);
+  user-select: none;
+}
+
+.q-category-card__name {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: var(--q-text-base, 16px);
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary, #171717);
+  margin: 0 0 var(--q-geist-space, 4px) 0;
+  line-height: var(--q-leading-snug, 1.375);
+}
+
+.q-category-card__count {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: var(--q-text-xs, 12px);
+  color: var(--q-fg-muted, #666666);
+  margin: 0;
+  line-height: var(--q-leading-normal, 1.5);
+}
+
+@media (max-width: 1023px) {
+  .q-categories__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .q-categories {
+    padding: var(--q-geist-space-10x, 40px) 0;
+  }
+
+  .q-categories__title {
+    font-size: var(--q-text-xl, 20px);
+  }
+
+  .q-categories__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--q-geist-space-2x, 8px);
+  }
+
+  .q-category-card__image-placeholder {
+    height: 90px;
+  }
+}

@@ -148,6 +148,12 @@ a.q-header-login-btn:hover {
   color: #ffffff !important;
 }
 
+@media (max-width: 1023px) {
+  .q-header-container {
+    padding: 14px 24px;
+  }
+}
+
 @media (max-width: 768px) {
   .q-header-container {
     padding: 12px 16px;

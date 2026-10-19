@@ -1,62 +1,43 @@
-// 1. Base CSS framework
+// Styles (order matters — CSS cascade is load-order-sensitive)
 import 'bulma/css/bulma.css';
-
-// 2. Design tokens (generated from Figma)
 import './views/styles/tokens/tokens.css';
-
-// 3. Semantic tokens and theme definitions
 import './views/styles/semantic.css';
-
-// 4. Font definitions
 import './views/styles/fonts.css';
-
-// 5. Bulma overrides mapped to tokens
 import './views/styles/bulma-overrides.css';
-
-// 6. Custom project styles
 import './views/styles/main.css';
 
-// 7. Component styles
-import './views/styles/main.css';
-import './views/components/navbar.css';
+// Component styles (load order follows page top-to-bottom composition)
 import './views/components/header.css';
+import './views/components/navbar.css';
 import './views/components/footer.css';
-import { renderCategoriesSection } from './views/components/CategoriesSection.js';
-import { renderFeaturedStoresSection } from './views/components/FeaturedStoresSection.js';
+import './views/components/categories.css';
+import './views/components/featured-stores.css';
 
+// Components (alphabetical)
+import { CategoriesView } from './views/components/CategoriesView.js';
+import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 
-const categoriesData = [
-  { name: 'Artesanías', productCount: 45 },
-  { name: 'Moda', productCount: 120 },
-  { name: 'Hogar', productCount: 85 },
-  { name: 'Alimentos', productCount: 32 },
-  { name: 'Tecnología', productCount: 14 },
-  { name: 'Belleza', productCount: 50 },
-];
-
-const storesData = [
-  { name: 'Artesanías Andinas', category: 'Artesanías', rating: 4.8, reviewCount: 124 },
-  { name: 'Café Orgánico Local', category: 'Alimentos', rating: 4.9, reviewCount: 98 },
-  { name: 'Moda Sostenible', category: 'Moda', rating: 4.7, reviewCount: 56 },
-];
-
 const app = document.getElementById('app');
+
 if (app) {
-  app.style.display = 'flex';
-  app.style.flexDirection = 'column';
-  app.style.minHeight = '100vh';
+  app.className = 'q-app';
 
   const header = new HeaderView();
   header.mount(app);
 
   const main = document.createElement('main');
-  main.className = 'q-main-content';
-  main.style.flex = '1';
+  main.className = 'q-main';
 
-  main.appendChild(renderCategoriesSection(categoriesData));
-  main.appendChild(renderFeaturedStoresSection(storesData));
+  const categories = new CategoriesView();
+  categories.mount(main);
+
+  // Featured products section — to be integrated in a separate PR (Gabriel).
+  // Placeholder comment so the slot is obvious in code review.
+
+  const stores = new FeaturedStoresView();
+  stores.mount(main);
 
   app.appendChild(main);
 
@@ -66,6 +47,3 @@ if (app) {
 
 // eslint-disable-next-line no-console
 console.log('Qatu Marketplace client initialized.');
-
-app.appendChild(renderCategoriesSection());
-app.appendChild(renderFeaturedStoresSection());

@@ -85,6 +85,12 @@ a.q-navbar-link.is-active {
   transform: translateY(-6px) rotate(-45deg);
 }
 
+@media (max-width: 1023px) {
+  .q-navbar-list {
+    gap: 24px;
+  }
+}
+
 @media (max-width: 768px) {
   .q-navbar-burger {
     display: flex;
