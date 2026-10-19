@@ -61,7 +61,8 @@ export class NavbarView {
         anchor.classList.add('is-active');
       }
 
-      anchor.addEventListener('click', () => {
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
         this.viewModel.setActiveLink(link.id);
         this.viewModel.closeMenu();
       });

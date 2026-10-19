@@ -43,6 +43,10 @@ export class FooterView {
     brandLink.textContent = this.viewModel.brand.logoText;
     brandLink.setAttribute('aria-label', `${this.viewModel.brand.logoText} inicio`);
 
+    brandLink.addEventListener('click', (e) => {
+      e.preventDefault();
+    });
+
     const tagline = document.createElement('p');
     tagline.className = 'q-footer-tagline';
     tagline.textContent = this.viewModel.brand.tagline;
@@ -68,6 +72,9 @@ export class FooterView {
         const anchor = document.createElement('a');
         anchor.href = link.href;
         anchor.textContent = link.label;
+        anchor.addEventListener('click', (e) => {
+          e.preventDefault();
+        });
         item.appendChild(anchor);
         list.appendChild(item);
       });

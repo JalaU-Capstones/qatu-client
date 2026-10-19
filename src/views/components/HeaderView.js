@@ -43,6 +43,10 @@ export class HeaderView {
     logoBadge.textContent = this.viewModel.logoText;
     brandLink.appendChild(logoBadge);
 
+    brandLink.addEventListener('click', (e) => {
+      e.preventDefault();
+    });
+
     // 2. Navigation
     const navWrapper = document.createElement('div');
     navWrapper.className = 'q-header-nav';
@@ -85,10 +89,8 @@ export class HeaderView {
     loginBtn.setAttribute('role', 'button');
 
     loginBtn.addEventListener('click', (e) => {
-      if (this.viewModel.onLoginClick) {
-        e.preventDefault();
-        this.viewModel.triggerLogin();
-      }
+      e.preventDefault();
+      this.viewModel.triggerLogin();
     });
 
     actionsWrapper.appendChild(cartBtn);
