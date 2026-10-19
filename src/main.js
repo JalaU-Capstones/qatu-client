@@ -9,15 +9,17 @@ import './views/styles/main.css';
 // Component styles (load order follows page top-to-bottom composition)
 import './views/components/header.css';
 import './views/components/navbar.css';
-import './views/components/footer.css';
+import './views/components/hero.css';
 import './views/components/categories.css';
 import './views/components/featured-stores.css';
+import './views/components/footer.css';
 
 // Components (alphabetical)
 import { CategoriesView } from './views/components/CategoriesView.js';
 import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { HeroView } from './views/components/HeroView.js';
 
 const app = document.getElementById('app');
 
@@ -29,6 +31,9 @@ if (app) {
 
   const main = document.createElement('main');
   main.className = 'q-main';
+
+  const hero = new HeroView();
+  hero.mount(main);
 
   const categories = new CategoriesView();
   categories.mount(main);
