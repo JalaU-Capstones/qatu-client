@@ -1,0 +1,184 @@
+/**
+ * Footer component styling
+ * Aligned with Qatu design tokens and Figma mockup
+ */
+
+.q-footer {
+  width: 100%;
+  background-color: var(--q-bg-surface, #f9fafb);
+  border-top: 1px solid var(--q-border-default, #e5e7eb);
+  padding: 48px 0 28px 0;
+  margin-top: auto;
+  box-sizing: border-box;
+}
+
+.q-footer-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  box-sizing: border-box;
+}
+
+.q-footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 40px;
+}
+
+/* Brand column */
+.q-footer-col-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.q-footer-col-brand a.q-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border: 1.5px solid var(--q-fg-primary, #171717);
+  border-radius: 6px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary, #171717) !important;
+  background-color: transparent;
+  text-decoration: none !important;
+}
+
+.q-footer-col-brand a.q-brand-logo:hover {
+  background-color: var(--q-bg-page, #ffffff);
+}
+
+.q-footer-col-brand .q-footer-tagline {
+  margin: 16px 0 0 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--q-fg-muted, #6b7280);
+  max-width: 280px;
+}
+
+/* Link columns */
+.q-footer-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-footer-heading {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--q-fg-primary, #111827);
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
+}
+
+.q-footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.q-footer-links li {
+  margin: 0;
+  padding: 0;
+}
+
+.q-footer-links a {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  color: var(--q-fg-muted, #6b7280) !important;
+  text-decoration: none !important;
+  transition: color 150ms ease;
+  display: inline-block;
+}
+
+.q-footer-links a:hover {
+  color: var(--q-fg-primary, #111827) !important;
+  text-decoration: none !important;
+}
+
+/* Social buttons */
+.q-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+a.q-footer-social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--q-border-default, #d1d5db);
+  border-radius: 4px;
+  background-color: var(--q-bg-page, #ffffff);
+  color: var(--q-fg-secondary, #4b5563) !important;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+a.q-footer-social-btn:hover {
+  border-color: var(--q-fg-primary, #111827);
+  color: var(--q-fg-primary, #111827) !important;
+  background-color: var(--q-bg-surface, #f9fafb);
+  text-decoration: none !important;
+}
+
+/* Bottom Bar */
+.q-footer-bottom {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--q-border-default, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.8125rem;
+  color: var(--q-fg-muted, #6b7280);
+}
+
+.q-footer-copyright {
+  font-weight: 400;
+}
+
+.q-footer-motto {
+  font-weight: 400;
+}
+
+@media (max-width: 960px) {
+  .q-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 560px) {
+  .q-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .q-footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

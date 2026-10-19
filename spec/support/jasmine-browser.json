@@ -5,6 +5,7 @@
   "specFiles": ["**/*.spec.js"],
   "helpers": [],
   "random": true,
+  "esmFilenameExtension": ".js",
   "browser": {
     "name": "headlessChrome",
     "usePuppeteer": true,
