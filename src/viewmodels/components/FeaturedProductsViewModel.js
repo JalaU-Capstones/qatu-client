@@ -1,98 +1,4 @@
-/**
- * Default featured products, taken from the Figma home page (node 44:2768).
- * The API does not expose store name or country yet, so these are mocked
- * until the catalog model (`models/api/`) feeds the section.
- */
-const DEFAULT_PRODUCTS = [
-  {
-    id: 'aguayo-tradicional-tarabuco',
-    name: 'Aguayo tradicional de Tarabuco',
-    seller: 'Tejidos Illimani',
-    country: 'Bolivia',
-    rating: 4.9,
-    ratingsCount: 24,
-    price: 40,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'cafe-especialidad-cusco',
-    name: 'Café de especialidad de Cusco 500 g',
-    seller: 'Café Altura Cusco',
-    country: 'Perú',
-    rating: 4.8,
-    ratingsCount: 18,
-    price: 14,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'jarron-barro-negro-oaxaca',
-    name: 'Jarrón de barro negro de Oaxaca',
-    seller: 'Barro Negro Oaxaca',
-    country: 'México',
-    rating: 5.0,
-    ratingsCount: 12,
-    price: 38,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'bolso-cuero-artesanal',
-    name: 'Bolso de cuero artesanal',
-    seller: 'Pampa Cuero',
-    country: 'Argentina',
-    rating: 4.7,
-    ratingsCount: 31,
-    price: 85,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'audifonos-inalambricos-anc-pro',
-    name: 'Audífonos inalámbricos ANC Pro',
-    seller: 'Andes Tech',
-    country: 'Chile',
-    rating: 4.6,
-    ratingsCount: 46,
-    price: 165,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'chocolate-cacao-esmeraldas',
-    name: 'Chocolate 70% cacao de Esmeraldas',
-    seller: 'Cacao Esmeraldas',
-    country: 'Ecuador',
-    rating: 4.9,
-    ratingsCount: 27,
-    price: 6,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'mochila-trekking-45l',
-    name: 'Mochila de trekking 45 L',
-    seller: 'Sabores del Eje',
-    country: 'Colombia',
-    rating: 4.8,
-    ratingsCount: 15,
-    price: 92,
-    currency: 'USD',
-    imageUrl: null,
-  },
-  {
-    id: 'huipil-bordado-guatemalteco',
-    name: 'Huipil bordado guatemalteco',
-    seller: 'Telar Maya',
-    country: 'Guatemala',
-    rating: 4.9,
-    ratingsCount: 9,
-    price: 65,
-    currency: 'USD',
-    imageUrl: null,
-  },
-];
+import { ProductsApi } from '../../models/api/ProductsApi.js';
 
 const CURRENCY_LABELS = {
   USD: 'US$',
@@ -100,7 +6,8 @@ const CURRENCY_LABELS = {
 
 /**
  * ViewModel for the Featured products section of the home page.
- * Holds the section copy, the product list and the "Add to cart" interaction.
+ * Holds the section copy, the loading state, the product list and the "Add to cart" interaction.
+ * Product data comes from the `ProductsApi` model; this class never touches the DOM.
  */
 export class FeaturedProductsViewModel {
   /**
@@ -111,7 +18,9 @@ export class FeaturedProductsViewModel {
    * @param {{ label: string, href: string }} [options.link]
    * @param {string} [options.addToCartLabel]
    * @param {string} [options.imagePlaceholderLabel]
-   * @param {Array<Object>} [options.products]
+   * @param {string} [options.loadErrorMessage]
+   * @param {ProductsApi} [options.productsApi] Model used by `load()`.
+   * @param {Array<Object>} [options.products] Initial products, skips the need to call `load()`.
    * @param {Function} [options.onAddToCart] Called with the product when "Add to cart" is pressed.
    */
   constructor(options = {}) {
@@ -121,17 +30,47 @@ export class FeaturedProductsViewModel {
     this.link = options.link || { label: 'Ver catálogo →', href: '/productos' };
     this.addToCartLabel = options.addToCartLabel || 'Add to cart';
     this.imagePlaceholderLabel = options.imagePlaceholderLabel || 'Imagen del producto';
-    this.products = options.products || DEFAULT_PRODUCTS.map((product) => ({ ...product }));
+    this.loadErrorMessage =
+      options.loadErrorMessage || 'No pudimos cargar los productos destacados.';
+    this.productsApi = options.productsApi || new ProductsApi();
+    this.products = options.products || [];
+    /** @type {'idle' | 'loading' | 'ready' | 'error'} */
+    this.status = options.products ? 'ready' : 'idle';
+    this.errorMessage = '';
     this.onAddToCart = options.onAddToCart || null;
     this._listeners = new Set();
   }
 
   /**
-   * Replaces the product list (for example with the API response).
+   * Loads the featured products from the model and notifies the view.
+   * A failure is stored in `errorMessage` so the view can show it.
+   * @returns {Promise<void>}
+   */
+  async load() {
+    this.status = 'loading';
+    this.errorMessage = '';
+
+    try {
+      const products = await this.productsApi.getFeaturedProducts();
+      this.products = Array.isArray(products) ? products : [];
+      this.status = 'ready';
+    } catch {
+      this.products = [];
+      this.status = 'error';
+      this.errorMessage = this.loadErrorMessage;
+    }
+
+    this._notify();
+  }
+
+  /**
+   * Replaces the product list.
    * @param {Array<Object>} products
    */
   setProducts(products) {
     this.products = Array.isArray(products) ? products : [];
+    this.status = 'ready';
+    this.errorMessage = '';
     this._notify();
   }
 
@@ -153,6 +92,15 @@ export class FeaturedProductsViewModel {
    */
   getRatingLabel(product) {
     return `${Number(product.rating).toFixed(1)} (${product.ratingsCount})`;
+  }
+
+  /**
+   * Builds the rating sentence read by screen readers, e.g. "Calificación 4.9 de 5, 24 reseñas".
+   * @param {{ rating: number, ratingsCount: number }} product
+   * @returns {string}
+   */
+  getRatingAccessibleLabel(product) {
+    return `Calificación ${Number(product.rating).toFixed(1)} de 5, ${product.ratingsCount} reseñas`;
   }
 
   /**
