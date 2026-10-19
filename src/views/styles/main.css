@@ -1,11 +1,71 @@
-/*
+/**
  * Qatu Marketplace - Custom Styles
  *
- * This file is reserved for project-specific styles that extend or override Bulma.
- * The color palette and design tokens will be defined in a future task.
+ * Load order (imported from src/main.js):
+ * 1. Bulma CSS (base framework)
+ * 2. tokens.css (design tokens from Figma)
+ * 3. semantic.css (semantic mapping + dark mode)
+ * 4. fonts.css (font definitions)
+ * 5. bulma-overrides.css (Bulma variable overrides)
+ * 6. main.css (this file - project-specific styles)
  *
- * Bulma is imported globally in src/main.js. Use this file only for overrides
- * and custom components not provided by Bulma.
+ * Do not import Bulma or tokens here. They are imported in src/main.js
+ * in the correct order.
  */
 
-/* Placeholder: no custom styles defined yet */
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Layout utilities */
+.q-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--q-page-margin, 24px);
+  padding-right: var(--q-page-margin, 24px);
+}
+
+.q-container-wide {
+  max-width: 1400px;
+}
+
+/* Visually hidden (accessible) */
+.q-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Shadow utilities */
+.q-shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.q-shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+.q-shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Transition utility */
+.q-transition {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}

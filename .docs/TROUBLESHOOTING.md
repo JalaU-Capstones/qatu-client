@@ -56,6 +56,14 @@
 
 - **Missing environment variables:** Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`.
 
+## Styling
+
+- **Tokens not applied:** Verify that `tokens.css` is imported in `src/main.js` before `semantic.css`. Check that `pnpm tokens:build` ran successfully.
+- **Bulma overrides not working:** Ensure `bulma-overrides.css` is imported after `bulma.css` and `tokens.css`.
+- **Fonts not loading:** Check the network tab in the browser. If using Inter from Google Fonts, ensure the network is available. If using Geist locally, verify the font files exist in `src/assets/fonts/`.
+- **Dark mode not switching:** Verify the `data-theme` attribute on `<html>`. Inspect `semantic.css` to confirm dark tokens are defined.
+- **Style Dictionary errors:** Ensure `tokens.json` is valid DTCG. Run `pnpm tokens:build` with `--verbose` for details.
+
 ## 4.9 General Tips
 
 - Clear caches, restart the dev server, check the Node version.
