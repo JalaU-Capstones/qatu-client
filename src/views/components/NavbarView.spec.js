@@ -33,7 +33,7 @@ describe('NavbarView', () => {
   });
 
   it('should toggle burger and menu on burger click', () => {
-    const el = view.render();
+    const el = view.mount(container);
     const burger = el.querySelector('.q-navbar-burger');
     const menu = el.querySelector('.q-navbar-menu');
 
@@ -50,7 +50,7 @@ describe('NavbarView', () => {
   });
 
   it('should set active link on click', () => {
-    const el = view.render();
+    const el = view.mount(container);
     const links = el.querySelectorAll('.q-navbar-link');
 
     links[1].click();

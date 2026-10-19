@@ -118,6 +118,8 @@ a.q-header-brand {
   padding: 0 4px;
 }
 
+.q-header-login-btn,
+button.q-header-login-btn,
 a.q-header-login-btn {
   display: inline-flex;
   align-items: center;
@@ -139,6 +141,8 @@ a.q-header-login-btn {
     border-color 150ms ease;
 }
 
+.q-header-login-btn:hover,
+button.q-header-login-btn:hover,
 a.q-header-login-btn:hover {
   background-color: var(--q-fg-primary, #171717);
   color: #ffffff !important;

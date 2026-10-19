@@ -69,7 +69,7 @@ describe('HeaderView', () => {
       },
     });
     const customView = new HeaderView(customVM);
-    const el = customView.render();
+    const el = customView.mount(container);
 
     const loginBtn = el.querySelector('.q-header-login-btn');
     loginBtn.click();

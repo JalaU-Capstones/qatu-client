@@ -77,19 +77,21 @@ export class HeaderView {
       cartBtn.appendChild(badge);
     }
 
-    cartBtn.addEventListener('click', () => {
+    cartBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       this.viewModel.triggerCart();
     });
 
     // Login Button
-    const loginBtn = document.createElement('a');
+    const loginBtn = document.createElement('button');
+    loginBtn.type = 'button';
     loginBtn.className = 'q-header-login-btn';
-    loginBtn.href = this.viewModel.loginHref;
     loginBtn.textContent = this.viewModel.loginText;
-    loginBtn.setAttribute('role', 'button');
 
     loginBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       this.viewModel.triggerLogin();
     });
 
@@ -147,7 +149,6 @@ export class HeaderView {
     const loginBtn = this.element.querySelector('.q-header-login-btn');
     if (loginBtn) {
       loginBtn.textContent = vm.loginText;
-      loginBtn.href = vm.loginHref;
     }
   }
 

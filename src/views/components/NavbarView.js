@@ -63,6 +63,7 @@ export class NavbarView {
 
       anchor.addEventListener('click', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         this.viewModel.setActiveLink(link.id);
         this.viewModel.closeMenu();
       });
