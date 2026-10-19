@@ -18,5 +18,31 @@ import './views/styles/bulma-overrides.css';
 // 6. Custom project styles
 import './views/styles/main.css';
 
+// 7. Component styles
+import './views/components/navbar.css';
+import './views/components/header.css';
+import './views/components/footer.css';
+
+import { FooterView } from './views/components/FooterView.js';
+import { HeaderView } from './views/components/HeaderView.js';
+
+const app = document.getElementById('app');
+if (app) {
+  app.style.display = 'flex';
+  app.style.flexDirection = 'column';
+  app.style.minHeight = '100vh';
+
+  const header = new HeaderView();
+  header.mount(app);
+
+  const main = document.createElement('main');
+  main.className = 'q-main-content';
+  main.style.flex = '1';
+  app.appendChild(main);
+
+  const footer = new FooterView();
+  footer.mount(app);
+}
+
 // eslint-disable-next-line no-console
 console.log('Qatu Marketplace client initialized.');
