@@ -1,5 +1,3 @@
-// src/main.js
-
 // 1. Base CSS framework
 import 'bulma/css/bulma.css';
 
@@ -18,5 +16,14 @@ import './views/styles/bulma-overrides.css';
 // 6. Custom project styles
 import './views/styles/main.css';
 
+import './views/styles/main.css';
+import { renderCategoriesSection } from './views/components/CategoriesSection.js';
+import { renderFeaturedStoresSection } from './views/components/FeaturedStoresSection.js';
+
 // eslint-disable-next-line no-console
 console.log('Qatu Marketplace client initialized.');
+
+const app = document.querySelector('#app') || document.body;
+
+app.appendChild(renderCategoriesSection());
+app.appendChild(renderFeaturedStoresSection());
