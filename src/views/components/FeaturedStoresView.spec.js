@@ -20,11 +20,12 @@ describe('FeaturedStoresView', () => {
     }
   });
 
-  it('should render a section element with class q-featured-stores', () => {
+  it('should render a section element with class q-featured-stores and .q-section-container', () => {
     const el = view.render();
     expect(el.tagName.toLowerCase()).toBe('section');
     expect(el.classList.contains('q-featured-stores')).toBe(true);
     expect(el.getAttribute('aria-labelledby')).toBe('q-featured-stores-title');
+    expect(el.querySelector('.q-section-container')).not.toBeNull();
   });
 
   it('should contain header with title, subtitle, and see-all link', () => {
@@ -48,7 +49,7 @@ describe('FeaturedStoresView', () => {
     expect(cards.length).toBe(3);
   });
 
-  it('should render each store card with avatar, name, category, rating, and CTA button', () => {
+  it('should render each store card with avatar img, name, category, rating, and CTA button', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-store-card');
     const firstCard = cards[0];
@@ -60,7 +61,9 @@ describe('FeaturedStoresView', () => {
     const cta = firstCard.querySelector('.q-store-card__cta');
 
     expect(avatar).not.toBeNull();
-    expect(avatar.textContent).toBe('✕');
+    const img = avatar.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toContain('placehold.co');
     expect(name).not.toBeNull();
     expect(name.textContent).toBe('Tejidos Illimani');
     expect(category).not.toBeNull();

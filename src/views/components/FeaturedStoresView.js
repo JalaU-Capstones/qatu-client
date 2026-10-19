@@ -28,6 +28,9 @@ export class FeaturedStoresView {
     section.className = 'q-featured-stores';
     section.setAttribute('aria-labelledby', 'q-featured-stores-title');
 
+    const container = document.createElement('div');
+    container.className = 'q-section-container';
+
     // Header container
     const header = document.createElement('div');
     header.className = 'q-featured-stores__header';
@@ -63,8 +66,9 @@ export class FeaturedStoresView {
     grid.className = 'q-featured-stores__grid';
     this._renderCards(grid);
 
-    section.appendChild(header);
-    section.appendChild(grid);
+    container.appendChild(header);
+    container.appendChild(grid);
+    section.appendChild(container);
 
     this.element = section;
     this._gridElement = grid;
@@ -94,7 +98,12 @@ export class FeaturedStoresView {
       const avatar = document.createElement('div');
       avatar.className = 'q-store-card__avatar';
       avatar.setAttribute('aria-hidden', 'true');
-      avatar.textContent = '✕';
+
+      const img = document.createElement('img');
+      img.src = 'https://placehold.co/100x100/F9FAFB/9CA3AF?text=Tienda';
+      img.alt = '';
+      img.loading = 'lazy';
+      avatar.appendChild(img);
 
       const name = document.createElement('h3');
       name.className = 'q-store-card__name';

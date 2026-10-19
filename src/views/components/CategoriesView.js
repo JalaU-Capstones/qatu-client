@@ -28,6 +28,9 @@ export class CategoriesView {
     section.className = 'q-categories';
     section.setAttribute('aria-labelledby', 'q-categories-title');
 
+    const container = document.createElement('div');
+    container.className = 'q-section-container';
+
     // Header container
     const header = document.createElement('div');
     header.className = 'q-categories__header';
@@ -63,8 +66,9 @@ export class CategoriesView {
     grid.className = 'q-categories__grid';
     this._renderCards(grid);
 
-    section.appendChild(header);
-    section.appendChild(grid);
+    container.appendChild(header);
+    container.appendChild(grid);
+    section.appendChild(container);
 
     this.element = section;
     this._gridElement = grid;
@@ -95,7 +99,12 @@ export class CategoriesView {
       const placeholder = document.createElement('div');
       placeholder.className = 'q-category-card__image-placeholder';
       placeholder.setAttribute('aria-hidden', 'true');
-      placeholder.textContent = '✕';
+
+      const img = document.createElement('img');
+      img.src = 'https://placehold.co/400x300/F9FAFB/9CA3AF?text=Categor%C3%ADa';
+      img.alt = '';
+      img.loading = 'lazy';
+      placeholder.appendChild(img);
 
       const name = document.createElement('h3');
       name.className = 'q-category-card__name';

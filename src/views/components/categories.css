@@ -5,9 +5,7 @@
 
 .q-categories {
   width: 100%;
-  max-width: var(--q-geist-page-width, 1200px);
-  margin: 0 auto;
-  padding: var(--q-geist-space-16x, 64px) var(--q-geist-page-margin, 24px);
+  padding: var(--q-geist-space-16x, 64px) 0;
   box-sizing: border-box;
 }
 
@@ -101,6 +99,7 @@ a.q-category-card:focus-visible {
   height: 110px;
   background-color: var(--q-bg-surface, #f9fafb);
   border-radius: var(--q-radius-md, 6px);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,6 +107,14 @@ a.q-category-card:focus-visible {
   color: var(--q-fg-muted, #999999);
   font-size: var(--q-text-lg, 18px);
   user-select: none;
+}
+
+.q-category-card__image-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
 }
 
 .q-category-card__name {

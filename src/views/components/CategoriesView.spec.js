@@ -20,11 +20,12 @@ describe('CategoriesView', () => {
     }
   });
 
-  it('should render a section element with class q-categories', () => {
+  it('should render a section element with class q-categories and .q-section-container', () => {
     const el = view.render();
     expect(el.tagName.toLowerCase()).toBe('section');
     expect(el.classList.contains('q-categories')).toBe(true);
     expect(el.getAttribute('aria-labelledby')).toBe('q-categories-title');
+    expect(el.querySelector('.q-section-container')).not.toBeNull();
   });
 
   it('should contain header with title, subtitle, and see-all link', () => {
@@ -48,7 +49,7 @@ describe('CategoriesView', () => {
     expect(cards.length).toBe(6);
   });
 
-  it('should render each card with name, placeholder, and formatted product count', () => {
+  it('should render each card with name, placeholder img, and formatted product count', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-category-card');
     const firstCard = cards[0];
@@ -58,7 +59,9 @@ describe('CategoriesView', () => {
     const count = firstCard.querySelector('.q-category-card__count');
 
     expect(placeholder).not.toBeNull();
-    expect(placeholder.textContent).toBe('✕');
+    const img = placeholder.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toContain('placehold.co');
     expect(name).not.toBeNull();
     expect(name.textContent).toBe('Textiles y moda');
     expect(count).not.toBeNull();

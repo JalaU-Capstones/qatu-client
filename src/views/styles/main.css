@@ -79,3 +79,13 @@
 .q-main {
   flex: 1;
 }
+
+.q-section-container {
+  width: 100%;
+  max-width: var(--q-geist-page-width, 1200px);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--q-geist-page-margin, 24px);
+  padding-right: var(--q-geist-page-margin, 24px);
+  box-sizing: border-box;
+}
