@@ -67,11 +67,13 @@ a.q-categories__see-all:hover {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
 }
 
 a.q-category-card {
   display: flex;
   flex-direction: column;
+  height: 100%;
   background-color: var(--q-bg-page, #ffffff);
   border: 1px solid var(--q-border-default, #ededed);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);

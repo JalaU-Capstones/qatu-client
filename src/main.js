@@ -11,11 +11,13 @@ import './views/components/header.css';
 import './views/components/navbar.css';
 import './views/components/hero.css';
 import './views/components/categories.css';
+import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
 import './views/components/footer.css';
 
-// Components (alphabetical)
+// Components
 import { CategoriesView } from './views/components/CategoriesView.js';
+import { FeaturedProductsView } from './views/components/FeaturedProductsView.js';
 import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
@@ -38,8 +40,13 @@ if (app) {
   const categories = new CategoriesView();
   categories.mount(main);
 
-  // Featured products section — to be integrated in a separate PR (Gabriel).
-  // Placeholder comment so the slot is obvious in code review.
+  const featuredProducts = new FeaturedProductsView();
+  // Wire the "Add to cart" action to update the header badge
+  featuredProducts.viewModel.onAddToCart = () => {
+    header.viewModel.setCartCount(header.viewModel.cartCount + 1);
+  };
+  featuredProducts.mount(main);
+  featuredProducts.viewModel.load();
 
   const stores = new FeaturedStoresView();
   stores.mount(main);
