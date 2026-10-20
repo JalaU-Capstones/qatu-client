@@ -82,10 +82,17 @@
 
 .q-section-container {
   width: 100%;
-  max-width: var(--q-geist-page-width, 1200px);
+  max-width: calc(var(--q-geist-page-width, 1200) * 1px);
   margin-left: auto;
   margin-right: auto;
-  padding-left: var(--q-geist-page-margin, 24px);
-  padding-right: var(--q-geist-page-margin, 24px);
+  padding-left: calc(var(--q-geist-page-margin, 24) * 1px);
+  padding-right: calc(var(--q-geist-page-margin, 24) * 1px);
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .q-section-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
