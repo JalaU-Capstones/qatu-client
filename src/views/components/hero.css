@@ -92,7 +92,7 @@
 
 .q-hero__search-input {
   flex: 1;
-  padding: 12px 16px;
+  padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-4x, 16) * 1px);
   border: 1px solid var(--q-border-default, #ededed);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
@@ -114,7 +114,7 @@
 }
 
 .q-hero__search-button {
-  padding: 12px 24px;
+  padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
   border: none;
   border-radius: calc(var(--q-radius-md, 6) * 1px);
   background: var(--q-fg-primary, #171717);
@@ -146,7 +146,7 @@
   margin-top: calc(var(--q-geist-space-3x, 12) * 1px);
   display: flex;
   flex-wrap: wrap;
-  gap: calc(var(--q-geist-space-1x, 4) * 1px);
+  gap: calc(var(--q-geist-space, 4) * 1px);
   align-items: center;
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-sm, 14) * 1px);
@@ -155,7 +155,7 @@
 .q-hero__quick-links-label {
   color: var(--q-fg-muted, #666666);
   font-weight: var(--q-font-weight-medium, 500);
-  margin-right: calc(var(--q-geist-space-1x, 4) * 1px);
+  margin-right: calc(var(--q-geist-space, 4) * 1px);
 }
 
 a.q-hero__quick-link {
@@ -227,14 +227,14 @@ a.q-hero__quick-link:focus-visible {
 
 a.q-hero__floating-card {
   position: absolute;
-  bottom: 24px;
-  left: 24px;
+  bottom: calc(var(--q-geist-space-6x, 24) * 1px);
+  left: calc(var(--q-geist-space-6x, 24) * 1px);
   background: var(--q-bg-page, #ffffff);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);
-  padding: 12px 16px;
+  padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-4x, 16) * 1px);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: calc(var(--q-geist-space, 4) * 1px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   border: 1px solid var(--q-border-default, #ededed);
   text-decoration: none;
