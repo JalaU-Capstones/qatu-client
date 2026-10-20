@@ -30,7 +30,7 @@ export class FeaturedProductsView {
     section.setAttribute('aria-labelledby', 'q-featured-title');
 
     const container = document.createElement('div');
-    container.className = 'q-featured-container';
+    container.className = 'q-section-container';
 
     container.appendChild(this._renderHeading());
     container.appendChild(this.viewModel.errorMessage ? this._renderMessage() : this._renderGrid());

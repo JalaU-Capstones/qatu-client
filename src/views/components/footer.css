@@ -163,14 +163,14 @@ a.q-footer-social-btn:hover {
   font-weight: 400;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1023px) {
   .q-footer-grid {
     grid-template-columns: 1fr 1fr;
     gap: 32px;
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 768px) {
   .q-footer-grid {
     grid-template-columns: 1fr;
     gap: 28px;

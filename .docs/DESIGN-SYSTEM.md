@@ -131,6 +131,19 @@ In `semantic.css`, colors adapt dynamically:
 - **CSS Custom Properties:** All custom properties are prefixed with `--q-` (e.g., `--q-color-primary`, `--q-bg-page`, `--q-radius-md`, `--q-font-sans`) to prevent namespace collisions with Bulma's `--bulma-*` variables or third-party styles.
 - **Utility and Custom Classes:** All custom utility and layout classes are prefixed with `q-` (e.g., `.q-container`, `.q-container-wide`, `.q-sr-only`, `.q-shadow-md`, `.q-transition`).
 
+## Layout & Containers
+
+- Standard content max-width: `1200px` (`--q-geist-page-width`), horizontal padding `24px` (`--q-geist-page-margin`).
+- Wide layouts (dashboards): `1400px`.
+- **Header and Footer currently use `max-width: 1400px` hardcoded.** They should be aligned to `1200px` in a future pass for visual consistency with sections that use `.q-section-container`. Tracked as a follow-up task.
+- **Token units gotcha:** Style Dictionary exports `number`-typed tokens without units. Always wrap them with `calc(... * 1px)` in CSS. Example:
+
+  ```css
+  max-width: calc(var(--q-geist-page-width, 1200) * 1px);
+  ```
+
+  Using them directly without `calc()` produces invalid CSS that gets silently ignored.
+
 ## Troubleshooting
 
 - **Tokens not applied:** Verify that `tokens.css` is imported in `src/main.js` before `semantic.css`. Check that `pnpm tokens:build` ran successfully.
