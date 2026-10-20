@@ -74,6 +74,7 @@ a.q-category-card {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background-color: var(--q-bg-page, #ffffff);
   border: 1px solid var(--q-border-default, #ededed);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);
@@ -140,7 +141,7 @@ a.q-category-card:focus-visible {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .q-categories {
     padding: calc(var(--q-geist-space-10x, 40) * 1px) 0;
   }
