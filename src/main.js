@@ -22,7 +22,9 @@ import './views/styles/main.css';
 import './views/components/navbar.css';
 import './views/components/header.css';
 import './views/components/footer.css';
+import './views/components/featured-products.css';
 
+import { FeaturedProductsView } from './views/components/FeaturedProductsView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 
@@ -39,6 +41,13 @@ if (app) {
   main.className = 'q-main-content';
   main.style.flex = '1';
   app.appendChild(main);
+
+  const featuredProducts = new FeaturedProductsView();
+  featuredProducts.viewModel.onAddToCart = () => {
+    header.viewModel.setCartCount(header.viewModel.cartCount + 1);
+  };
+  featuredProducts.mount(main);
+  featuredProducts.viewModel.load();
 
   const footer = new FooterView();
   footer.mount(app);
