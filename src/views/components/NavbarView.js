@@ -57,13 +57,16 @@ export class NavbarView {
       anchor.textContent = link.label;
       anchor.dataset.linkId = link.id;
 
+      // Add data-route for client-side routing on all nav links
+      anchor.dataset.route = '';
+
       if (this.viewModel.activeLinkId === link.id) {
         anchor.classList.add('is-active');
       }
 
       anchor.addEventListener('click', (e) => {
         e.preventDefault();
-        e.stopPropagation();
+        // Do NOT call stopPropagation() — allow the router's document handler to navigate
         this.viewModel.setActiveLink(link.id);
         this.viewModel.closeMenu();
       });

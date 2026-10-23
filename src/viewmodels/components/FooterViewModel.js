@@ -18,7 +18,7 @@ export class FooterViewModel {
         id: 'buying-selling',
         title: 'Comprar y vender',
         links: [
-          { label: 'Productos', href: '/productos' },
+          { label: 'Productos', href: '/products' },
           { label: 'Categorías', href: '/categorias' },
           { label: 'Tiendas', href: '/tiendas' },
           { label: 'Vender en Q’atu', href: '/vender' },
