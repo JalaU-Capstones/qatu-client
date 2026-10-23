@@ -109,9 +109,10 @@ export class FeaturedProductsView {
     link.className = 'q-featured-link';
     link.href = this.viewModel.link.href;
     link.textContent = this.viewModel.link.label;
+    link.dataset.route = '';
     link.addEventListener('click', (e) => {
-      // No client-side router yet: avoid a full page navigation.
       e.preventDefault();
+      // Router will handle navigation via data-route
     });
 
     row.appendChild(copy);

@@ -14,47 +14,21 @@ import './views/components/categories.css';
 import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
 import './views/components/footer.css';
+import './views/pages/catalog.css';
 
-// Components
-import { CategoriesView } from './views/components/CategoriesView.js';
-import { FeaturedProductsView } from './views/components/FeaturedProductsView.js';
-import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
-import { FooterView } from './views/components/FooterView.js';
-import { HeaderView } from './views/components/HeaderView.js';
-import { HeroView } from './views/components/HeroView.js';
+import { Router } from './router/router.js';
+import { CatalogView } from './views/pages/CatalogView.js';
+import { HomeView } from './views/pages/HomeView.js';
 
 const app = document.getElementById('app');
 
 if (app) {
-  app.className = 'q-app';
+  const router = new Router({
+    '/': HomeView,
+    '/products': CatalogView,
+  });
 
-  const header = new HeaderView();
-  header.mount(app);
-
-  const main = document.createElement('main');
-  main.className = 'q-main';
-
-  const hero = new HeroView();
-  hero.mount(main);
-
-  const categories = new CategoriesView();
-  categories.mount(main);
-
-  const featuredProducts = new FeaturedProductsView();
-  // Wire the "Add to cart" action to update the header badge
-  featuredProducts.viewModel.onAddToCart = () => {
-    header.viewModel.setCartCount(header.viewModel.cartCount + 1);
-  };
-  featuredProducts.mount(main);
-  featuredProducts.viewModel.load();
-
-  const stores = new FeaturedStoresView();
-  stores.mount(main);
-
-  app.appendChild(main);
-
-  const footer = new FooterView();
-  footer.mount(app);
+  router.init(app);
 }
 
 // eslint-disable-next-line no-console

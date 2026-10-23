@@ -72,6 +72,10 @@ export class FooterView {
         const anchor = document.createElement('a');
         anchor.href = link.href;
         anchor.textContent = link.label;
+        // Mark internal links so the router can intercept navigation
+        if (!link.href.startsWith('http')) {
+          anchor.dataset.route = '';
+        }
         anchor.addEventListener('click', (e) => {
           e.preventDefault();
         });

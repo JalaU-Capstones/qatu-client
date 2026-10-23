@@ -38,7 +38,7 @@ describe('FeaturedProductsView', () => {
     const el = view.render();
     const link = el.querySelector('.q-featured-link');
     expect(link.textContent).toBe('Ver catálogo →');
-    expect(link.getAttribute('href')).toBe('/productos');
+    expect(link.getAttribute('href')).toBe('/products');
 
     const event = new MouseEvent('click', { bubbles: true, cancelable: true });
     link.dispatchEvent(event);

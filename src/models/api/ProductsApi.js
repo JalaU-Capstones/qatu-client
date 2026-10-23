@@ -1,3 +1,8 @@
+const BASE_URL =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL
+    : 'http://localhost:3000/v1';
+
 /**
  * Featured products shown on the home page
  */
@@ -98,5 +103,24 @@ export class ProductsApi {
    */
   async getFeaturedProducts() {
     return FEATURED_PRODUCTS.map((product) => ({ ...product }));
+  }
+
+  /**
+   * Fetches a paginated list of products from the API.
+   * @param {Object} [params]
+   * @param {number} [params.page=1]   Page number (1-based).
+   * @param {number} [params.limit=20] Items per page.
+   * @returns {Promise<{ data: Array<Object>, meta: Object }>}
+   * @throws {Error} When the server responds with a non-2xx status.
+   */
+  async getProducts({ page = 1, limit = 20 } = {}) {
+    const url = `${BASE_URL}/products?page=${page}&limit=${limit}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
   }
 }

@@ -27,7 +27,7 @@ export class FeaturedProductsViewModel {
     this.eyebrow = options.eyebrow || 'PRODUCTOS DESTACADOS';
     this.title = options.title || 'Destacados de la semana';
     this.subtitle = options.subtitle || 'Seleccionados para ti';
-    this.link = options.link || { label: 'Ver catálogo →', href: '/productos' };
+    this.link = options.link || { label: 'Ver catálogo →', href: '/products' };
     this.addToCartLabel = options.addToCartLabel || 'Add to cart';
     this.imagePlaceholderLabel = options.imagePlaceholderLabel || 'Imagen del producto';
     this.loadErrorMessage =
