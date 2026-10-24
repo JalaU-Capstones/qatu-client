@@ -43,6 +43,8 @@ export class HeaderView {
     logoBadge.textContent = this.viewModel.logoText;
     brandLink.appendChild(logoBadge);
 
+    brandLink.dataset.route = '';
+
     brandLink.addEventListener('click', (e) => {
       e.preventDefault();
       this.viewModel.triggerLogo();

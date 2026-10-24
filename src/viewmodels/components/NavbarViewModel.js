@@ -11,7 +11,7 @@ export class NavbarViewModel {
     this.links = options.links || [
       { id: 'nav-categorias', label: 'Categorías', href: '/categorias' },
       { id: 'nav-tiendas', label: 'Tiendas', href: '/tiendas' },
-      { id: 'nav-productos', label: 'Productos', href: '/productos' },
+      { id: 'nav-productos', label: 'Productos', href: '/products' },
     ];
     this.activeLinkId = options.activeLinkId || null;
     this.isMenuOpen = false;

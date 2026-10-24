@@ -25,10 +25,20 @@ import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { HeroView } from './views/components/HeroView.js';
+import './views/pages/catalog.css';
+
+import { CatalogView } from './views/pages/CatalogView.js';
+import { HomeView } from './views/pages/HomeView.js';
 
 const app = document.getElementById('app');
 
 if (app) {
+  const router = new Router({
+    '/': HomeView,
+    '/products': CatalogView,
+  });
+
+  router.init(app);
   app.className = 'q-app';
 
   const header = new HeaderView();
@@ -39,7 +49,6 @@ if (app) {
   app.appendChild(main);
 
   const authApi = new AuthApi();
-  const router = new Router();
 
   header.viewModel.onLoginClick = () => {
     router.navigate('/login');
