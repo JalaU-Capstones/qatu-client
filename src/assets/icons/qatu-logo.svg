@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 36" fill="none" class="q-brand-logo-svg">
+  <rect x="1" y="1" width="34" height="34" rx="8" fill="#0090ff" fill-opacity="0.1" stroke="#0090ff" stroke-width="2"/>
+  <path d="M18 10C13.5817 10 10 13.5817 10 18C10 22.4183 13.5817 26 18 26C19.8487 26 21.5478 25.3725 22.9 24.3142L25.2929 26.7071C25.6834 27.0976 26.3166 27.0976 26.7071 26.7071C27.0976 26.3166 27.0976 25.6834 26.7071 25.2929L24.3142 22.9C25.3725 21.5478 26 19.8487 26 18C26 13.5817 22.4183 10 18 10ZM14 18C14 15.7909 15.7909 14 18 14C20.2091 14 22 15.7909 22 18C22 20.2091 20.2091 22 18 22C15.7909 22 14 20.2091 14 18Z" fill="#0090ff"/>
+  <text x="44" y="24" font-family="GeistSans, Inter, system-ui, sans-serif" font-size="20" font-weight="700" letter-spacing="-0.5" fill="#171717">Q'atu</text>
+</svg>

@@ -148,6 +148,46 @@ a.q-header-login-btn:hover {
   color: #ffffff !important;
 }
 
+/* Circular User Profile Avatar */
+.q-header-avatar,
+.q-header-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--q-bg-surface, #f9fafb);
+  border: 1.5px solid var(--q-border-default, #d1d5db);
+  color: var(--q-fg-primary, #171717);
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.q-header-avatar:hover,
+.q-header-user-avatar:hover {
+  border-color: var(--q-color-primary, #0090ff);
+  background-color: var(--q-bg-page, #ffffff);
+}
+
+.q-header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.q-header-avatar-placeholder {
+  width: 20px;
+  height: 20px;
+  stroke: var(--q-fg-primary, #171717);
+}
+
 @media (max-width: 1023px) {
   .q-header-container {
     padding: 14px 24px;

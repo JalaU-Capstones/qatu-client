@@ -1,4 +1,5 @@
-packages:
-  - '.'
+overrides:
+  fast-uri: '>=3.1.9'
+  zod: '>=4.6.6'
 allowBuilds:
-  puppeteer: true
+  puppeteer: false

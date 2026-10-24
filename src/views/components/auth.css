@@ -1,0 +1,540 @@
+/**
+ * Authentication (Login & Register) component styling
+ * Fully aligned with Qatu design tokens and semantic variables
+ */
+
+.q-auth-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  box-sizing: border-box;
+  background-color: var(--q-bg-page);
+}
+
+/* Outer Card Container */
+.q-auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  min-height: 640px;
+  background-color: var(--q-bg-page);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-xl, 12) * 1px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Form Panels */
+.q-auth-form-panel {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  background-color: var(--q-bg-page);
+  transition:
+    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.4s ease-in-out,
+    visibility 0.4s;
+  overflow-y: auto;
+}
+
+/* Login panel (left side by default) */
+.q-auth-login-panel {
+  left: 0;
+  z-index: 2;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* When in register mode: login panel slides slightly left and fades out */
+.q-auth-card.is-register .q-auth-login-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+  transform: translateX(-20%);
+}
+
+/* Register panel (right side by default, activated in register mode) */
+.q-auth-register-panel {
+  left: 50%;
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(20%);
+}
+
+/* When in register mode: register panel slides into position on the right */
+.q-auth-card.is-register .q-auth-register-panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 2;
+  transform: translateX(0);
+}
+
+/* Sliding Overlay Container (occupies 50% width and translates) */
+.q-auth-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 10;
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* When in register mode: overlay slides from right to left */
+.q-auth-card.is-register .q-auth-overlay-container {
+  transform: translateX(-100%);
+}
+
+/* The wide track inside overlay container (200% width) */
+.q-auth-overlay {
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.16), transparent 35%),
+    radial-gradient(circle at 85% 80%, rgba(14, 165, 233, 0.14), transparent 35%),
+    linear-gradient(
+      135deg,
+      var(--q-color-gray-950, #030712) 0%,
+      var(--q-color-grey-9, #171717) 50%,
+      var(--q-color-gray-950, #030712) 100%
+    );
+  color: var(--q-ds-white, #ffffff);
+  transform: translateX(0);
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  display: flex;
+}
+
+/* When in register mode: overlay background slides to show the other panel */
+.q-auth-card.is-register .q-auth-overlay {
+  transform: translateX(50%);
+}
+
+/* Individual Overlay Content Panels */
+.q-auth-overlay-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 44px;
+  text-align: center;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  box-sizing: border-box;
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.q-auth-overlay-panel h3 {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--q-ds-white, #ffffff);
+  margin: 0 0 12px 0;
+}
+
+.q-auth-overlay-panel p {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--q-color-gray-50, #f9fafb);
+  margin: 0 0 24px 0;
+  max-width: 290px;
+}
+
+/* Left overlay panel (active when overlay moves left in register mode) */
+.q-auth-overlay-left {
+  transform: translateX(-20%);
+}
+
+.q-auth-card.is-register .q-auth-overlay-left {
+  transform: translateX(0);
+}
+
+/* Right overlay panel (active when overlay is on right in login mode) */
+.q-auth-overlay-right {
+  transform: translateX(0);
+}
+
+.q-auth-card.is-register .q-auth-overlay-right {
+  transform: translateX(20%);
+}
+
+/* Ghost button for switching modes on the overlay */
+.q-auth-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--q-ds-white, #ffffff);
+  border: 1.5px solid var(--q-ds-white, #ffffff);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  padding: 10px 28px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.q-auth-ghost-btn:hover {
+  background-color: var(--q-ds-white, #ffffff);
+  color: var(--q-fg-primary);
+  transform: translateY(-1px);
+}
+
+.q-auth-ghost-btn:active {
+  transform: translateY(0);
+}
+
+/* Form Elements Styling */
+.q-auth-header {
+  margin-bottom: 16px;
+}
+
+.q-auth-brand {
+  margin-bottom: 12px;
+}
+
+.q-auth-brand-logo {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.q-auth-title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.q-auth-subtitle {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  color: var(--q-fg-muted);
+  margin: 0;
+}
+
+/* Social Login Button */
+.q-auth-social-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background-color: transparent;
+  color: var(--q-fg-primary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.q-auth-social-btn:hover {
+  background-color: var(--q-bg-surface);
+  border-color: var(--q-border-strong, var(--q-fg-primary));
+}
+
+.q-auth-social-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Divider with text */
+.q-auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 14px 0;
+  text-align: center;
+  color: var(--q-fg-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.q-auth-divider::before,
+.q-auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--q-border-default);
+}
+
+.q-auth-divider span {
+  padding: 0 10px;
+}
+
+/* Form Fields */
+.q-auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.q-auth-label {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--q-fg-primary);
+}
+
+.q-auth-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.q-auth-input {
+  width: 100%;
+  height: 36px;
+  padding: 6px 12px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background-color: var(--q-bg-page);
+  color: var(--q-fg-primary);
+  box-sizing: border-box;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.q-auth-input:focus {
+  outline: none;
+  border-color: var(--q-color-primary);
+  box-shadow: 0 0 0 1px var(--q-color-primary);
+}
+
+.q-auth-input::placeholder {
+  color: var(--q-fg-muted);
+}
+
+.q-auth-password-hint {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.75rem;
+  color: var(--q-fg-muted);
+  margin: 2px 0 0 0;
+  line-height: 1.3;
+}
+
+/* Checkbox and extras */
+.q-auth-extras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 0 12px 0;
+  font-size: 0.8125rem;
+}
+
+.q-auth-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--q-fg-secondary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  cursor: pointer;
+  user-select: none;
+}
+
+.q-auth-checkbox-label input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--q-color-primary);
+  width: 15px;
+  height: 15px;
+}
+
+.q-auth-link {
+  color: var(--q-color-primary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.q-auth-link:hover {
+  text-decoration: underline;
+}
+
+/* Submit Button with primary brand tokens */
+.q-auth-submit-btn {
+  width: 100%;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--q-color-primary);
+  color: var(--q-ds-white, #ffffff);
+  border: 1px solid var(--q-color-primary);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease;
+}
+
+.q-auth-submit-btn:hover {
+  background-color: var(--q-color-primary-hover);
+  border-color: var(--q-color-primary-hover);
+}
+
+.q-auth-submit-btn:active {
+  background-color: var(--q-color-primary-active);
+  transform: scale(0.99);
+}
+
+.q-auth-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Feedback messages using semantic tokens */
+.q-auth-alert {
+  padding: 8px 12px;
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  font-size: 0.8125rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.q-auth-alert-error {
+  background-color: var(--q-color-red-50);
+  color: var(--q-color-error);
+  border: 1px solid var(--q-color-error);
+}
+
+.q-auth-alert-success {
+  background-color: var(--q-color-green-50);
+  color: var(--q-color-success);
+  border: 1px solid var(--q-color-success);
+}
+
+/* Switch links on card */
+.q-auth-switch-link {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--q-fg-secondary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.q-auth-switch-link button {
+  background: none;
+  border: none;
+  color: var(--q-color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Mobile Switch (hidden on desktop) */
+.q-auth-mobile-switch {
+  display: none;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--q-fg-muted);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.q-auth-mobile-switch button {
+  background: none;
+  border: none;
+  color: var(--q-color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .q-auth-card {
+    min-height: auto;
+    max-width: 440px;
+  }
+
+  .q-auth-overlay-container {
+    display: none;
+  }
+
+  .q-auth-form-panel {
+    position: relative;
+    width: 100%;
+    left: 0 !important;
+    padding: 28px 20px;
+    display: none;
+    transform: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .q-auth-card:not(.is-register) .q-auth-login-panel {
+    display: flex;
+  }
+
+  .q-auth-card.is-register .q-auth-register-panel {
+    display: flex;
+  }
+
+  .q-auth-mobile-switch {
+    display: block;
+  }
+
+  .q-auth-switch-link {
+    display: none;
+  }
+}
