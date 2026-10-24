@@ -77,6 +77,50 @@ describe('HeaderView', () => {
     customView.destroy();
   });
 
+  it('should render circular default avatar placeholder when user is logged in without avatarUrl', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'camilam', full_name: 'Camila Morales' },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    expect(el.querySelector('.q-header-login-btn')).toBeNull();
+    const avatar = el.querySelector('.q-header-user-avatar');
+    expect(avatar).not.toBeNull();
+    expect(avatar.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+    loggedInView.destroy();
+  });
+
+  it('should render image avatar when user has avatarUrl', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: {
+        username: 'camilam',
+        avatarUrl: 'https://example.com/avatar.jpg',
+      },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const img = el.querySelector('.q-header-avatar-img');
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toBe('https://example.com/avatar.jpg');
+    loggedInView.destroy();
+  });
+
+  it('should reactively transition from login button to avatar when user logs in', () => {
+    const el = view.render();
+    expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+    expect(el.querySelector('.q-header-user-avatar')).toBeNull();
+
+    viewModel.setUser({ username: 'roberto' });
+    expect(el.querySelector('.q-header-login-btn')).toBeNull();
+    expect(el.querySelector('.q-header-user-avatar')).not.toBeNull();
+
+    viewModel.setUser(null);
+    expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+    expect(el.querySelector('.q-header-user-avatar')).toBeNull();
+  });
+
   it('should mount into container correctly', () => {
     view.mount(container);
     expect(container.querySelector('.q-header')).not.toBeNull();

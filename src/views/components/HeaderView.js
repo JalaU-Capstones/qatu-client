@@ -3,7 +3,7 @@ import { NavbarView } from './NavbarView.js';
 
 /**
  * View component for the Header.
- * Combines Brand Logo, Navbar, Cart/Search Icon, and Iniciar Sesión button.
+ * Combines Brand Logo, Navbar, Cart Icon, and Iniciar Sesión button or User Avatar.
  */
 export class HeaderView {
   /**
@@ -45,6 +45,7 @@ export class HeaderView {
 
     brandLink.addEventListener('click', (e) => {
       e.preventDefault();
+      this.viewModel.triggerLogo();
     });
 
     // 2. Navigation
@@ -83,20 +84,14 @@ export class HeaderView {
       this.viewModel.triggerCart();
     });
 
-    // Login Button
-    const loginBtn = document.createElement('button');
-    loginBtn.type = 'button';
-    loginBtn.className = 'q-header-login-btn';
-    loginBtn.textContent = this.viewModel.loginText;
-
-    loginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.viewModel.triggerLogin();
-    });
-
     actionsWrapper.appendChild(cartBtn);
-    actionsWrapper.appendChild(loginBtn);
+
+    // User authentication: Login Button or Circular User Profile Avatar
+    if (this.viewModel.user) {
+      actionsWrapper.appendChild(this._createUserAvatar(this.viewModel.user));
+    } else {
+      actionsWrapper.appendChild(this._createLoginButton());
+    }
 
     container.appendChild(brandLink);
     container.appendChild(navWrapper);
@@ -110,6 +105,65 @@ export class HeaderView {
     });
 
     return this.element;
+  }
+
+  /**
+   * Creates the Iniciar Sesión button.
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createLoginButton() {
+    const loginBtn = document.createElement('button');
+    loginBtn.type = 'button';
+    loginBtn.className = 'q-header-login-btn';
+    loginBtn.textContent = this.viewModel.loginText;
+
+    loginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerLogin();
+    });
+
+    return loginBtn;
+  }
+
+  /**
+   * Creates a circular user profile avatar element.
+   * Renders user avatar image if available, or a generic default avatar placeholder.
+   * @param {Object} user
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createUserAvatar(user) {
+    const avatar = document.createElement('button');
+    avatar.type = 'button';
+    avatar.className = 'q-header-avatar q-header-user-avatar';
+    avatar.setAttribute('aria-label', `Perfil de ${user.username || user.full_name || 'usuario'}`);
+    avatar.setAttribute('title', user.username || user.full_name || 'Perfil de usuario');
+
+    const avatarUrl = user.avatar_url || user.avatarUrl;
+    if (avatarUrl) {
+      const img = document.createElement('img');
+      img.src = avatarUrl;
+      img.alt = user.username || user.full_name || 'Usuario';
+      img.className = 'q-header-avatar-img';
+      avatar.appendChild(img);
+    } else {
+      avatar.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-avatar-placeholder">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      `;
+    }
+
+    avatar.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerProfile();
+    });
+
+    return avatar;
   }
 
   /**
@@ -146,9 +200,26 @@ export class HeaderView {
       }
     }
 
-    const loginBtn = this.element.querySelector('.q-header-login-btn');
-    if (loginBtn) {
-      loginBtn.textContent = vm.loginText;
+    const actionsWrapper = this.element.querySelector('.q-header-actions');
+    if (actionsWrapper) {
+      const existingLogin = actionsWrapper.querySelector('.q-header-login-btn');
+      const existingAvatar = actionsWrapper.querySelector(
+        '.q-header-avatar, .q-header-user-avatar'
+      );
+
+      if (vm.user) {
+        if (existingLogin) existingLogin.remove();
+        if (!existingAvatar) {
+          actionsWrapper.appendChild(this._createUserAvatar(vm.user));
+        }
+      } else {
+        if (existingAvatar) existingAvatar.remove();
+        if (!existingLogin) {
+          actionsWrapper.appendChild(this._createLoginButton());
+        } else {
+          existingLogin.textContent = vm.loginText;
+        }
+      }
     }
   }
 

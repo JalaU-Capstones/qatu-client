@@ -13,8 +13,11 @@ export class HeaderViewModel {
    * @param {number} [options.cartCount]
    * @param {string} [options.loginText]
    * @param {string} [options.loginHref]
+   * @param {Object|null} [options.user]
    * @param {Function} [options.onLoginClick]
    * @param {Function} [options.onCartClick]
+   * @param {Function} [options.onLogoClick]
+   * @param {Function} [options.onProfileClick]
    */
   constructor(options = {}) {
     this.logoText = options.logoText || "Q'atu";
@@ -23,9 +26,21 @@ export class HeaderViewModel {
     this.cartCount = options.cartCount ?? 0;
     this.loginText = options.loginText || 'Iniciar sesión';
     this.loginHref = options.loginHref || '/login';
+    this.user = options.user || null;
     this.onLoginClick = options.onLoginClick || null;
     this.onCartClick = options.onCartClick || null;
+    this.onLogoClick = options.onLogoClick || null;
+    this.onProfileClick = options.onProfileClick || null;
     this._listeners = new Set();
+  }
+
+  /**
+   * Sets current logged in user or null to log out.
+   * @param {Object|null} user
+   */
+  setUser(user) {
+    this.user = user || null;
+    this._notify();
   }
 
   /**
@@ -54,6 +69,24 @@ export class HeaderViewModel {
   triggerCart() {
     if (typeof this.onCartClick === 'function') {
       this.onCartClick();
+    }
+  }
+
+  /**
+   * Triggers the logo click action.
+   */
+  triggerLogo() {
+    if (typeof this.onLogoClick === 'function') {
+      this.onLogoClick();
+    }
+  }
+
+  /**
+   * Triggers user profile avatar click.
+   */
+  triggerProfile() {
+    if (typeof this.onProfileClick === 'function') {
+      this.onProfileClick(this.user);
     }
   }
 
