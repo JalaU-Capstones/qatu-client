@@ -27,7 +27,6 @@ import { HeaderView } from './views/components/HeaderView.js';
 import { HeroView } from './views/components/HeroView.js';
 import './views/pages/catalog.css';
 
-import { Router } from './router/router.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { HomeView } from './views/pages/HomeView.js';
 
@@ -50,7 +49,6 @@ if (app) {
   app.appendChild(main);
 
   const authApi = new AuthApi();
-  const router = new Router();
 
   header.viewModel.onLoginClick = () => {
     router.navigate('/login');
