@@ -18,6 +18,7 @@ export class HeaderViewModel {
    * @param {Function} [options.onCartClick]
    * @param {Function} [options.onLogoClick]
    * @param {Function} [options.onProfileClick]
+   * @param {Function} [options.onLogoutClick]
    */
   constructor(options = {}) {
     this.logoText = options.logoText || "Q'atu";
@@ -31,15 +32,19 @@ export class HeaderViewModel {
     this.onCartClick = options.onCartClick || null;
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
+    this.onLogoutClick = options.onLogoutClick || null;
+    this.isDropdownOpen = false;
     this._listeners = new Set();
   }
 
   /**
    * Sets current logged in user or null to log out.
+   * When user becomes null, forces the dropdown closed.
    * @param {Object|null} user
    */
   setUser(user) {
     this.user = user || null;
+    if (!this.user) this.isDropdownOpen = false;
     this._notify();
   }
 
@@ -88,6 +93,36 @@ export class HeaderViewModel {
     if (typeof this.onProfileClick === 'function') {
       this.onProfileClick(this.user);
     }
+  }
+
+  /**
+   * Toggles the user dropdown open/closed. No-op when the user is anonymous.
+   */
+  toggleDropdown() {
+    if (!this.user) return;
+    this.isDropdownOpen = !this.isDropdownOpen;
+    this._notify();
+  }
+
+  /**
+   * Closes the user dropdown if open.
+   */
+  closeDropdown() {
+    if (this.isDropdownOpen) {
+      this.isDropdownOpen = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Triggers the logout action and closes the dropdown.
+   */
+  triggerLogout() {
+    this.isDropdownOpen = false;
+    if (typeof this.onLogoutClick === 'function') {
+      this.onLogoutClick();
+    }
+    this._notify();
   }
 
   /**

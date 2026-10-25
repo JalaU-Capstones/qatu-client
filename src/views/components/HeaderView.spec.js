@@ -125,4 +125,109 @@ describe('HeaderView', () => {
     view.mount(container);
     expect(container.querySelector('.q-header')).not.toBeNull();
   });
+
+  // --- Dropdown tests ---
+
+  it('avatar click calls toggleDropdown() on the viewModel', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'pedro' },
+    });
+    spyOn(loggedInVM, 'toggleDropdown').and.callThrough();
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const avatar = el.querySelector('.q-header-avatar');
+    avatar.click();
+    expect(loggedInVM.toggleDropdown).toHaveBeenCalled();
+    loggedInView.destroy();
+  });
+
+  it('dropdown is hidden by default when user is set', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'lara', email: 'lara@q.com' },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const dropdown = el.querySelector('.q-header-dropdown');
+    expect(dropdown).not.toBeNull();
+    expect(dropdown.hasAttribute('hidden')).toBe(true);
+    loggedInView.destroy();
+  });
+
+  it('dropdown removes hidden attribute when isDropdownOpen becomes true', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'lara', email: 'lara@q.com' },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    loggedInVM.toggleDropdown(); // open it
+    const dropdown = el.querySelector('.q-header-dropdown');
+    expect(dropdown.hasAttribute('hidden')).toBe(false);
+
+    loggedInVM.toggleDropdown(); // close it
+    expect(dropdown.hasAttribute('hidden')).toBe(true);
+    loggedInView.destroy();
+  });
+
+  it('clicking outside the header closes the dropdown', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'tomas', email: 'tomas@q.com' },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    loggedInView.mount(container);
+
+    // Open the dropdown
+    loggedInVM.toggleDropdown();
+    expect(loggedInVM.isDropdownOpen).toBe(true);
+
+    // Dispatch a click on an element outside the header
+    const outside = document.createElement('div');
+    document.body.appendChild(outside);
+    const outsideClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+    outside.dispatchEvent(outsideClick);
+
+    expect(loggedInVM.isDropdownOpen).toBe(false);
+
+    outside.remove();
+    loggedInView.destroy();
+  });
+
+  it('.q-header-logout-btn click calls viewModel.triggerLogout()', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'vera', email: 'vera@q.com' },
+    });
+    spyOn(loggedInVM, 'triggerLogout');
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const logoutBtn = el.querySelector('.q-header-logout-btn');
+    expect(logoutBtn).not.toBeNull();
+    logoutBtn.click();
+    expect(loggedInVM.triggerLogout).toHaveBeenCalled();
+    loggedInView.destroy();
+  });
+
+  it('when user transitions null → object, avatar wrapper with dropdown is created', () => {
+    const el = view.render();
+    expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
+
+    viewModel.setUser({ username: 'sofia', email: 'sofia@q.com' });
+    const wrapper = el.querySelector('.q-header-avatar-wrapper');
+    expect(wrapper).not.toBeNull();
+    const dropdown = wrapper.querySelector('.q-header-dropdown');
+    expect(dropdown).not.toBeNull();
+    expect(dropdown.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('when user transitions object → null, avatar wrapper is removed from DOM', () => {
+    viewModel.setUser({ username: 'sofia', email: 'sofia@q.com' });
+    const el = view.render();
+    expect(el.querySelector('.q-header-avatar-wrapper')).not.toBeNull();
+
+    viewModel.setUser(null);
+    expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
+    expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+  });
 });

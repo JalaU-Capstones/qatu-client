@@ -162,9 +162,10 @@ export class AuthViewModel {
           null;
         const user = response?.data?.user || response?.user || null;
         const profile = response?.data?.profile || response?.profile || user || null;
+        const roles = response?.data?.roles || response?.roles || [];
 
         if (this.authStore && typeof this.authStore.setSession === 'function') {
-          this.authStore.setSession({ token, user, profile });
+          this.authStore.setSession({ token, user, profile, roles });
         }
 
         if (typeof this.onLoginSuccess === 'function') {
@@ -246,9 +247,10 @@ export class AuthViewModel {
           null;
         const user = response?.data?.user || response?.user || null;
         const profile = response?.data?.profile || response?.profile || user || null;
+        const roles = response?.data?.roles || response?.roles || [];
 
         if (this.authStore && typeof this.authStore.setSession === 'function') {
-          this.authStore.setSession({ token, user, profile });
+          this.authStore.setSession({ token, user, profile, roles });
         }
 
         if (typeof this.onRegisterSuccess === 'function') {

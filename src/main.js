@@ -29,8 +29,14 @@ const app = document.getElementById('app');
 if (app) {
   app.className = 'q-app';
 
+  const authApi = new AuthApi();
+
+  // Hydrate session from localStorage before mounting anything that reads user state
+  authStore.loadFromStorage();
+
   // Persistent shell
   const header = new HeaderView();
+  header.viewModel.setUser(authStore.getUser());
   header.mount(app);
 
   const mainEl = document.createElement('main');
@@ -39,8 +45,6 @@ if (app) {
 
   const footer = new FooterView();
   footer.mount(app);
-
-  const authApi = new AuthApi();
 
   let currentPageView = null;
   let activeAuth = null;
@@ -107,6 +111,18 @@ if (app) {
 
   header.viewModel.onLoginClick = () => router.navigate('/login');
   header.viewModel.onLogoClick = () => router.navigate('/');
+
+  // Wire logout: clear session and redirect to /login
+  header.viewModel.onLogoutClick = () => {
+    authStore.clearSession();
+    router.navigate('/login');
+  };
+
+  // Wire 401 expiry event dispatched by apiFetch on expired JWT
+  window.addEventListener('qatu:auth-expired', () => {
+    authStore.clearSession();
+    router.navigate('/login');
+  });
 
   authStore.subscribe((store) => {
     header.viewModel.setUser(store.getUser());

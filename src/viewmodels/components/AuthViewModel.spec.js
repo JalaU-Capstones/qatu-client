@@ -267,4 +267,50 @@ describe('AuthViewModel', () => {
     expect(viewModel.successMessage).toBe('Éxito');
     expect(viewModel.errorMessage).toBe('');
   });
+
+  it('submitLogin() passes roles from response.data.roles to authStore.setSession', async () => {
+    const rolesData = [{ id: 'r1', name: 'buyer' }];
+    mockAuthApi.login = jasmine.createSpy('login').and.resolveTo({
+      data: {
+        token: 'tok-role-login',
+        user: { id: 'u1', username: 'zzz' },
+        profile: { id: 'u1', full_name: 'ZZZ' },
+        roles: rolesData,
+      },
+    });
+    spyOn(mockAuthStore, 'setSession');
+
+    viewModel.setLoginField('email', 'test@example.com');
+    viewModel.setLoginField('password', 'pass123');
+    await viewModel.submitLogin();
+
+    expect(mockAuthStore.setSession).toHaveBeenCalledWith(
+      jasmine.objectContaining({ roles: rolesData })
+    );
+  });
+
+  it('submitRegister() passes roles from response.data.roles to authStore.setSession', async () => {
+    const rolesData = [{ id: 'r2', name: 'seller' }];
+    mockAuthApi.register = jasmine.createSpy('register').and.resolveTo({
+      data: {
+        token: 'tok-role-register',
+        user: { id: 'u2', username: 'new_user' },
+        profile: { id: 'u2', full_name: 'New User' },
+        roles: rolesData,
+      },
+    });
+    spyOn(mockAuthStore, 'setSession');
+
+    viewModel.setRegisterField('full_name', 'New User');
+    viewModel.setRegisterField('username', 'new_user');
+    viewModel.setRegisterField('email', 'new@example.com');
+    viewModel.setRegisterField('password', 'StrongPass1!');
+    viewModel.setRegisterField('confirmPassword', 'StrongPass1!');
+    viewModel.registerData.acceptTerms = true;
+    await viewModel.submitRegister();
+
+    expect(mockAuthStore.setSession).toHaveBeenCalledWith(
+      jasmine.objectContaining({ roles: rolesData })
+    );
+  });
 });
