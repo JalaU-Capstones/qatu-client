@@ -14,6 +14,7 @@ export class HeaderView {
     this.navbarView = new NavbarView(this.viewModel.navbarViewModel);
     this.element = null;
     this._unsubscribe = null;
+    this._handleDocumentClick = this._handleDocumentClick.bind(this);
   }
 
   /**
@@ -106,6 +107,8 @@ export class HeaderView {
       this._update(vm);
     });
 
+    document.addEventListener('click', this._handleDocumentClick);
+
     return this.element;
   }
 
@@ -130,13 +133,15 @@ export class HeaderView {
   }
 
   /**
-   * Creates a circular user profile avatar element.
-   * Renders user avatar image if available, or a generic default avatar placeholder.
+   * Creates a circular user profile avatar element wrapped in a dropdown container.
    * @param {Object} user
-   * @returns {HTMLElement}
+   * @returns {HTMLElement} wrapper div containing the avatar button and dropdown
    * @private
    */
   _createUserAvatar(user) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'q-header-avatar-wrapper';
+
     const avatar = document.createElement('button');
     avatar.type = 'button';
     avatar.className = 'q-header-avatar q-header-user-avatar';
@@ -162,10 +167,45 @@ export class HeaderView {
     avatar.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.viewModel.triggerProfile();
+      this.viewModel.toggleDropdown();
     });
 
-    return avatar;
+    // Dropdown panel
+    const dropdown = document.createElement('div');
+    dropdown.className = 'q-header-dropdown';
+    dropdown.setAttribute('hidden', '');
+
+    const dropdownHeader = document.createElement('div');
+    dropdownHeader.className = 'q-header-dropdown-header';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'q-header-dropdown-name';
+    nameSpan.textContent = user.full_name || user.username || user.email || '';
+
+    const emailSpan = document.createElement('span');
+    emailSpan.className = 'q-header-dropdown-email';
+    emailSpan.textContent = user.email || '';
+
+    dropdownHeader.appendChild(nameSpan);
+    dropdownHeader.appendChild(emailSpan);
+
+    const logoutBtn = document.createElement('button');
+    logoutBtn.type = 'button';
+    logoutBtn.className = 'q-header-dropdown-item q-header-logout-btn';
+    logoutBtn.textContent = 'Cerrar sesión';
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerLogout();
+    });
+
+    dropdown.appendChild(dropdownHeader);
+    dropdown.appendChild(logoutBtn);
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(dropdown);
+
+    return wrapper;
   }
 
   /**
@@ -205,23 +245,46 @@ export class HeaderView {
     const actionsWrapper = this.element.querySelector('.q-header-actions');
     if (actionsWrapper) {
       const existingLogin = actionsWrapper.querySelector('.q-header-login-btn');
+      const existingAvatarWrapper = actionsWrapper.querySelector('.q-header-avatar-wrapper');
       const existingAvatar = actionsWrapper.querySelector(
         '.q-header-avatar, .q-header-user-avatar'
       );
 
       if (vm.user) {
         if (existingLogin) existingLogin.remove();
-        if (!existingAvatar) {
+        if (!existingAvatarWrapper) {
           actionsWrapper.appendChild(this._createUserAvatar(vm.user));
         }
       } else {
-        if (existingAvatar) existingAvatar.remove();
+        if (existingAvatarWrapper) existingAvatarWrapper.remove();
+        else if (existingAvatar) existingAvatar.remove();
         if (!existingLogin) {
           actionsWrapper.appendChild(this._createLoginButton());
         } else {
           existingLogin.textContent = vm.loginText;
         }
       }
+    }
+
+    // Update dropdown visibility
+    const dropdown = this.element.querySelector('.q-header-dropdown');
+    if (dropdown) {
+      if (vm.isDropdownOpen) {
+        dropdown.removeAttribute('hidden');
+      } else {
+        dropdown.setAttribute('hidden', '');
+      }
+    }
+  }
+
+  /**
+   * Closes the dropdown when a click is detected outside the header element.
+   * @param {MouseEvent} event
+   * @private
+   */
+  _handleDocumentClick(event) {
+    if (this.viewModel.isDropdownOpen && this.element && !this.element.contains(event.target)) {
+      this.viewModel.closeDropdown();
     }
   }
 
@@ -236,6 +299,7 @@ export class HeaderView {
     if (this.navbarView) {
       this.navbarView.destroy();
     }
+    document.removeEventListener('click', this._handleDocumentClick);
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }

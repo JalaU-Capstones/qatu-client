@@ -67,4 +67,84 @@ describe('HeaderViewModel', () => {
     vm.triggerProfile();
     expect(profileTriggered).toBe(true);
   });
+
+  it('toggleDropdown() opens and closes when user is set', () => {
+    viewModel.setUser({ username: 'ana' });
+    expect(viewModel.isDropdownOpen).toBe(false);
+
+    viewModel.toggleDropdown();
+    expect(viewModel.isDropdownOpen).toBe(true);
+
+    viewModel.toggleDropdown();
+    expect(viewModel.isDropdownOpen).toBe(false);
+  });
+
+  it('toggleDropdown() is a no-op when user is null', () => {
+    let notified = false;
+    viewModel.subscribe(() => {
+      notified = true;
+    });
+
+    viewModel.toggleDropdown(); // user is null
+    expect(viewModel.isDropdownOpen).toBe(false);
+    expect(notified).toBe(false);
+  });
+
+  it('closeDropdown() closes an open dropdown and notifies', () => {
+    viewModel.setUser({ username: 'ana' });
+    viewModel.toggleDropdown();
+    expect(viewModel.isDropdownOpen).toBe(true);
+
+    let notified = false;
+    viewModel.subscribe(() => {
+      notified = true;
+    });
+
+    viewModel.closeDropdown();
+    expect(viewModel.isDropdownOpen).toBe(false);
+    expect(notified).toBe(true);
+  });
+
+  it('closeDropdown() is a no-op when already closed', () => {
+    let notified = false;
+    viewModel.subscribe(() => {
+      notified = true;
+    });
+
+    viewModel.closeDropdown();
+    expect(notified).toBe(false);
+  });
+
+  it('triggerLogout() calls onLogoutClick and closes dropdown', () => {
+    let logoutCalled = false;
+    const vm = new HeaderViewModel({
+      user: { username: 'ben' },
+      onLogoutClick: () => {
+        logoutCalled = true;
+      },
+    });
+    vm.toggleDropdown();
+    expect(vm.isDropdownOpen).toBe(true);
+
+    vm.triggerLogout();
+    expect(logoutCalled).toBe(true);
+    expect(vm.isDropdownOpen).toBe(false);
+  });
+
+  it('triggerLogout() does not throw when onLogoutClick is not set', () => {
+    viewModel.setUser({ username: 'clara' });
+    viewModel.toggleDropdown();
+    expect(() => viewModel.triggerLogout()).not.toThrow();
+    expect(viewModel.isDropdownOpen).toBe(false);
+  });
+
+  it('setUser(null) forces isDropdownOpen to false', () => {
+    viewModel.setUser({ username: 'dani' });
+    viewModel.toggleDropdown();
+    expect(viewModel.isDropdownOpen).toBe(true);
+
+    viewModel.setUser(null);
+    expect(viewModel.isDropdownOpen).toBe(false);
+    expect(viewModel.user).toBeNull();
+  });
 });

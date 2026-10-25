@@ -1,6 +1,14 @@
 import { AuthStore } from '../../store/authStore.js';
 import { AuthViewModel, LoginRegisterViewModel } from './AuthViewModel.js';
 
+/**
+ * NOTE (FE-04 audit @ 087b05b): several callbacks exercised in this file
+ * (onLoginSuccess, onRegisterSuccess, onLogin, onRegister, onGoogleAuth,
+ * onForgotPassword) are declared by AuthViewModel but NOT wired by
+ * AuthPageView or main.js in production. The specs that exercise them
+ * are kept as contract tests. Dead-code removal is tracked separately.
+ */
+
 describe('AuthViewModel', () => {
   let viewModel;
   let mockAuthApi;
@@ -115,6 +123,10 @@ describe('AuthViewModel', () => {
     expect(viewModel.registerData.acceptTerms).toBe(true);
   });
 
+  // Documents a callback that AuthViewModel declares and fires, but that is
+  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
+  // Keep this spec: it validates the callback contract. If the team later
+  // removes the callback, remove this spec in the same commit.
   it('should validate and fail login submit if fields are missing', async () => {
     let loggedIn = false;
     viewModel.onLogin = () => {
@@ -127,6 +139,10 @@ describe('AuthViewModel', () => {
     expect(viewModel.errorMessage).toBe('Por favor completa todos los campos.');
   });
 
+  // Documents a callback that AuthViewModel declares and fires, but that is
+  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
+  // Keep this spec: it validates the callback contract. If the team later
+  // removes the callback, remove this spec in the same commit.
   it('should succeed login submit, call API, store session and navigate home', async () => {
     let capturedData = null;
     let navigatedPath = null;
@@ -187,6 +203,10 @@ describe('AuthViewModel', () => {
     expect(viewModel.errorMessage).toBe('Debes aceptar los términos y condiciones.');
   });
 
+  // Documents a callback that AuthViewModel declares and fires, but that is
+  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
+  // Keep this spec: it validates the callback contract. If the team later
+  // removes the callback, remove this spec in the same commit.
   it('should succeed register submit and call API with payload', async () => {
     let capturedData = null;
     let navigatedPath = null;
@@ -236,6 +256,10 @@ describe('AuthViewModel', () => {
     expect(viewModel.isLoading).toBe(false);
   });
 
+  // Documents a callback that AuthViewModel declares and fires, but that is
+  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
+  // Keep this spec: it validates the callback contract. If the team later
+  // removes the callback, remove this spec in the same commit.
   it('should trigger onGoogleAuth and onForgotPassword callbacks', () => {
     let googleClicked = false;
     let forgotClicked = false;
@@ -266,5 +290,51 @@ describe('AuthViewModel', () => {
     viewModel.setSuccess('Éxito');
     expect(viewModel.successMessage).toBe('Éxito');
     expect(viewModel.errorMessage).toBe('');
+  });
+
+  it('submitLogin() passes roles from response.data.roles to authStore.setSession', async () => {
+    const rolesData = [{ id: 'r1', name: 'buyer' }];
+    mockAuthApi.login = jasmine.createSpy('login').and.resolveTo({
+      data: {
+        token: 'tok-role-login',
+        user: { id: 'u1', username: 'zzz' },
+        profile: { id: 'u1', full_name: 'ZZZ' },
+        roles: rolesData,
+      },
+    });
+    spyOn(mockAuthStore, 'setSession');
+
+    viewModel.setLoginField('email', 'test@example.com');
+    viewModel.setLoginField('password', 'pass123');
+    await viewModel.submitLogin();
+
+    expect(mockAuthStore.setSession).toHaveBeenCalledWith(
+      jasmine.objectContaining({ roles: rolesData })
+    );
+  });
+
+  it('submitRegister() passes roles from response.data.roles to authStore.setSession', async () => {
+    const rolesData = [{ id: 'r2', name: 'seller' }];
+    mockAuthApi.register = jasmine.createSpy('register').and.resolveTo({
+      data: {
+        token: 'tok-role-register',
+        user: { id: 'u2', username: 'new_user' },
+        profile: { id: 'u2', full_name: 'New User' },
+        roles: rolesData,
+      },
+    });
+    spyOn(mockAuthStore, 'setSession');
+
+    viewModel.setRegisterField('full_name', 'New User');
+    viewModel.setRegisterField('username', 'new_user');
+    viewModel.setRegisterField('email', 'new@example.com');
+    viewModel.setRegisterField('password', 'StrongPass1!');
+    viewModel.setRegisterField('confirmPassword', 'StrongPass1!');
+    viewModel.registerData.acceptTerms = true;
+    await viewModel.submitRegister();
+
+    expect(mockAuthStore.setSession).toHaveBeenCalledWith(
+      jasmine.objectContaining({ roles: rolesData })
+    );
   });
 });
