@@ -13,6 +13,7 @@ import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
+import './views/pages/catalog.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
@@ -25,20 +26,11 @@ import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { HeroView } from './views/components/HeroView.js';
-import './views/pages/catalog.css';
-
 import { CatalogView } from './views/pages/CatalogView.js';
-import { HomeView } from './views/pages/HomeView.js';
 
 const app = document.getElementById('app');
 
 if (app) {
-  const router = new Router({
-    '/': HomeView,
-    '/products': CatalogView,
-  });
-
-  router.init(app);
   app.className = 'q-app';
 
   const header = new HeaderView();
@@ -48,29 +40,24 @@ if (app) {
   main.className = 'q-main';
   app.appendChild(main);
 
+  const footer = new FooterView();
+  footer.mount(app);
+
   const authApi = new AuthApi();
-
-  header.viewModel.onLoginClick = () => {
-    router.navigate('/login');
-  };
-
-  header.viewModel.onLogoClick = () => {
-    router.navigate('/');
-  };
-
-  authStore.subscribe((store) => {
-    header.viewModel.setUser(store.getUser());
-  });
 
   let currentViewCleanup = null;
   let activeAuth = null;
 
-  const renderHome = () => {
+  const clearCurrentView = () => {
     if (typeof currentViewCleanup === 'function') {
       currentViewCleanup();
       currentViewCleanup = null;
     }
     main.innerHTML = '';
+  };
+
+  const renderHome = () => {
+    clearCurrentView();
 
     const hero = new HeroView();
     hero.mount(main);
@@ -105,11 +92,7 @@ if (app) {
       return;
     }
 
-    if (typeof currentViewCleanup === 'function') {
-      currentViewCleanup();
-      currentViewCleanup = null;
-    }
-    main.innerHTML = '';
+    clearCurrentView();
 
     const authViewModel = new AuthViewModel({
       initialMode: mode,
@@ -135,14 +118,31 @@ if (app) {
     };
   };
 
+  const renderCatalog = () => {
+    clearCurrentView();
+
+    const catalog = new CatalogView();
+    catalog.mount(main);
+
+    currentViewCleanup = () => {
+      catalog.destroy();
+    };
+  };
+
+  const router = new Router();
   router.addRoute('/', () => renderHome());
+  router.addRoute('/products', () => renderCatalog());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
-  router.start();
+  header.viewModel.onLoginClick = () => router.navigate('/login');
+  header.viewModel.onLogoClick = () => router.navigate('/');
 
-  const footer = new FooterView();
-  footer.mount(app);
+  authStore.subscribe((store) => {
+    header.viewModel.setUser(store.getUser());
+  });
+
+  router.start();
 }
 
 // eslint-disable-next-line no-console
