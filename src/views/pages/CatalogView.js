@@ -1,11 +1,9 @@
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
-import { FooterView } from '../components/FooterView.js';
-import { HeaderView } from '../components/HeaderView.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 
 /**
- * Page view for the Catalog route ('/products').
- * Renders the Header, Catalog section with product grid and pagination, and Footer.
+ * Catalog page content view. Mounts INSIDE the persistent <main class="q-main">.
+ * Header, footer, and the <main> wrapper are owned by the app shell (main.js).
  */
 export class CatalogView {
   /**
@@ -13,27 +11,17 @@ export class CatalogView {
    */
   constructor(viewModel = new CatalogViewModel()) {
     this.viewModel = viewModel;
-    this._header = null;
-    this._footer = null;
-    this._main = null;
+    this._section = null;
     this._grid = null;
     this._pagination = null;
     this._unsubscribe = null;
   }
 
   /**
-   * Mounts the catalog page into the given container.
+   * Mounts the catalog section into the given container.
    * @param {HTMLElement} container
    */
   mount(container) {
-    container.className = 'q-app';
-
-    this._header = new HeaderView();
-    this._header.mount(container);
-
-    this._main = document.createElement('main');
-    this._main.className = 'q-main';
-
     const section = document.createElement('section');
     section.className = 'q-catalog';
     section.setAttribute('aria-label', 'Catálogo de productos');
@@ -71,11 +59,8 @@ export class CatalogView {
     inner.appendChild(pagination);
 
     section.appendChild(inner);
-    this._main.appendChild(section);
-    container.appendChild(this._main);
-
-    this._footer = new FooterView();
-    this._footer.mount(container);
+    this._section = section;
+    container.appendChild(section);
 
     // Subscribe to ViewModel state changes
     this._unsubscribe = this.viewModel.subscribe((vm) => {
@@ -168,24 +153,16 @@ export class CatalogView {
   }
 
   /**
-   * Destroys all child components and cleans up event listeners and subscriptions.
+   * Destroys the catalog section and cleans up event listeners and subscriptions.
    */
   destroy() {
     if (typeof this._unsubscribe === 'function') {
       this._unsubscribe();
       this._unsubscribe = null;
     }
-    if (this._footer) {
-      this._footer.destroy();
-      this._footer = null;
-    }
-    if (this._main && this._main.parentNode) {
-      this._main.parentNode.removeChild(this._main);
-      this._main = null;
-    }
-    if (this._header) {
-      this._header.destroy();
-      this._header = null;
+    if (this._section && this._section.parentNode) {
+      this._section.parentNode.removeChild(this._section);
+      this._section = null;
     }
     this._grid = null;
     this._pagination = null;

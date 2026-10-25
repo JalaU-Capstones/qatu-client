@@ -42,6 +42,7 @@ export class FooterView {
     brandLink.href = this.viewModel.brand.logoHref;
     brandLink.textContent = this.viewModel.brand.logoText;
     brandLink.setAttribute('aria-label', `${this.viewModel.brand.logoText} inicio`);
+    brandLink.dataset.route = '';
 
     brandLink.addEventListener('click', (e) => {
       e.preventDefault();

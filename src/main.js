@@ -13,106 +13,77 @@ import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
+import './views/pages/catalog.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
 import { authStore } from './store/authStore.js';
-import { AuthViewModel } from './viewmodels/components/AuthViewModel.js';
-import { AuthView } from './views/components/AuthView.js';
-import { CategoriesView } from './views/components/CategoriesView.js';
-import { FeaturedProductsView } from './views/components/FeaturedProductsView.js';
-import { FeaturedStoresView } from './views/components/FeaturedStoresView.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
-import { HeroView } from './views/components/HeroView.js';
-import './views/pages/catalog.css';
-
+import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { HomeView } from './views/pages/HomeView.js';
 
 const app = document.getElementById('app');
 
 if (app) {
-  const router = new Router({
-    '/': HomeView,
-    '/products': CatalogView,
-  });
-
-  router.init(app);
   app.className = 'q-app';
 
+  // Persistent shell
   const header = new HeaderView();
   header.mount(app);
 
-  const main = document.createElement('main');
-  main.className = 'q-main';
-  app.appendChild(main);
+  const mainEl = document.createElement('main');
+  mainEl.className = 'q-main';
+  app.appendChild(mainEl);
+
+  const footer = new FooterView();
+  footer.mount(app);
 
   const authApi = new AuthApi();
 
-  header.viewModel.onLoginClick = () => {
-    router.navigate('/login');
-  };
-
-  header.viewModel.onLogoClick = () => {
-    router.navigate('/');
-  };
-
-  authStore.subscribe((store) => {
-    header.viewModel.setUser(store.getUser());
-  });
-
-  let currentViewCleanup = null;
+  let currentPageView = null;
   let activeAuth = null;
 
-  const renderHome = () => {
-    if (typeof currentViewCleanup === 'function') {
-      currentViewCleanup();
-      currentViewCleanup = null;
+  const clearCurrentView = () => {
+    if (currentPageView && typeof currentPageView.destroy === 'function') {
+      currentPageView.destroy();
     }
-    main.innerHTML = '';
-
-    const hero = new HeroView();
-    hero.mount(main);
-
-    const categories = new CategoriesView();
-    categories.mount(main);
-
-    const featuredProducts = new FeaturedProductsView();
-    // Wire the "Add to cart" action to update the header badge
-    featuredProducts.viewModel.onAddToCart = () => {
-      header.viewModel.setCartCount(header.viewModel.cartCount + 1);
-    };
-    featuredProducts.mount(main);
-    featuredProducts.viewModel.load();
-
-    const stores = new FeaturedStoresView();
-    stores.mount(main);
-
-    currentViewCleanup = () => {
-      hero.destroy();
-      categories.destroy();
-      featuredProducts.destroy();
-      stores.destroy();
-    };
+    currentPageView = null;
+    activeAuth = null;
+    mainEl.innerHTML = '';
   };
 
-  const renderAuth = (mode = 'register') => {
-    if (activeAuth && activeAuth.viewModel) {
-      if (activeAuth.viewModel.mode !== mode) {
-        activeAuth.viewModel.setMode(mode);
-      }
+  const renderHome = () => {
+    clearCurrentView();
+    currentPageView = new HomeView({
+      onAddToCart: () => {
+        header.viewModel.setCartCount(header.viewModel.cartCount + 1);
+      },
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderCatalog = () => {
+    clearCurrentView();
+    currentPageView = new CatalogView();
+    currentPageView.mount(mainEl);
+  };
+
+  const renderAuth = (mode) => {
+    // Preserve sliding animation: if we are already on an auth page,
+    // switch mode in place instead of remounting.
+    if (activeAuth && activeAuth.mode !== mode) {
+      activeAuth.setMode(mode);
+      return;
+    }
+    if (activeAuth && activeAuth.mode === mode) {
       return;
     }
 
-    if (typeof currentViewCleanup === 'function') {
-      currentViewCleanup();
-      currentViewCleanup = null;
-    }
-    main.innerHTML = '';
-
-    const authViewModel = new AuthViewModel({
-      initialMode: mode,
+    clearCurrentView();
+    const view = new AuthPageView({
+      mode,
       authApi,
       authStore,
       onNavigate: (path) => router.navigate(path),
@@ -123,26 +94,25 @@ if (app) {
         }
       },
     });
-
-    const authView = new AuthView(authViewModel);
-    authView.mount(main);
-
-    activeAuth = { view: authView, viewModel: authViewModel };
-
-    currentViewCleanup = () => {
-      authView.destroy();
-      activeAuth = null;
-    };
+    view.mount(mainEl);
+    currentPageView = view;
+    activeAuth = view;
   };
 
+  const router = new Router();
   router.addRoute('/', () => renderHome());
+  router.addRoute('/products', () => renderCatalog());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
-  router.start();
+  header.viewModel.onLoginClick = () => router.navigate('/login');
+  header.viewModel.onLogoClick = () => router.navigate('/');
 
-  const footer = new FooterView();
-  footer.mount(app);
+  authStore.subscribe((store) => {
+    header.viewModel.setUser(store.getUser());
+  });
+
+  router.start();
 }
 
 // eslint-disable-next-line no-console

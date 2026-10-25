@@ -37,12 +37,16 @@ describe('CatalogView', () => {
     }
   });
 
-  it('should mount header, section, title, grid, pagination, and footer', () => {
+  it('should mount only a catalog section (no header, footer, or nested main) into the container', () => {
     const view = new CatalogView(mockViewModel);
     view.mount(container);
 
-    expect(container.querySelector('.q-header')).not.toBeNull();
-    expect(container.querySelector('main.q-main')).not.toBeNull();
+    // Content-only: no shell elements
+    expect(container.querySelector('header, .q-header')).toBeNull();
+    expect(container.querySelector('footer, .q-footer')).toBeNull();
+    expect(container.querySelector('main')).toBeNull();
+
+    // Catalog content is present
     expect(container.querySelector('section.q-catalog')).not.toBeNull();
 
     const title = container.querySelector('.q-catalog__title');
@@ -55,9 +59,16 @@ describe('CatalogView', () => {
 
     expect(container.querySelector('#q-catalog-grid')).not.toBeNull();
     expect(container.querySelector('.q-catalog__pagination')).not.toBeNull();
-    expect(container.querySelector('.q-footer')).not.toBeNull();
 
     expect(mockViewModel.loadProducts).toHaveBeenCalledWith(1);
+    view.destroy();
+  });
+
+  it('should not mutate container.className', () => {
+    container.className = 'original-class';
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+    expect(container.className).toBe('original-class');
     view.destroy();
   });
 
@@ -206,7 +217,7 @@ describe('CatalogView', () => {
     });
   });
 
-  it('should clean up subscriptions and elements on destroy', () => {
+  it('should remove the catalog section from DOM and clean up subscriptions on destroy', () => {
     const view = new CatalogView(mockViewModel);
     view.mount(container);
 
