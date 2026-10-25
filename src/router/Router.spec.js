@@ -86,4 +86,64 @@ describe('Router', () => {
     router.start();
     expect(resolved).toBe(true);
   });
+
+  it('should intercept click on data-route anchor and navigate', () => {
+    const originalHref = window.location.href;
+    const a = document.createElement('a');
+    a.href = '/products';
+    a.dataset.route = '';
+    a.textContent = 'x';
+    document.body.appendChild(a);
+
+    const handler = jasmine.createSpy('handler');
+    router.addRoute('/products', handler);
+    router.start();
+
+    a.click();
+
+    expect(window.location.pathname).toBe('/products');
+    expect(handler).toHaveBeenCalled();
+
+    a.remove();
+    window.history.pushState({}, '', originalHref);
+  });
+
+  it('should ignore clicks on non-data-route anchors', () => {
+    const a = document.createElement('a');
+    a.href = '/about';
+    a.textContent = 'x';
+    a.addEventListener('click', (e) => e.preventDefault());
+    document.body.appendChild(a);
+
+    const handler = jasmine.createSpy('handler');
+    router.addRoute('/about', handler);
+    router.start();
+
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    a.dispatchEvent(ev);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    a.remove();
+  });
+
+  it('should ignore clicks on external data-route anchors', () => {
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.dataset.route = '';
+    a.textContent = 'x';
+    a.addEventListener('click', (e) => e.preventDefault());
+    document.body.appendChild(a);
+
+    const handler = jasmine.createSpy('handler');
+    router.addRoute('/example', handler);
+    router.start();
+
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+    a.dispatchEvent(ev);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    a.remove();
+  });
 });

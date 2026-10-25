@@ -11,6 +11,7 @@ export class Router {
     this.root = options.root || '/';
     this.currentPath = null;
     this._onPopState = this._handlePopState.bind(this);
+    this._onDocumentClick = this._handleClick.bind(this);
     this._isStarted = false;
   }
 
@@ -60,11 +61,12 @@ export class Router {
   }
 
   /**
-   * Starts listening to browser history popstate events.
+   * Starts listening to browser history popstate and document link click events.
    */
   start() {
     if (!this._isStarted) {
       window.addEventListener('popstate', this._onPopState);
+      document.addEventListener('click', this._onDocumentClick);
       this._isStarted = true;
     }
     this.resolve();
@@ -76,9 +78,31 @@ export class Router {
   destroy() {
     if (this._isStarted) {
       window.removeEventListener('popstate', this._onPopState);
+      document.removeEventListener('click', this._onDocumentClick);
       this._isStarted = false;
     }
     this.routes.clear();
+  }
+
+  /**
+   * Intercepts clicks on anchors marked with `data-route` and performs
+   * an SPA navigation instead of a full page reload.
+   *
+   * @param {MouseEvent} event
+   * @private
+   */
+  _handleClick(event) {
+    const anchor = event.target.closest('a[data-route]');
+    if (!anchor) return;
+    // External links (target=_blank, mailto:, tel:, absolute URLs) opt out.
+    if (anchor.target === '_blank' || anchor.hostname !== window.location.hostname) {
+      return;
+    }
+    event.preventDefault();
+    const path = anchor.getAttribute('href');
+    if (path) {
+      this.navigate(path);
+    }
   }
 
   /**
