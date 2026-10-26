@@ -77,10 +77,10 @@ describe('AuthView', () => {
 
     // Copy assertions
     const title = registerPanel.querySelector('.q-auth-title');
-    expect(title.textContent).toBe('Crea tu cuenta y compra con propósito');
+    expect(title.textContent).toBe('Crear una cuenta');
 
     const subtitle = registerPanel.querySelector('.q-auth-subtitle');
-    expect(subtitle.textContent).toBe("Únete a la comunidad de Q'atu");
+    expect(subtitle.textContent).toBe("Únete a la comunidad de Q'atu.");
 
     const socialBtn = registerPanel.querySelector('.q-google-register-btn');
     expect(socialBtn.textContent).toContain('Continuar con Google');

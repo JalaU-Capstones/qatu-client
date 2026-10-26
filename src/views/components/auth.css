@@ -258,7 +258,7 @@
   font-size: 0.875rem;
   border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background-color: var(--q-bg-page);
+  background-color: var(--q-bg-surface);
   color: var(--q-fg-primary);
   box-sizing: border-box;
   transition:

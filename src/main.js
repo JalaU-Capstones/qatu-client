@@ -131,6 +131,7 @@ if (app) {
 
   // Wire logout: clear session and redirect to /login
   header.viewModel.onLogoutClick = () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
     authStore.clearSession();
     router.navigate('/login');
   };

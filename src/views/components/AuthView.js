@@ -1,22 +1,7 @@
-import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { AuthViewModel } from '../../viewmodels/components/AuthViewModel.js';
 import { AuthMarketingView } from './AuthMarketingView.js';
 
 const QATU_LOGO_URL = new URL('../../assets/icons/qatu-logo.svg', import.meta.url).href;
-
-// Ensure returnTo is preserved when logging out from protected / content routes
-if (typeof document !== 'undefined') {
-  document.addEventListener(
-    'click',
-    (e) => {
-      const logoutBtn = e.target?.closest?.('.q-header-logout-btn');
-      if (logoutBtn) {
-        authRedirectStore.setReturnTo(window.location.pathname);
-      }
-    },
-    true
-  );
-}
 
 /**
  * View component for Authentication (Login and Register).
@@ -87,8 +72,8 @@ export class AuthView {
         <div class="q-auth-brand">
           <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
-        <h2 class="q-auth-title">Iniciar Sesión</h2>
-        <p class="q-auth-subtitle">Ingresa a tu cuenta para continuar comprando</p>
+        <h2 class="q-auth-title">Iniciar sesión</h2>
+        <p class="q-auth-subtitle">Ingresa tus datos para continuar.</p>
       </div>
 
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
@@ -219,8 +204,8 @@ export class AuthView {
         <div class="q-auth-brand">
           <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
-        <h2 class="q-auth-title">Crea tu cuenta y compra con propósito</h2>
-        <p class="q-auth-subtitle">Únete a la comunidad de Q'atu</p>
+        <h2 class="q-auth-title">Crear una cuenta</h2>
+        <p class="q-auth-subtitle">Únete a la comunidad de Q'atu.</p>
       </div>
 
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
