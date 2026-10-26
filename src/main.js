@@ -18,6 +18,7 @@ import './views/pages/catalog.css';
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
 import { authStore } from './store/authStore.js';
+import { themeStore } from './store/themeStore.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -28,6 +29,7 @@ const app = document.getElementById('app');
 
 if (app) {
   app.className = 'q-app';
+  themeStore.init();
 
   const authApi = new AuthApi();
 
@@ -38,6 +40,11 @@ if (app) {
   const header = new HeaderView();
   header.viewModel.setUser(authStore.getUser());
   header.mount(app);
+  themeStore.subscribe((store) => {
+    header.viewModel.setTheme(store.getResolved());
+  });
+  header.viewModel.setTheme(themeStore.getResolved());
+  header.viewModel.onThemeToggleClick = () => themeStore.cycle();
 
   const mainEl = document.createElement('main');
   mainEl.className = 'q-main';

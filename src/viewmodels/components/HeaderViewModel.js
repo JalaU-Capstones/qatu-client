@@ -28,11 +28,13 @@ export class HeaderViewModel {
     this.loginText = options.loginText || 'Iniciar sesión';
     this.loginHref = options.loginHref || '/login';
     this.user = options.user || null;
+    this.theme = options.theme || 'system';
     this.onLoginClick = options.onLoginClick || null;
     this.onCartClick = options.onCartClick || null;
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
+    this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.isDropdownOpen = false;
     this._listeners = new Set();
   }
@@ -56,6 +58,26 @@ export class HeaderViewModel {
     if (this.cartCount !== count) {
       this.cartCount = count;
       this._notify();
+    }
+  }
+
+  /**
+   * Sets the active theme ('light' | 'dark' | 'system').
+   * @param {string} theme
+   */
+  setTheme(theme) {
+    if (this.theme !== theme) {
+      this.theme = theme;
+      this._notify();
+    }
+  }
+
+  /**
+   * Triggers the theme toggle action.
+   */
+  triggerThemeToggle() {
+    if (typeof this.onThemeToggleClick === 'function') {
+      this.onThemeToggleClick();
     }
   }
 

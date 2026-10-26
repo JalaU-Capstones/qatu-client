@@ -102,6 +102,12 @@ a.q-header-brand {
   stroke: var(--q-fg-primary, #171717);
 }
 
+.q-header-theme-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--q-fg-primary);
+}
+
 .q-header-cart-badge {
   position: absolute;
   top: -4px;
