@@ -22,6 +22,15 @@
   flex-direction: column;
 }
 
+.q-featured-stores__eyebrow {
+  margin: 0 0 4px 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--q-accent-fg);
+}
+
 .q-featured-stores__title {
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-2xl, 24) * 1px);
@@ -84,30 +93,39 @@ a.q-featured-stores__see-all:hover {
 
 .q-store-card:hover {
   border-color: var(--q-border-strong, #171717);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--q-shadow-sm);
 }
 
 .q-store-card__avatar {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background-color: var(--q-bg-surface, #f9fafb);
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: calc(var(--q-geist-space-4x, 16) * 1px);
-  color: var(--q-fg-muted, #999999);
-  font-size: calc(var(--q-text-lg, 18) * 1px);
+  color: var(--q-bg-page);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.9375rem;
+  font-weight: var(--q-font-weight-bold, 700);
+  letter-spacing: 0.02em;
   user-select: none;
 }
 
-.q-store-card__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-  display: block;
+.q-store-card__initials {
+  line-height: 1;
+}
+
+.q-store-card--pink .q-store-card__avatar {
+  background-color: var(--q-cat-pink);
+}
+
+.q-store-card--blue .q-store-card__avatar {
+  background-color: var(--q-cat-blue);
+}
+
+.q-store-card--purple .q-store-card__avatar {
+  background-color: var(--q-cat-purple);
 }
 
 .q-store-card__name {
@@ -137,7 +155,9 @@ a.q-featured-stores__see-all:hover {
 }
 
 .q-store-card__star {
-  color: var(--q-color-warning, #f5a623);
+  display: inline-flex;
+  align-items: center;
+  color: var(--q-color-warning);
 }
 
 a.q-store-card__cta {
@@ -164,8 +184,8 @@ a.q-store-card__cta {
 }
 
 a.q-store-card__cta:hover {
-  background-color: var(--q-fg-primary, #171717);
-  color: #ffffff !important;
+  background-color: var(--q-fg-primary);
+  color: var(--q-bg-page) !important;
 }
 
 a.q-store-card__cta:focus-visible {

@@ -89,6 +89,21 @@ export class HeaderView {
 
     actionsWrapper.appendChild(cartBtn);
 
+    // Theme toggle button
+    const themeBtn = document.createElement('button');
+    themeBtn.type = 'button';
+    themeBtn.className = 'q-header-icon-btn q-header-theme-btn';
+    themeBtn.setAttribute('aria-label', 'Cambiar tema');
+    themeBtn.innerHTML = this._getThemeIconSvg(this.viewModel.theme);
+
+    themeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerThemeToggle();
+    });
+
+    actionsWrapper.appendChild(themeBtn);
+
     // User authentication: Login Button or Circular User Profile Avatar
     if (this.viewModel.user) {
       actionsWrapper.appendChild(this._createUserAvatar(this.viewModel.user));
@@ -110,6 +125,43 @@ export class HeaderView {
     document.addEventListener('click', this._handleDocumentClick);
 
     return this.element;
+  }
+
+  /**
+   * Returns the SVG markup for the theme icon.
+   * @param {string} theme
+   * @returns {string}
+   * @private
+   */
+  _getThemeIconSvg(theme) {
+    if (theme === 'dark') {
+      return `
+        <svg class="q-header-theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon="moon">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      `;
+    }
+    if (theme === 'system') {
+      return `
+        <svg class="q-header-theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon="system">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"></path>
+        </svg>
+      `;
+    }
+    return `
+      <svg class="q-header-theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icon="sun">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+    `;
   }
 
   /**
@@ -240,6 +292,11 @@ export class HeaderView {
       } else if (badge) {
         badge.remove();
       }
+    }
+
+    const themeBtn = this.element.querySelector('.q-header-theme-btn');
+    if (themeBtn) {
+      themeBtn.innerHTML = this._getThemeIconSvg(vm.theme);
     }
 
     const actionsWrapper = this.element.querySelector('.q-header-actions');

@@ -9,9 +9,9 @@ describe('FeaturedProductsViewModel', () => {
   });
 
   it('should initialize with the section copy from the design', () => {
-    expect(viewModel.eyebrow).toBe('PRODUCTOS DESTACADOS');
+    expect(viewModel.eyebrow).toBe('Seleccionados para ti');
     expect(viewModel.title).toBe('Destacados de la semana');
-    expect(viewModel.subtitle).toBe('Seleccionados para ti');
+    expect(viewModel.subtitle).toBe('');
     expect(viewModel.link.label).toBe('Ver catálogo →');
     expect(viewModel.addToCartLabel).toBe('Add to cart');
   });
@@ -125,6 +125,55 @@ describe('FeaturedProductsViewModel', () => {
       expect(viewModel.getRatingAccessibleLabel(product)).toBe('Calificación 4.9 de 5, 24 reseñas');
       expect(viewModel.getOriginLabel(product)).toBe('Tejidos Illimani · Bolivia');
       expect(viewModel.getOriginLabel({ seller: 'Solo tienda' })).toBe('Solo tienda');
+    });
+  });
+
+  describe('card helpers', () => {
+    it('getAddButtonLabel should return "Añadir"', () => {
+      expect(viewModel.getAddButtonLabel()).toBe('Añadir');
+    });
+
+    describe('getStarsFilled', () => {
+      it('should return 5 booleans', () => {
+        const result = viewModel.getStarsFilled({ rating: 3 });
+        expect(result.length).toBe(5);
+      });
+
+      it('should fill the first N stars for a rating of N', () => {
+        expect(viewModel.getStarsFilled({ rating: 4 })).toEqual([true, true, true, true, false]);
+      });
+
+      it('should round 4.5 to 5 filled stars', () => {
+        expect(viewModel.getStarsFilled({ rating: 4.5 })).toEqual([true, true, true, true, true]);
+      });
+
+      it('should return all false for a rating of 0', () => {
+        expect(viewModel.getStarsFilled({ rating: 0 })).toEqual([
+          false,
+          false,
+          false,
+          false,
+          false,
+        ]);
+      });
+    });
+
+    describe('isNewProduct', () => {
+      it('should honour an explicit product.isNew = true', () => {
+        const product = { id: 'x', isNew: true };
+        expect(viewModel.isNewProduct(product)).toBe(true);
+      });
+
+      it('should honour an explicit product.isNew = false', () => {
+        const product = { id: viewModel.products[0].id, isNew: false };
+        expect(viewModel.isNewProduct(product)).toBe(false);
+      });
+
+      it('should fall back to index < 2 when isNew is not set', () => {
+        expect(viewModel.isNewProduct(viewModel.products[0])).toBe(true);
+        expect(viewModel.isNewProduct(viewModel.products[1])).toBe(true);
+        expect(viewModel.isNewProduct(viewModel.products[2])).toBe(false);
+      });
     });
   });
 

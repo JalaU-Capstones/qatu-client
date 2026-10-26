@@ -20,6 +20,25 @@
   --q-color-warning: var(--q-ds-amber-600);
   --q-color-error: var(--q-ds-red-600);
   --q-color-focus: var(--q-ds-blue-900);
+
+  /* ── Accent, ambient, elevation (added for visual phase) ─────── */
+  --q-accent: var(--q-ds-pink-800);
+  --q-accent-hover: var(--q-ds-pink-700);
+  --q-accent-fg: var(--q-ds-pink-800);
+  --q-ambient-pink: rgba(236, 72, 153, 0.25);
+  --q-ambient-cyan: rgba(34, 211, 238, 0.2);
+  --q-ambient-blur: 80px;
+  --q-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --q-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --q-shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.08);
+
+  /* ── Category accent colors ─────────────────────────────────── */
+  --q-cat-pink: var(--q-ds-pink-800);
+  --q-cat-amber: var(--q-ds-amber-600);
+  --q-cat-teal: var(--q-ds-teal-600);
+  --q-cat-purple: var(--q-ds-purple-600);
+  --q-cat-green: var(--q-ds-green-600);
+  --q-cat-blue: var(--q-ds-blue-600);
 }
 
 [data-theme='dark'] {
@@ -38,4 +57,23 @@
   --q-color-warning: var(--q-ds-amber-600);
   --q-color-error: var(--q-ds-red-600);
   --q-color-focus: var(--q-ds-blue-900);
+
+  /* ── Accent, ambient, elevation (added for visual phase) ─────── */
+  --q-accent: var(--q-ds-pink-700);
+  --q-accent-hover: var(--q-ds-pink-600);
+  --q-accent-fg: var(--q-ds-pink-900);
+  --q-ambient-pink: rgba(236, 72, 153, 0.1);
+  --q-ambient-cyan: rgba(34, 211, 238, 0.08);
+  --q-ambient-blur: 80px;
+  --q-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --q-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --q-shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
+
+  /* ── Category accent colors ─────────────────────────────────── */
+  --q-cat-pink: var(--q-ds-pink-700);
+  --q-cat-amber: var(--q-ds-amber-700);
+  --q-cat-teal: var(--q-ds-teal-700);
+  --q-cat-purple: var(--q-ds-purple-700);
+  --q-cat-green: var(--q-ds-green-700);
+  --q-cat-blue: var(--q-ds-blue-700);
 }

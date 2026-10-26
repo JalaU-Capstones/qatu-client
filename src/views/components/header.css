@@ -102,6 +102,12 @@ a.q-header-brand {
   stroke: var(--q-fg-primary, #171717);
 }
 
+.q-header-theme-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--q-fg-primary);
+}
+
 .q-header-cart-badge {
   position: absolute;
   top: -4px;
@@ -145,7 +151,7 @@ a.q-header-login-btn {
 button.q-header-login-btn:hover,
 a.q-header-login-btn:hover {
   background-color: var(--q-fg-primary, #171717);
-  color: #ffffff !important;
+  color: var(--q-bg-page) !important;
 }
 
 /* Circular User Profile Avatar */
@@ -220,9 +226,9 @@ a.q-header-login-btn:hover {
   right: 0;
   top: calc(100% + 0.5rem);
   min-width: 14rem;
-  background: #fff;
+  background: var(--q-bg-elevated);
   border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--q-shadow-md);
   padding: 0.5rem;
   z-index: 50;
 }
@@ -235,7 +241,7 @@ a.q-header-login-btn:hover {
   display: flex;
   flex-direction: column;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--q-border-default);
   margin-bottom: 0.25rem;
 }
 
@@ -245,7 +251,7 @@ a.q-header-login-btn:hover {
 
 .q-header-dropdown-email {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--q-fg-muted);
 }
 
 .q-header-dropdown-item {
@@ -260,5 +266,5 @@ a.q-header-login-btn:hover {
 }
 
 .q-header-dropdown-item:hover {
-  background: #f5f5f5;
+  background: var(--q-bg-surface);
 }

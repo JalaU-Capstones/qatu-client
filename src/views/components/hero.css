@@ -10,32 +10,6 @@
   overflow: hidden;
 }
 
-/* Decorative background blobs */
-.q-hero__bg-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.q-hero__bg-blob--pink {
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.25), transparent 70%);
-  top: -200px;
-  left: -200px;
-}
-
-.q-hero__bg-blob--cyan {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(34, 211, 238, 0.2), transparent 70%);
-  bottom: -180px;
-  right: -180px;
-}
-
 /* Inner layout container */
 .q-hero__inner {
   position: relative;
@@ -70,6 +44,10 @@
   line-height: var(--q-leading-tight, 1.05);
   color: var(--q-fg-primary, #171717);
   margin: calc(var(--q-geist-space-3x, 12) * 1px) 0;
+}
+
+.q-hero__title-accent {
+  color: var(--q-accent);
 }
 
 .q-hero__subtitle {
@@ -117,8 +95,8 @@
   padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
   border: none;
   border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background: var(--q-fg-primary, #171717);
-  color: var(--q-bg-page, #ffffff);
+  background: var(--q-accent);
+  color: var(--q-bg-page);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-base, 16) * 1px);
   font-weight: var(--q-font-weight-semibold, 600);
@@ -132,12 +110,12 @@
 }
 
 .q-hero__search-button:hover {
-  background: var(--q-color-primary, #0070f3);
-  color: #ffffff;
+  background: var(--q-accent-hover);
+  color: var(--q-bg-page);
 }
 
 .q-hero__search-button:focus-visible {
-  outline: 2px solid var(--q-color-focus, #0070f3);
+  outline: 2px solid var(--q-accent);
   outline-offset: 2px;
 }
 
@@ -278,12 +256,6 @@ a.q-hero__floating-card:focus-visible {
   .q-hero__title {
     font-size: calc(var(--q-text-4xl, 36) * 1px);
   }
-
-  .q-hero__bg-blob--pink,
-  .q-hero__bg-blob--cyan {
-    filter: blur(60px);
-    opacity: 0.3;
-  }
 }
 
 /* Mobile breakpoint */
@@ -311,10 +283,5 @@ a.q-hero__floating-card:focus-visible {
 
   .q-hero__visual {
     display: none;
-  }
-
-  .q-hero__bg-blob {
-    opacity: 0.2;
-    filter: blur(40px);
   }
 }

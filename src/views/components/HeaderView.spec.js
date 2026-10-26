@@ -230,4 +230,48 @@ describe('HeaderView', () => {
     expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
   });
+
+  it('renders .q-header-theme-btn between cart and login', () => {
+    const el = view.render();
+    const actions = el.querySelector('.q-header-actions');
+    expect(actions).not.toBeNull();
+
+    const cartBtn = actions.querySelector('.q-header-cart-btn');
+    const themeBtn = actions.querySelector('.q-header-theme-btn');
+    const loginBtn = actions.querySelector('.q-header-login-btn');
+
+    expect(cartBtn).not.toBeNull();
+    expect(themeBtn).not.toBeNull();
+    expect(loginBtn).not.toBeNull();
+
+    expect(cartBtn.nextElementSibling).toBe(themeBtn);
+    expect(themeBtn.nextElementSibling).toBe(loginBtn);
+  });
+
+  it('clicking .q-header-theme-btn calls viewModel.triggerThemeToggle()', () => {
+    spyOn(viewModel, 'triggerThemeToggle');
+    const el = view.render();
+    const themeBtn = el.querySelector('.q-header-theme-btn');
+    expect(themeBtn).not.toBeNull();
+
+    themeBtn.click();
+    expect(viewModel.triggerThemeToggle).toHaveBeenCalled();
+  });
+
+  it('_update() swaps the SVG when vm.theme changes', () => {
+    const el = view.render();
+    const themeBtn = el.querySelector('.q-header-theme-btn');
+
+    viewModel.setTheme('light');
+    let svg = themeBtn.querySelector('svg.q-header-theme-icon');
+    expect(svg.getAttribute('data-icon')).toBe('sun');
+
+    viewModel.setTheme('dark');
+    svg = themeBtn.querySelector('svg.q-header-theme-icon');
+    expect(svg.getAttribute('data-icon')).toBe('moon');
+
+    viewModel.setTheme('system');
+    svg = themeBtn.querySelector('svg.q-header-theme-icon');
+    expect(svg.getAttribute('data-icon')).toBe('system');
+  });
 });

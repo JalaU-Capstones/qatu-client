@@ -1,11 +1,11 @@
 import { AuthViewModel } from '../../viewmodels/components/AuthViewModel.js';
+import { AuthMarketingView } from './AuthMarketingView.js';
 
 const QATU_LOGO_URL = new URL('../../assets/icons/qatu-logo.svg', import.meta.url).href;
 
 /**
  * View component for Authentication (Login and Register).
- * Provides a dual-panel sliding layout with smooth transitions between
- * Login (left side) and Register (right side).
+ * 2-column layout: marketing panel on left (desktop), single form card on right.
  */
 export class AuthView {
   /**
@@ -14,6 +14,7 @@ export class AuthView {
   constructor(viewModel = new AuthViewModel()) {
     this.viewModel = viewModel;
     this.element = null;
+    this._marketing = null;
     this._unsubscribe = null;
   }
 
@@ -26,31 +27,29 @@ export class AuthView {
       return this.element;
     }
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'q-auth-wrapper';
+    // Outer page wrapper — 2 columns on desktop, 1 column on mobile
+    const page = document.createElement('div');
+    page.className = 'q-auth-page';
+
+    // LEFT COLUMN — marketing panel (AuthMarketingView from FE-09c-1)
+    this._marketing = new AuthMarketingView({ mode: this.viewModel.mode });
+    page.appendChild(this._marketing.render());
+
+    // RIGHT COLUMN — form panel
+    const formPanel = document.createElement('section');
+    formPanel.className = 'q-auth-form-panel';
 
     const card = document.createElement('div');
     card.className = 'q-auth-card q-shadow-lg';
-    if (this.viewModel.isRegisterMode) {
-      card.classList.add('is-register');
-    }
     card.setAttribute('data-mode', this.viewModel.mode);
 
-    // 1. Login Panel (Left)
-    const loginPanel = this._createLoginPanel();
+    card.appendChild(this._createLoginPanel());
+    card.appendChild(this._createRegisterPanel());
 
-    // 2. Register Panel (Right)
-    const registerPanel = this._createRegisterPanel();
+    formPanel.appendChild(card);
+    page.appendChild(formPanel);
 
-    // 3. Sliding Overlay Container (Center transition)
-    const overlayContainer = this._createOverlayContainer();
-
-    card.appendChild(loginPanel);
-    card.appendChild(registerPanel);
-    card.appendChild(overlayContainer);
-    wrapper.appendChild(card);
-
-    this.element = wrapper;
+    this.element = page;
 
     this._unsubscribe = this.viewModel.subscribe((vm) => {
       this._update(vm);
@@ -66,15 +65,15 @@ export class AuthView {
    */
   _createLoginPanel() {
     const panel = document.createElement('div');
-    panel.className = 'q-auth-form-panel q-auth-login-panel';
+    panel.className = 'q-auth-panel q-auth-login-panel';
 
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
           <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
-        <h2 class="q-auth-title">Iniciar Sesión</h2>
-        <p class="q-auth-subtitle">Ingresa a tu cuenta para continuar comprando</p>
+        <h2 class="q-auth-title">Iniciar sesión</h2>
+        <p class="q-auth-subtitle">Ingresa tus datos para continuar.</p>
       </div>
 
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
@@ -141,11 +140,6 @@ export class AuthView {
           ¿No tienes una cuenta?
           <button type="button" class="q-auth-link q-login-to-register">Regístrate</button>
         </p>
-
-        <p class="q-auth-mobile-switch">
-          ¿No tienes una cuenta?
-          <button type="button" class="q-mobile-to-register">Regístrate</button>
-        </p>
       </form>
     `;
 
@@ -191,12 +185,6 @@ export class AuthView {
       });
     }
 
-    const mobileToRegister = panel.querySelector('.q-mobile-to-register');
-    mobileToRegister.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.viewModel.setMode('register');
-    });
-
     return panel;
   }
 
@@ -209,15 +197,15 @@ export class AuthView {
    */
   _createRegisterPanel() {
     const panel = document.createElement('div');
-    panel.className = 'q-auth-form-panel q-auth-register-panel';
+    panel.className = 'q-auth-panel q-auth-register-panel';
 
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
           <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
-        <h2 class="q-auth-title">Crea tu cuenta y compra con propósito</h2>
-        <p class="q-auth-subtitle">Únete a la comunidad de Q'atu</p>
+        <h2 class="q-auth-title">Crear una cuenta</h2>
+        <p class="q-auth-subtitle">Únete a la comunidad de Q'atu.</p>
       </div>
 
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
@@ -324,11 +312,6 @@ export class AuthView {
           ¿Ya tienes una cuenta?
           <button type="button" class="q-auth-link q-register-to-login">Iniciar sesión</button>
         </p>
-
-        <p class="q-auth-mobile-switch">
-          ¿Ya tienes una cuenta?
-          <button type="button" class="q-mobile-to-login">Iniciar sesión</button>
-        </p>
       </form>
     `;
 
@@ -383,59 +366,7 @@ export class AuthView {
       });
     }
 
-    const mobileToLogin = panel.querySelector('.q-mobile-to-login');
-    mobileToLogin.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.viewModel.setMode('login');
-    });
-
     return panel;
-  }
-
-  /**
-   * Creates the sliding overlay container and panels.
-   * @returns {HTMLElement}
-   * @private
-   */
-  _createOverlayContainer() {
-    const container = document.createElement('div');
-    container.className = 'q-auth-overlay-container';
-
-    container.innerHTML = `
-      <div class="q-auth-overlay">
-        <!-- Left Panel: Prompt to switch to Login (visible when overlay is on the left) -->
-        <div class="q-auth-overlay-panel q-auth-overlay-left">
-          <h3>¡Bienvenido de nuevo!</h3>
-          <p>Para mantenerte conectado con nosotros, por favor inicia sesión con tus datos personales.</p>
-          <button type="button" class="q-auth-ghost-btn q-switch-to-login-btn">
-            Iniciar Sesión
-          </button>
-        </div>
-
-        <!-- Right Panel: Prompt to switch to Register (visible when overlay is on the right) -->
-        <div class="q-auth-overlay-panel q-auth-overlay-right">
-          <h3>¿Nuevo en Q'atu?</h3>
-          <p>Crea tu cuenta hoy y descubre miles de productos únicos y los mejores comercios de tu zona.</p>
-          <button type="button" class="q-auth-ghost-btn q-switch-to-register-btn">
-            Registrarse
-          </button>
-        </div>
-      </div>
-    `;
-
-    const switchToLoginBtn = container.querySelector('.q-switch-to-login-btn');
-    switchToLoginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.viewModel.setMode('login');
-    });
-
-    const switchToRegisterBtn = container.querySelector('.q-switch-to-register-btn');
-    switchToRegisterBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.viewModel.setMode('register');
-    });
-
-    return container;
   }
 
   /**
@@ -446,17 +377,18 @@ export class AuthView {
   _update(vm) {
     if (!this.element) return;
 
+    // Sync the marketing panel's title with the current mode
+    if (this._marketing) {
+      this._marketing.setMode(vm.mode);
+    }
+
+    // Toggle which form panel is visible
     const card = this.element.querySelector('.q-auth-card');
     if (card) {
       card.setAttribute('data-mode', vm.mode);
-      if (vm.isRegisterMode) {
-        card.classList.add('is-register');
-      } else {
-        card.classList.remove('is-register');
-      }
     }
 
-    // Update alerts in both panels
+    // Alerts — same as before
     const errorAlerts = this.element.querySelectorAll('.q-auth-alert-error');
     errorAlerts.forEach((alert) => {
       if (vm.errorMessage) {
@@ -479,7 +411,7 @@ export class AuthView {
       }
     });
 
-    // Update buttons loading state
+    // Submit buttons loading state — same as before
     const submitBtns = this.element.querySelectorAll('.q-auth-submit-btn');
     submitBtns.forEach((btn) => {
       btn.disabled = vm.isLoading;
@@ -504,6 +436,10 @@ export class AuthView {
     if (typeof this._unsubscribe === 'function') {
       this._unsubscribe();
       this._unsubscribe = null;
+    }
+    if (this._marketing) {
+      this._marketing.destroy();
+      this._marketing = null;
     }
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);

@@ -38,17 +38,24 @@ export class FeaturedStoresView {
     const titleGroup = document.createElement('div');
     titleGroup.className = 'q-featured-stores__title-group';
 
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'q-featured-stores__eyebrow';
+    eyebrow.textContent = this.viewModel.eyebrow;
+
     const title = document.createElement('h2');
     title.id = 'q-featured-stores-title';
     title.className = 'q-featured-stores__title';
     title.textContent = this.viewModel.title;
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-featured-stores__subtitle';
-    subtitle.textContent = this.viewModel.subtitle;
-
+    titleGroup.appendChild(eyebrow);
     titleGroup.appendChild(title);
-    titleGroup.appendChild(subtitle);
+
+    if (this.viewModel.subtitle) {
+      const subtitle = document.createElement('p');
+      subtitle.className = 'q-featured-stores__subtitle';
+      subtitle.textContent = this.viewModel.subtitle;
+      titleGroup.appendChild(subtitle);
+    }
 
     const seeAll = document.createElement('a');
     seeAll.className = 'q-featured-stores__see-all';
@@ -93,17 +100,18 @@ export class FeaturedStoresView {
       item.className = 'q-featured-stores__item';
 
       const card = document.createElement('div');
-      card.className = 'q-store-card';
+      card.className = `q-store-card q-store-card--${store.accent || 'pink'}`;
 
+      // Colored avatar with initials
       const avatar = document.createElement('div');
       avatar.className = 'q-store-card__avatar';
       avatar.setAttribute('aria-hidden', 'true');
 
-      const img = document.createElement('img');
-      img.src = 'https://placehold.co/100x100/F9FAFB/9CA3AF?text=Tienda';
-      img.alt = '';
-      img.loading = 'lazy';
-      avatar.appendChild(img);
+      const initials = document.createElement('span');
+      initials.className = 'q-store-card__initials';
+      initials.textContent = store.initials || '?';
+
+      avatar.appendChild(initials);
 
       const name = document.createElement('h3');
       name.className = 'q-store-card__name';
@@ -113,23 +121,27 @@ export class FeaturedStoresView {
       category.className = 'q-store-card__category';
       category.textContent = store.category;
 
+      // Rating with proper star SVG
       const rating = document.createElement('div');
       rating.className = 'q-store-card__rating';
 
       const star = document.createElement('span');
       star.className = 'q-store-card__star';
       star.setAttribute('aria-hidden', 'true');
-      star.textContent = '★';
+      star.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+
+      const ratingText = document.createElement('span');
+      ratingText.textContent = ` ${store.rating} · ${store.reviewCount} reseñas`;
 
       rating.appendChild(star);
-      rating.appendChild(
-        document.createTextNode(` ${store.rating} · ${store.reviewCount} reseñas`)
-      );
+      rating.appendChild(ratingText);
 
       const cta = document.createElement('a');
       cta.className = 'q-store-card__cta';
       cta.href = store.href;
-      cta.textContent = 'Visit store';
+      cta.dataset.route = '';
+      cta.textContent = 'Ver tienda';
       cta.addEventListener('click', (e) => {
         e.preventDefault();
       });

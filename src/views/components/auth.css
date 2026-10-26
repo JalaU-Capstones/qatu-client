@@ -3,211 +3,137 @@
  * Fully aligned with Qatu design tokens and semantic variables
  */
 
-.q-auth-wrapper {
+/* ─── Auth page layout (2-column: marketing + form) ─────────── */
+
+.q-auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: calc(100vh - var(--q-header-height, 64) * 1px);
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 16px;
-  box-sizing: border-box;
   background-color: var(--q-bg-page);
 }
 
-/* Outer Card Container */
-.q-auth-card {
-  position: relative;
-  width: 100%;
-  max-width: 920px;
-  min-height: 640px;
-  background-color: var(--q-bg-page);
-  border: 1px solid var(--q-border-default);
-  border-radius: calc(var(--q-radius-xl, 12) * 1px);
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  box-sizing: border-box;
-}
+/* ─── Marketing column ─────────────────────────────────────── */
 
-/* Form Panels */
-.q-auth-form-panel {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  padding: 32px 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-  background-color: var(--q-bg-page);
-  transition:
-    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1),
-    opacity 0.4s ease-in-out,
-    visibility 0.4s;
-  overflow-y: auto;
-}
-
-/* Login panel (left side by default) */
-.q-auth-login-panel {
-  left: 0;
-  z-index: 2;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-/* When in register mode: login panel slides slightly left and fades out */
-.q-auth-card.is-register .q-auth-login-panel {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  z-index: 1;
-  transform: translateX(-20%);
-}
-
-/* Register panel (right side by default, activated in register mode) */
-.q-auth-register-panel {
-  left: 50%;
-  z-index: 1;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateX(20%);
-}
-
-/* When in register mode: register panel slides into position on the right */
-.q-auth-card.is-register .q-auth-register-panel {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  z-index: 2;
-  transform: translateX(0);
-}
-
-/* Sliding Overlay Container (occupies 50% width and translates) */
-.q-auth-overlay-container {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  z-index: 10;
-  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-/* When in register mode: overlay slides from right to left */
-.q-auth-card.is-register .q-auth-overlay-container {
-  transform: translateX(-100%);
-}
-
-/* The wide track inside overlay container (200% width) */
-.q-auth-overlay {
-  position: relative;
-  left: -100%;
-  height: 100%;
-  width: 200%;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.16), transparent 35%),
-    radial-gradient(circle at 85% 80%, rgba(14, 165, 233, 0.14), transparent 35%),
-    linear-gradient(
-      135deg,
-      var(--q-color-gray-950, #030712) 0%,
-      var(--q-color-grey-9, #171717) 50%,
-      var(--q-color-gray-950, #030712) 100%
-    );
-  color: var(--q-ds-white, #ffffff);
-  transform: translateX(0);
-  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
-  display: flex;
-}
-
-/* When in register mode: overlay background slides to show the other panel */
-.q-auth-card.is-register .q-auth-overlay {
-  transform: translateX(50%);
-}
-
-/* Individual Overlay Content Panels */
-.q-auth-overlay-panel {
+.q-auth-marketing {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 64px 48px;
+  overflow: hidden;
+  background-color: var(--q-bg-surface);
+}
+
+.q-auth-marketing__content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+  display: flex;
   flex-direction: column;
-  padding: 0 44px;
-  text-align: center;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  box-sizing: border-box;
-  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+  gap: 16px;
 }
 
-.q-auth-overlay-panel h3 {
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--q-ds-white, #ffffff);
-  margin: 0 0 12px 0;
-}
-
-.q-auth-overlay-panel p {
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--q-color-gray-50, #f9fafb);
-  margin: 0 0 24px 0;
-  max-width: 290px;
-}
-
-/* Left overlay panel (active when overlay moves left in register mode) */
-.q-auth-overlay-left {
-  transform: translateX(-20%);
-}
-
-.q-auth-card.is-register .q-auth-overlay-left {
-  transform: translateX(0);
-}
-
-/* Right overlay panel (active when overlay is on right in login mode) */
-.q-auth-overlay-right {
-  transform: translateX(0);
-}
-
-.q-auth-card.is-register .q-auth-overlay-right {
-  transform: translateX(20%);
-}
-
-/* Ghost button for switching modes on the overlay */
-.q-auth-ghost-btn {
+.q-auth-marketing__brand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: transparent;
-  color: var(--q-ds-white, #ffffff);
-  border: 1.5px solid var(--q-ds-white, #ffffff);
-  border-radius: calc(var(--q-radius-md, 6) * 1px);
-  padding: 10px 28px;
+  padding: 6px 16px;
+  border: 1.5px solid var(--q-fg-primary);
+  border-radius: 6px;
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
-}
-
-.q-auth-ghost-btn:hover {
-  background-color: var(--q-ds-white, #ffffff);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: var(--q-fg-primary);
-  transform: translateY(-1px);
+  width: fit-content;
+  margin-bottom: 8px;
 }
 
-.q-auth-ghost-btn:active {
-  transform: translateY(0);
+.q-auth-marketing__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--q-accent-fg);
+  margin: 0;
+}
+
+.q-auth-marketing__title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary);
+  margin: 0;
+}
+
+.q-auth-marketing__subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--q-fg-secondary);
+  margin: 0;
+}
+
+.q-auth-marketing__features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 16px 0 0 0;
+  padding: 0;
+}
+
+.q-auth-marketing__feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9375rem;
+  color: var(--q-fg-primary);
+}
+
+.q-auth-marketing__check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--q-fg-primary);
+}
+
+/* ─── Form column ─────────────────────────────────────────── */
+
+.q-auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background-color: var(--q-bg-page);
+}
+
+.q-auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px 32px;
+  background-color: var(--q-bg-elevated);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-xl, 12) * 1px);
+  box-sizing: border-box;
+}
+
+/* Panels — only one visible based on data-mode */
+
+.q-auth-panel {
+  display: none;
+  flex-direction: column;
+}
+
+.q-auth-card[data-mode='login'] .q-auth-login-panel {
+  display: flex;
+}
+
+.q-auth-card[data-mode='register'] .q-auth-register-panel {
+  display: flex;
 }
 
 /* Form Elements Styling */
@@ -332,7 +258,7 @@
   font-size: 0.875rem;
   border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background-color: var(--q-bg-page);
+  background-color: var(--q-bg-surface);
   color: var(--q-fg-primary);
   box-sizing: border-box;
   transition:
@@ -385,7 +311,7 @@
 }
 
 .q-auth-link {
-  color: var(--q-color-primary);
+  color: var(--q-accent);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -401,16 +327,16 @@
   text-decoration: underline;
 }
 
-/* Submit Button with primary brand tokens */
+/* Submit Button with accent (pink) brand tokens */
 .q-auth-submit-btn {
   width: 100%;
   height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--q-color-primary);
-  color: var(--q-ds-white, #ffffff);
-  border: 1px solid var(--q-color-primary);
+  background-color: var(--q-accent);
+  color: var(--q-bg-page);
+  border: 1px solid var(--q-accent);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: 0.875rem;
@@ -424,12 +350,12 @@
 }
 
 .q-auth-submit-btn:hover {
-  background-color: var(--q-color-primary-hover);
-  border-color: var(--q-color-primary-hover);
+  background-color: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
 }
 
 .q-auth-submit-btn:active {
-  background-color: var(--q-color-primary-active);
+  background-color: var(--q-accent-hover);
   transform: scale(0.99);
 }
 
@@ -473,27 +399,7 @@
 .q-auth-switch-link button {
   background: none;
   border: none;
-  color: var(--q-color-primary);
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-/* Mobile Switch (hidden on desktop) */
-.q-auth-mobile-switch {
-  display: none;
-  margin-top: 14px;
-  text-align: center;
-  font-size: 0.8125rem;
-  color: var(--q-fg-muted);
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-}
-
-.q-auth-mobile-switch button {
-  background: none;
-  border: none;
-  color: var(--q-color-primary);
+  color: var(--q-accent);
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
@@ -501,40 +407,25 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .q-auth-card {
-    min-height: auto;
-    max-width: 440px;
+@media (max-width: 1023px) {
+  .q-auth-page {
+    grid-template-columns: minmax(0, 1fr);
   }
-
-  .q-auth-overlay-container {
+  .q-auth-marketing {
     display: none;
   }
-
   .q-auth-form-panel {
-    position: relative;
-    width: 100%;
-    left: 0 !important;
-    padding: 28px 20px;
-    display: none;
-    transform: none !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+    min-height: calc(100vh - var(--q-header-height, 64) * 1px);
+    padding: 32px 16px;
   }
+}
 
-  .q-auth-card:not(.is-register) .q-auth-login-panel {
-    display: flex;
+@media (max-width: 767px) {
+  .q-auth-card {
+    padding: 32px 20px;
+    border-radius: calc(var(--q-radius-lg, 8) * 1px);
   }
-
-  .q-auth-card.is-register .q-auth-register-panel {
-    display: flex;
-  }
-
-  .q-auth-mobile-switch {
-    display: block;
-  }
-
-  .q-auth-switch-link {
-    display: none;
+  .q-auth-form-panel {
+    padding: 24px 12px;
   }
 }

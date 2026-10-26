@@ -1,7 +1,5 @@
 import { FeaturedProductsViewModel } from '../../viewmodels/components/FeaturedProductsViewModel.js';
-
-const PLACEHOLDER_MARK_URL = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url)
-  .href;
+import { ProductCardView } from './ProductCardView.js';
 
 /**
  * View component for the Featured products section of the home page.
@@ -98,12 +96,14 @@ export class FeaturedProductsView {
     title.className = 'q-featured-title';
     title.textContent = this.viewModel.title;
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-featured-subtitle';
-    subtitle.textContent = this.viewModel.subtitle;
-
     copy.appendChild(title);
-    copy.appendChild(subtitle);
+
+    if (this.viewModel.subtitle) {
+      const subtitle = document.createElement('p');
+      subtitle.className = 'q-featured-subtitle';
+      subtitle.textContent = this.viewModel.subtitle;
+      copy.appendChild(subtitle);
+    }
 
     const link = document.createElement('a');
     link.className = 'q-featured-link';
@@ -157,104 +157,26 @@ export class FeaturedProductsView {
    * @private
    */
   _renderCard(product) {
-    const card = document.createElement('li');
-    card.className = 'q-product-card';
-    card.dataset.productId = product.id;
-
-    card.appendChild(this._renderImage(product));
-
-    const info = document.createElement('div');
-    info.className = 'q-product-card-info';
-
-    const seller = document.createElement('p');
-    seller.className = 'q-product-card-seller';
-    seller.textContent = this.viewModel.getOriginLabel(product);
-
-    const title = document.createElement('h3');
-    title.className = 'q-product-card-title';
-    title.textContent = product.name;
-
-    const rating = document.createElement('p');
-    rating.className = 'q-product-card-rating';
-
-    const stars = document.createElement('span');
-    stars.setAttribute('aria-hidden', 'true');
-    stars.textContent = '☆☆☆☆☆';
-
-    const ratingValue = document.createElement('span');
-    ratingValue.setAttribute('aria-hidden', 'true');
-    ratingValue.textContent = this.viewModel.getRatingLabel(product);
-
-    const ratingText = document.createElement('span');
-    ratingText.className = 'q-sr-only';
-    ratingText.textContent = this.viewModel.getRatingAccessibleLabel(product);
-
-    rating.appendChild(stars);
-    rating.appendChild(ratingValue);
-    rating.appendChild(ratingText);
-
-    const price = document.createElement('p');
-    price.className = 'q-product-card-price';
-    price.textContent = this.viewModel.getPriceLabel(product);
-
-    const action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'q-product-card-action';
-    action.textContent = this.viewModel.addToCartLabel;
-    action.setAttribute('aria-label', `${this.viewModel.addToCartLabel}: ${product.name}`);
-    action.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.viewModel.addToCart(product.id);
-    });
-
-    info.appendChild(seller);
-    info.appendChild(title);
-    info.appendChild(rating);
-    info.appendChild(price);
-    info.appendChild(action);
-    card.appendChild(info);
-
-    return card;
-  }
-
-  /**
-   * Renders the product photo, or the design placeholder when there is no image yet.
-   * @param {Object} product
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderImage(product) {
-    const image = document.createElement('div');
-    image.className = 'q-product-card-image';
-
-    if (product.imageUrl) {
-      const photo = document.createElement('img');
-      photo.className = 'q-product-card-photo';
-      photo.src = product.imageUrl;
-      photo.alt = product.name;
-      photo.loading = 'lazy';
-      image.appendChild(photo);
-      return image;
-    }
-
-    const mark = document.createElement('span');
-    mark.className = 'q-product-card-mark';
-
-    const markImg = document.createElement('img');
-    markImg.src = PLACEHOLDER_MARK_URL;
-    markImg.alt = '';
-    // Keep the SVG's own root size. The `width`/`height` properties would truncate to integers.
-    markImg.setAttribute('width', '24.7071');
-    markImg.setAttribute('height', '24.7071');
-    mark.appendChild(markImg);
-
-    const label = document.createElement('p');
-    label.className = 'q-product-card-image-label';
-    label.textContent = this.viewModel.imagePlaceholderLabel;
-
-    image.appendChild(mark);
-    image.appendChild(label);
-
-    return image;
+    const cardView = new ProductCardView(
+      {
+        id: product.id,
+        name: product.name,
+        sellerLine: this.viewModel.getOriginLabel(product),
+        priceLabel: this.viewModel.getPriceLabel(product),
+        ratingLabel: this.viewModel.getRatingLabel(product),
+        ratingAccessible: this.viewModel.getRatingAccessibleLabel(product),
+        starsFilled: this.viewModel.getStarsFilled(product),
+        imageUrl: product.imageUrl || null,
+        isNew: this.viewModel.isNewProduct(product),
+      },
+      {
+        variant: 'featured',
+        onAddToCart: (id) => this.viewModel.addToCart(id),
+        onToggleFavorite: () => {
+          // no-op for now
+        },
+      }
+    );
+    return cardView.render();
   }
 }

@@ -147,4 +147,27 @@ describe('HeaderViewModel', () => {
     expect(viewModel.isDropdownOpen).toBe(false);
     expect(viewModel.user).toBeNull();
   });
+
+  it('setTheme("dark") notifies subscribers and updates theme', () => {
+    let notified = false;
+    viewModel.subscribe(() => {
+      notified = true;
+    });
+
+    viewModel.setTheme('dark');
+    expect(viewModel.theme).toBe('dark');
+    expect(notified).toBe(true);
+  });
+
+  it('triggerThemeToggle() calls onThemeToggleClick when defined', () => {
+    let clicked = false;
+    const vm = new HeaderViewModel({
+      onThemeToggleClick: () => {
+        clicked = true;
+      },
+    });
+
+    vm.triggerThemeToggle();
+    expect(clicked).toBe(true);
+  });
 });

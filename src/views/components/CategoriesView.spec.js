@@ -28,7 +28,7 @@ describe('CategoriesView', () => {
     expect(el.querySelector('.q-section-container')).not.toBeNull();
   });
 
-  it('should contain header with title, subtitle, and see-all link', () => {
+  it('should contain header with title, and see-all link; no subtitle by default', () => {
     const el = view.render();
     const title = el.querySelector('#q-categories-title');
     const subtitle = el.querySelector('.q-categories__subtitle');
@@ -36,8 +36,7 @@ describe('CategoriesView', () => {
 
     expect(title).not.toBeNull();
     expect(title.textContent).toBe('Explora por categoría');
-    expect(subtitle).not.toBeNull();
-    expect(subtitle.textContent).toBe('Encuentra tu próximo favorito');
+    expect(subtitle).toBeNull();
     expect(seeAll).not.toBeNull();
     expect(seeAll.textContent).toContain('Ver todas');
     expect(seeAll.getAttribute('href')).toBe('/categorias');
@@ -49,23 +48,42 @@ describe('CategoriesView', () => {
     expect(cards.length).toBe(6);
   });
 
-  it('should render each card with name, placeholder img, and formatted product count', () => {
+  it('should render each card with name, svg icon, and formatted product count', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-category-card');
     const firstCard = cards[0];
 
-    const placeholder = firstCard.querySelector('.q-category-card__image-placeholder');
+    const iconWrapper = firstCard.querySelector('.q-category-card__icon');
     const name = firstCard.querySelector('.q-category-card__name');
     const count = firstCard.querySelector('.q-category-card__count');
 
-    expect(placeholder).not.toBeNull();
-    const img = placeholder.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img.getAttribute('src')).toContain('placehold.co');
+    expect(iconWrapper).not.toBeNull();
+    const svg = iconWrapper.querySelector('svg');
+    expect(svg).not.toBeNull();
     expect(name).not.toBeNull();
     expect(name.textContent).toBe('Textiles y moda');
     expect(count).not.toBeNull();
     expect(count.textContent).toBe('248 productos');
+  });
+
+  it('should apply modifier class q-category-card--{color} matching category.style.color', () => {
+    const el = view.render();
+    const cards = el.querySelectorAll('.q-category-card');
+    cards.forEach((card, idx) => {
+      const cat = viewModel.categories[idx];
+      expect(card.classList.contains(`q-category-card--${cat.style.color}`)).toBe(true);
+    });
+  });
+
+  it('should render eyebrow above the title in DOM order', () => {
+    const el = view.render();
+    const eyebrow = el.querySelector('.q-categories__eyebrow');
+    const title = el.querySelector('.q-categories__title');
+
+    expect(eyebrow).not.toBeNull();
+    expect(eyebrow.textContent).toBe('Encuentra tu próximo favorito');
+    expect(title).not.toBeNull();
+    expect(eyebrow.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('should prevent default navigation on card click', () => {

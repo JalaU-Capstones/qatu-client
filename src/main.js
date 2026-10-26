@@ -11,13 +11,17 @@ import './views/components/hero.css';
 import './views/components/categories.css';
 import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
+import './views/components/shipping-banner.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
+import './views/components/product-card.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
+import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
+import { themeStore } from './store/themeStore.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -28,6 +32,7 @@ const app = document.getElementById('app');
 
 if (app) {
   app.className = 'q-app';
+  themeStore.init();
 
   const authApi = new AuthApi();
 
@@ -38,6 +43,11 @@ if (app) {
   const header = new HeaderView();
   header.viewModel.setUser(authStore.getUser());
   header.mount(app);
+  themeStore.subscribe((store) => {
+    header.viewModel.setTheme(store.getResolved());
+  });
+  header.viewModel.setTheme(themeStore.getResolved());
+  header.viewModel.onThemeToggleClick = () => themeStore.cycle();
 
   const mainEl = document.createElement('main');
   mainEl.className = 'q-main';
@@ -90,7 +100,13 @@ if (app) {
       mode,
       authApi,
       authStore,
-      onNavigate: (path) => router.navigate(path),
+      onNavigate: (path) => {
+        // AuthViewModel calls onNavigate('/') on successful login/registration.
+        // If the user was redirected here from another page, return them there.
+        const returnTo = authRedirectStore.getReturnTo();
+        authRedirectStore.clearReturnTo();
+        router.navigate(returnTo || path || '/');
+      },
       onModeChange: (newMode) => {
         const targetPath = newMode === 'register' ? '/register' : '/login';
         if (window.location.pathname !== targetPath) {
@@ -109,17 +125,22 @@ if (app) {
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
-  header.viewModel.onLoginClick = () => router.navigate('/login');
+  header.viewModel.onLoginClick = () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
+    router.navigate('/login');
+  };
   header.viewModel.onLogoClick = () => router.navigate('/');
 
   // Wire logout: clear session and redirect to /login
   header.viewModel.onLogoutClick = () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
     authStore.clearSession();
     router.navigate('/login');
   };
 
   // Wire 401 expiry event dispatched by apiFetch on expired JWT
   window.addEventListener('qatu:auth-expired', () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
     authStore.clearSession();
     router.navigate('/login');
   });

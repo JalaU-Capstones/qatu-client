@@ -1,0 +1,64 @@
+/**
+ * Shipping banner styling.
+ * Sits between Featured Products and Featured Stores on the Home page.
+ */
+
+.q-shipping-banner {
+  position: relative;
+  margin: calc(var(--q-geist-space-8x, 32) * 1px) 0;
+  padding: calc(var(--q-geist-space-4x, 16) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
+  border-radius: calc(var(--q-radius-lg, 8) * 1px);
+  background-color: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
+  overflow: hidden;
+}
+
+.q-shipping-banner__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--q-geist-space-4x, 16) * 1px);
+  flex-wrap: wrap;
+}
+
+.q-shipping-banner__title {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-base, 16) * 1px);
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary);
+}
+
+.q-shipping-banner__link {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  color: var(--q-fg-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.q-shipping-banner__link:hover {
+  color: var(--q-fg-primary);
+}
+
+.q-shipping-banner__cta {
+  color: var(--q-accent);
+  font-weight: var(--q-font-weight-semibold, 600);
+}
+
+.q-shipping-banner__link:focus-visible {
+  outline: 2px solid var(--q-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .q-shipping-banner__inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: calc(var(--q-geist-space-2x, 8) * 1px);
+  }
+}
