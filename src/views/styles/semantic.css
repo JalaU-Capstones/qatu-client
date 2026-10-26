@@ -38,6 +38,7 @@
   --q-cat-teal: var(--q-ds-teal-600);
   --q-cat-purple: var(--q-ds-purple-600);
   --q-cat-green: var(--q-ds-green-600);
+  --q-cat-blue: var(--q-ds-blue-600);
 }
 
 [data-theme='dark'] {
@@ -74,4 +75,5 @@
   --q-cat-teal: var(--q-ds-teal-700);
   --q-cat-purple: var(--q-ds-purple-700);
   --q-cat-green: var(--q-ds-green-700);
+  --q-cat-blue: var(--q-ds-blue-700);
 }

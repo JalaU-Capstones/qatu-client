@@ -11,6 +11,7 @@ import './views/components/hero.css';
 import './views/components/categories.css';
 import './views/components/featured-products.css';
 import './views/components/featured-stores.css';
+import './views/components/shipping-banner.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';

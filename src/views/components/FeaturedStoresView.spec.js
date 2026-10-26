@@ -39,8 +39,18 @@ describe('FeaturedStoresView', () => {
     expect(subtitle).not.toBeNull();
     expect(subtitle.textContent).toBe('Conoce a quienes crean');
     expect(seeAll).not.toBeNull();
-    expect(seeAll.textContent).toContain('Ver todas');
+    expect(seeAll.textContent).toContain('Ver tiendas');
     expect(seeAll.getAttribute('href')).toBe('/tiendas');
+  });
+
+  it('eyebrow renders above title in DOM order', () => {
+    const el = view.render();
+    const eyebrow = el.querySelector('.q-featured-stores__eyebrow');
+    const title = el.querySelector('#q-featured-stores-title');
+
+    expect(eyebrow).not.toBeNull();
+    expect(eyebrow.textContent).toBe('Conoce a quienes crean');
+    expect(eyebrow.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('should render exactly 3 store cards by default', () => {
@@ -49,30 +59,54 @@ describe('FeaturedStoresView', () => {
     expect(cards.length).toBe(3);
   });
 
-  it('should render each store card with avatar img, name, category, rating, and CTA button', () => {
+  it('should render each store card with initials avatar, name, category, rating with star svg, and CTA button', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-store-card');
     const firstCard = cards[0];
 
     const avatar = firstCard.querySelector('.q-store-card__avatar');
+    const initials = firstCard.querySelector('.q-store-card__initials');
     const name = firstCard.querySelector('.q-store-card__name');
     const category = firstCard.querySelector('.q-store-card__category');
     const rating = firstCard.querySelector('.q-store-card__rating');
+    const star = firstCard.querySelector('.q-store-card__star');
     const cta = firstCard.querySelector('.q-store-card__cta');
 
     expect(avatar).not.toBeNull();
-    const img = avatar.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img.getAttribute('src')).toContain('placehold.co');
+    expect(avatar.querySelector('img')).toBeNull();
+    expect(initials).not.toBeNull();
+    expect(initials.textContent).toBe('TI');
     expect(name).not.toBeNull();
     expect(name.textContent).toBe('Tejidos Illimani');
     expect(category).not.toBeNull();
     expect(category.textContent).toBe('Textiles artesanales');
     expect(rating).not.toBeNull();
+    expect(star.querySelector('svg')).not.toBeNull();
     expect(rating.textContent).toContain('4.8 · 132 reseñas');
     expect(cta).not.toBeNull();
-    expect(cta.textContent).toBe('Visit store');
+    expect(cta.textContent).toBe('Ver tienda');
     expect(cta.getAttribute('href')).toBe('/tiendas/tejidos-illimani');
+  });
+
+  it('card root has modifier q-store-card--{accent}', () => {
+    const el = view.render();
+    const cards = el.querySelectorAll('.q-store-card');
+    expect(cards[0].classList.contains('q-store-card--pink')).toBe(true);
+    expect(cards[1].classList.contains('q-store-card--blue')).toBe(true);
+    expect(cards[2].classList.contains('q-store-card--purple')).toBe(true);
+  });
+
+  it('avatar contains initials text, not an img', () => {
+    const el = view.render();
+    const cards = el.querySelectorAll('.q-store-card');
+    cards.forEach((card) => {
+      const avatar = card.querySelector('.q-store-card__avatar');
+      expect(avatar.querySelector('img')).toBeNull();
+      const initials = avatar.querySelector('.q-store-card__initials');
+      expect(initials).not.toBeNull();
+      expect(initials.textContent.length).toBeGreaterThan(0);
+      expect(initials.textContent.length).toBeLessThanOrEqual(2);
+    });
   });
 
   it('should prevent default navigation on CTA click', () => {
