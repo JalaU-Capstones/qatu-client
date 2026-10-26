@@ -10,13 +10,15 @@
  * @typedef {Object} ProductCardData
  * @property {string}   id
  * @property {string}   name
- * @property {string}   sellerLine      Pre-formatted "Seller · Country" line
- * @property {string}   priceLabel      Pre-formatted price "US$ 40.00"
- * @property {string}   ratingLabel     Pre-formatted "4.9 (24)"
- * @property {string}   ratingAccessible Pre-formatted screen-reader label
- * @property {boolean[]} starsFilled    5 booleans
+ * @property {string}   sellerLine
+ * @property {string}   priceLabel
+ * @property {string}   ratingLabel
+ * @property {string}   ratingAccessible
+ * @property {boolean[]} starsFilled
  * @property {string|null} imageUrl
- * @property {boolean} [isNew]
+ * @property {boolean}  [isNew]
+ * @property {number|null} [stock]     null = unknown → allow click
+ * @property {string}   [state]        'published' | 'draft' | 'unpublished'
  */
 
 /**
@@ -37,6 +39,10 @@ export class ProductCardView {
     this.onAddToCart = options.onAddToCart || null;
     this.onToggleFavorite = options.onToggleFavorite || null;
     this.element = null;
+    this._status = 'idle'; // 'idle' | 'loading' | 'success' | 'error' | 'disabled'
+    this._errorMessage = '';
+    this._successTimer = null;
+    this._actionBtn = null; // cached reference
   }
 
   render() {
@@ -126,12 +132,31 @@ export class ProductCardView {
     action.type = 'button';
     action.className = 'q-product-card-action';
     action.textContent = 'Añadir';
-    action.setAttribute('aria-label', `${action.textContent}: ${this.data.name}`);
-    action.addEventListener('click', (e) => {
+    action.setAttribute('aria-label', `Añadir: ${this.data.name}`);
+    this._actionBtn = action;
+
+    // Disabled state: out of stock OR not published
+    if (this._isDisabledByData()) {
+      this._status = 'disabled';
+      action.disabled = true;
+      action.classList.add('is-disabled');
+      action.textContent = this._disabledLabel();
+      action.setAttribute('aria-label', `${action.textContent}: ${this.data.name}`);
+    }
+
+    action.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (typeof this.onAddToCart === 'function') {
-        this.onAddToCart(this.data.id);
+      if (this._status === 'loading' || this._status === 'disabled') return;
+      if (typeof this.onAddToCart !== 'function') return;
+
+      this._setStatus('loading');
+      let result;
+      try {
+        result = await this.onAddToCart(this.data.id);
+      } catch (error) {
+        result = { status: 'error', error };
       }
+      this._handleResult(result);
     });
 
     info.appendChild(seller);
@@ -188,6 +213,111 @@ export class ProductCardView {
     return image;
   }
 
+  /**
+   * @returns {boolean}
+   * @private
+   */
+  _isDisabledByData() {
+    const { stock, state } = this.data;
+    if (state && state !== 'published') return true;
+    if (typeof stock === 'number' && stock <= 0) return true;
+    return false;
+  }
+
+  /**
+   * @returns {string}
+   * @private
+   */
+  _disabledLabel() {
+    const { stock, state } = this.data;
+    if (state && state !== 'published') return 'No disponible';
+    if (typeof stock === 'number' && stock <= 0) return 'Sin stock';
+    return 'Añadir';
+  }
+
+  /**
+   * @param {string} status
+   * @private
+   */
+  _setStatus(status) {
+    this._status = status;
+    if (!this._actionBtn) return;
+
+    this._actionBtn.classList.remove('is-loading', 'is-success', 'is-error', 'is-disabled');
+
+    switch (status) {
+      case 'loading':
+        this._actionBtn.disabled = true;
+        this._actionBtn.classList.add('is-loading');
+        this._actionBtn.textContent = 'Añadiendo…';
+        break;
+      case 'success':
+        this._actionBtn.disabled = false;
+        this._actionBtn.classList.add('is-success');
+        this._actionBtn.textContent = '✓ Añadido';
+        break;
+      case 'error':
+        this._actionBtn.disabled = false;
+        this._actionBtn.classList.add('is-error');
+        this._actionBtn.textContent = 'Añadir';
+        break;
+      case 'disabled':
+        this._actionBtn.disabled = true;
+        this._actionBtn.classList.add('is-disabled');
+        this._actionBtn.textContent = this._disabledLabel();
+        break;
+      case 'idle':
+      default:
+        this._actionBtn.disabled = false;
+        this._actionBtn.textContent = 'Añadir';
+    }
+  }
+
+  /**
+   * @param {{ status?: string, error?: Error } | undefined} result
+   * @private
+   */
+  _handleResult(result) {
+    if (this._successTimer) {
+      clearTimeout(this._successTimer);
+      this._successTimer = null;
+    }
+
+    const status = result?.status;
+
+    if (status === 'added' || status === 'auth-required') {
+      // auth-required triggers a redirect in main.js; the card will likely unmount.
+      // For UX we still flash success so the user sees feedback before redirect.
+      this._setStatus('success');
+      this._successTimer = setTimeout(() => {
+        this._setStatus('idle');
+        this._successTimer = null;
+      }, 1500);
+      return;
+    }
+
+    this._errorMessage = result?.error?.message || 'No se pudo añadir';
+    this._setStatus('error');
+    this._renderError();
+  }
+
+  /**
+   * Inserts an inline error message below the action button.
+   * @private
+   */
+  _renderError() {
+    const info = this.element?.querySelector('.q-product-card-info');
+    if (!info) return;
+    let errEl = info.querySelector('.q-product-card-error');
+    if (!errEl) {
+      errEl = document.createElement('p');
+      errEl.className = 'q-product-card-error';
+      errEl.setAttribute('role', 'alert');
+      info.appendChild(errEl);
+    }
+    errEl.textContent = this._errorMessage;
+  }
+
   mount(container) {
     const el = this.render();
     container.appendChild(el);
@@ -195,9 +325,14 @@ export class ProductCardView {
   }
 
   destroy() {
+    if (this._successTimer) {
+      clearTimeout(this._successTimer);
+      this._successTimer = null;
+    }
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
     this.element = null;
+    this._actionBtn = null;
   }
 }

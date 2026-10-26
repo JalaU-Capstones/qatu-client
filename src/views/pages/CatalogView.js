@@ -123,12 +123,12 @@ export class CatalogView {
             ),
             imageUrl: product.primary_image_path || null,
             isNew: false,
+            stock: typeof product.stock === 'number' ? product.stock : null,
+            state: product.state || 'published',
           },
           {
             variant: 'default',
-            onAddToCart: () => {
-              // no-op for now — cart wiring is out of scope
-            },
+            onAddToCart: () => Promise.resolve({ status: 'added' }),
           }
         );
         this._grid.appendChild(cardView.render());
