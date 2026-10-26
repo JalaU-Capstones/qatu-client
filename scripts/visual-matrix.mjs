@@ -56,7 +56,11 @@ for (const route of ROUTES) {
 
       // Set theme before navigation so first paint is themed
       await page.evaluateOnNewDocument((t) => {
-        try { window.localStorage.setItem('qatu.theme', t); } catch { /* ignore */ }
+        try {
+          window.localStorage.setItem('qatu.theme', t);
+        } catch {
+          /* ignore */
+        }
       }, theme);
 
       try {
@@ -112,7 +116,9 @@ for (const route of ROUTES) {
           }
         }, route.name);
 
-        const missing = Object.entries(keyCheck).filter(([, ok]) => !ok).map(([k]) => k);
+        const missing = Object.entries(keyCheck)
+          .filter(([, ok]) => !ok)
+          .map(([k]) => k);
         if (missing.length > 0) {
           combo.errors.push('MISSING_ELEMENTS: ' + missing.join(','));
         }
@@ -120,7 +126,8 @@ for (const route of ROUTES) {
         // ── Validation 3: no non-empty alt in product images (leak guard)
         const altLeak = await page.evaluate(() => {
           const imgs = document.querySelectorAll('.q-product-card-photo');
-          return Array.from(imgs).filter((img) => (img.getAttribute('alt') || '').length > 0).length;
+          return Array.from(imgs).filter((img) => (img.getAttribute('alt') || '').length > 0)
+            .length;
         });
         if (altLeak > 0) {
           combo.errors.push(`ALT_TEXT_LEAK: ${altLeak} img with non-empty alt`);
@@ -168,9 +175,11 @@ console.log(`  MATRIX SUMMARY: ${pass}/${results.length} PASS, ${fail} FAIL`);
 console.log('══════════════════════════════════════════');
 if (fail > 0) {
   console.log('\nFailures:');
-  results.filter((r) => r.status === 'FAIL').forEach((r) => {
-    console.log(`  - ${r.route} / ${r.theme} / ${r.viewport}: ${r.errors.join(' | ')}`);
-  });
+  results
+    .filter((r) => r.status === 'FAIL')
+    .forEach((r) => {
+      console.log(`  - ${r.route} / ${r.theme} / ${r.viewport}: ${r.errors.join(' | ')}`);
+    });
 }
 console.log('\nScreenshots saved to: ' + OUT_DIR);
 console.log('  ' + results.length + ' files');
