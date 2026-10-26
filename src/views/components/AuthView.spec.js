@@ -25,20 +25,23 @@ describe('AuthView', () => {
     }
   });
 
-  it('should render the auth wrapper and card with default login mode', () => {
+  it('should render the auth page and card with default login mode', () => {
     const el = view.render();
-    expect(el.classList.contains('q-auth-wrapper')).toBe(true);
+    expect(el.classList.contains('q-auth-page')).toBe(true);
+    expect(el.querySelector('.q-auth-marketing')).not.toBeNull();
+    expect(el.querySelector('.q-auth-form-panel')).not.toBeNull();
+    expect(el.querySelector('.q-auth-overlay-container')).toBeNull();
+    expect(el.querySelector('.q-auth-wrapper')).toBeNull();
 
     const card = el.querySelector('.q-auth-card');
     expect(card).not.toBeNull();
     expect(card.getAttribute('data-mode')).toBe('login');
-    expect(card.classList.contains('is-register')).toBe(false);
   });
 
   it('should support LoginRegisterView alias', () => {
     const aliasView = new LoginRegisterView();
     const el = aliasView.render();
-    expect(el.classList.contains('q-auth-wrapper')).toBe(true);
+    expect(el.classList.contains('q-auth-page')).toBe(true);
     aliasView.destroy();
   });
 
@@ -54,11 +57,10 @@ describe('AuthView', () => {
     const el = view.render();
     const loginPanel = el.querySelector('.q-auth-login-panel');
     const registerPanel = el.querySelector('.q-auth-register-panel');
-    const overlayContainer = el.querySelector('.q-auth-overlay-container');
 
     expect(loginPanel).not.toBeNull();
     expect(registerPanel).not.toBeNull();
-    expect(overlayContainer).not.toBeNull();
+    expect(el.querySelector('.q-auth-overlay-container')).toBeNull();
 
     // Check login panel elements
     expect(loginPanel.querySelector('#q-login-email')).not.toBeNull();
@@ -92,17 +94,24 @@ describe('AuthView', () => {
     expect(directSwitchBtn.textContent).toBe('Iniciar sesión');
   });
 
-  it('should switch to register mode when clicking switch-to-register button', () => {
+  it('should render a 2-column layout with marketing panel on the left and form panel on the right', () => {
     const el = view.render();
-    const switchBtn = el.querySelector('.q-switch-to-register-btn');
+    expect(el.classList.contains('q-auth-page')).toBe(true);
+    expect(el.children.length).toBe(2);
+    expect(el.children[0].classList.contains('q-auth-marketing')).toBe(true);
+    expect(el.children[1].classList.contains('q-auth-form-panel')).toBe(true);
+  });
+
+  it('should switch to register mode when clicking switch link on login card', () => {
+    const el = view.render();
+    const switchBtn = el.querySelector('.q-login-to-register');
     const card = el.querySelector('.q-auth-card');
 
-    expect(card.classList.contains('is-register')).toBe(false);
+    expect(card.getAttribute('data-mode')).toBe('login');
 
     switchBtn.click();
 
     expect(viewModel.mode).toBe('register');
-    expect(card.classList.contains('is-register')).toBe(true);
     expect(card.getAttribute('data-mode')).toBe('register');
   });
 
@@ -110,42 +119,25 @@ describe('AuthView', () => {
     viewModel.setMode('register');
     const el = view.render();
     const card = el.querySelector('.q-auth-card');
-    expect(card.classList.contains('is-register')).toBe(true);
+    expect(card.getAttribute('data-mode')).toBe('register');
 
     const directSwitchBtn = el.querySelector('.q-register-to-login');
     directSwitchBtn.click();
 
     expect(viewModel.mode).toBe('login');
-    expect(card.classList.contains('is-register')).toBe(false);
-  });
-
-  it('should switch back to login mode when clicking switch-to-login button on overlay', () => {
-    viewModel.setMode('register');
-    const el = view.render();
-    const card = el.querySelector('.q-auth-card');
-    expect(card.classList.contains('is-register')).toBe(true);
-
-    const switchBtn = el.querySelector('.q-switch-to-login-btn');
-    switchBtn.click();
-
-    expect(viewModel.mode).toBe('login');
-    expect(card.classList.contains('is-register')).toBe(false);
     expect(card.getAttribute('data-mode')).toBe('login');
   });
 
-  it('should switch mode with mobile switch buttons', () => {
+  it('should sync marketing panel when mode changes', () => {
     const el = view.render();
-    const card = el.querySelector('.q-auth-card');
+    const marketingTitle = el.querySelector('.q-auth-marketing__title');
+    expect(marketingTitle.textContent).toContain('Qué bueno verte de nuevo');
 
-    const mobileToRegister = el.querySelector('.q-mobile-to-register');
-    mobileToRegister.click();
-    expect(viewModel.mode).toBe('register');
-    expect(card.classList.contains('is-register')).toBe(true);
+    viewModel.setMode('register');
+    expect(marketingTitle.textContent).toContain('Crea tu cuenta y compra con propósito');
 
-    const mobileToLogin = el.querySelector('.q-mobile-to-login');
-    mobileToLogin.click();
-    expect(viewModel.mode).toBe('login');
-    expect(card.classList.contains('is-register')).toBe(false);
+    viewModel.setMode('login');
+    expect(marketingTitle.textContent).toContain('Qué bueno verte de nuevo');
   });
 
   it('should update login data in ViewModel when inputs change', () => {
