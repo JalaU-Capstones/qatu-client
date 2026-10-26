@@ -131,15 +131,15 @@ describe('CatalogView', () => {
     expect(cards.length).toBe(3);
 
     const titles = Array.from(cards).map(
-      (card) => card.querySelector('.q-product-card__title').textContent
+      (card) => card.querySelector('.q-product-card-title').textContent
     );
     expect(titles).toEqual(['Aguayo', 'Café', 'Chocolate']);
 
     const buttons = container.querySelectorAll(
-      '#q-catalog-grid .q-product-card button.q-product-card__action'
+      '#q-catalog-grid .q-product-card button.q-product-card-action'
     );
     expect(buttons.length).toBe(3);
-    expect(buttons[0].textContent).toBe('Agregar al carrito');
+    expect(buttons[0].textContent).toBe('Añadir al carrito');
 
     view.destroy();
   });

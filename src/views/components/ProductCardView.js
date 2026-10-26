@@ -1,117 +1,190 @@
 /**
- * View component for a single product card in the catalog.
+ * Product card — single reusable renderer used by Home (featured variant)
+ * and Catalog (/products, default variant).
+ *
+ * Pure renderer: caller formats the data before passing it in.
+ * Caller also wires the callbacks.
  */
+
+/**
+ * @typedef {Object} ProductCardData
+ * @property {string}   id
+ * @property {string}   name
+ * @property {string}   sellerLine      Pre-formatted "Seller · Country" line
+ * @property {string}   priceLabel      Pre-formatted price "US$ 40.00"
+ * @property {string}   ratingLabel     Pre-formatted "4.9 (24)"
+ * @property {string}   ratingAccessible Pre-formatted screen-reader label
+ * @property {boolean[]} starsFilled    5 booleans
+ * @property {string|null} imageUrl
+ * @property {boolean} [isNew]
+ */
+
+/**
+ * @typedef {Object} ProductCardOptions
+ * @property {'featured'|'default'} [variant='default']
+ * @property {Function} [onAddToCart]     Called with productId
+ * @property {Function} [onToggleFavorite]
+ */
+
 export class ProductCardView {
   /**
-   * @param {Object} [product]
-   * @param {string} [product.id]
-   * @param {string} [product.name]
-   * @param {number|string} [product.price]
-   * @param {string} [product.currency]
-   * @param {string|null} [product.primary_image_path]
-   * @param {string} [product.seller]
+   * @param {ProductCardData} data
+   * @param {ProductCardOptions} [options]
    */
-  constructor(product = {}) {
-    this.product = product;
+  constructor(data = {}, options = {}) {
+    this.data = data;
+    this.variant = options.variant || 'default';
+    this.onAddToCart = options.onAddToCart || null;
+    this.onToggleFavorite = options.onToggleFavorite || null;
     this.element = null;
   }
 
-  /**
-   * Builds and returns the DOM element for the product card.
-   * Renders image (or placeholder), name, formatted price, and "Agregar al carrito" action button.
-   * Internal identifiers (such as product UUIDs) are never displayed in the visible card text.
-   * @returns {HTMLElement}
-   */
   render() {
-    if (this.element) {
-      return this.element;
+    if (this.element) return this.element;
+
+    const variant = this.variant;
+
+    const card = document.createElement('li');
+    card.className = `q-product-card q-product-card--${variant}`;
+    card.dataset.productId = this.data.id;
+
+    // ─── Media ───────────────────────────────────────────────
+    const media = document.createElement('div');
+    media.className = 'q-product-card-media';
+
+    media.appendChild(this._renderImage());
+
+    if (variant === 'featured' && this.data.isNew) {
+      const badge = document.createElement('span');
+      badge.className = 'q-product-card-new-badge';
+      badge.textContent = 'Nuevo';
+      badge.setAttribute('aria-label', 'Producto nuevo');
+      media.appendChild(badge);
     }
 
-    const card = document.createElement('div');
-    card.className = 'q-product-card';
-
-    // Image container
-    const imageContainer = document.createElement('div');
-    imageContainer.className = 'q-product-card__image';
-
-    if (this.product.primary_image_path) {
-      const img = document.createElement('img');
-      img.className = 'q-product-card__img';
-      img.src = this.product.primary_image_path;
-      img.alt = this.product.name || 'Producto';
-      img.loading = 'lazy';
-      imageContainer.appendChild(img);
-    } else {
-      const placeholder = document.createElement('div');
-      placeholder.className = 'q-product-card__placeholder';
-
-      const placeholderText = document.createElement('span');
-      placeholderText.className = 'q-product-card__placeholder-text';
-      placeholderText.textContent = 'Sin imagen';
-
-      placeholder.appendChild(placeholderText);
-      imageContainer.appendChild(placeholder);
+    if (variant === 'featured') {
+      const heartBtn = document.createElement('button');
+      heartBtn.type = 'button';
+      heartBtn.className = 'q-product-card-heart-btn';
+      heartBtn.setAttribute('aria-label', `Guardar ${this.data.name} en favoritos`);
+      heartBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+      heartBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof this.onToggleFavorite === 'function') {
+          this.onToggleFavorite(this.data.id);
+        }
+      });
+      media.appendChild(heartBtn);
     }
 
-    // Content container
-    const content = document.createElement('div');
-    content.className = 'q-product-card__content';
+    card.appendChild(media);
 
-    // Optional human-readable seller line (e.g. from mockups)
-    if (this.product.seller) {
-      const seller = document.createElement('p');
-      seller.className = 'q-product-card__seller';
-      seller.textContent = this.product.seller;
-      content.appendChild(seller);
-    }
+    // ─── Info ────────────────────────────────────────────────
+    const info = document.createElement('div');
+    info.className = 'q-product-card-info';
 
-    // Product name
+    const seller = document.createElement('p');
+    seller.className = 'q-product-card-seller';
+    seller.textContent = this.data.sellerLine;
+
     const title = document.createElement('h3');
-    title.className = 'q-product-card__title';
-    title.textContent = this.product.name || '';
+    title.className = 'q-product-card-title';
+    title.textContent = this.data.name;
 
-    // Price
+    const rating = document.createElement('p');
+    rating.className = 'q-product-card-rating';
+
+    const starsWrap = document.createElement('span');
+    starsWrap.className = 'q-product-card-stars';
+    starsWrap.setAttribute('aria-hidden', 'true');
+    starsWrap.innerHTML = (this.data.starsFilled || [false, false, false, false, false])
+      .map(
+        (isFilled) =>
+          `<svg class="q-product-card-star${isFilled ? ' is-filled' : ''}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+      )
+      .join('');
+
+    const ratingValue = document.createElement('span');
+    ratingValue.className = 'q-product-card-rating-value';
+    ratingValue.textContent = this.data.ratingLabel;
+
+    const ratingText = document.createElement('span');
+    ratingText.className = 'q-sr-only';
+    ratingText.textContent = this.data.ratingAccessible;
+
+    rating.appendChild(starsWrap);
+    rating.appendChild(ratingValue);
+    rating.appendChild(ratingText);
+
     const price = document.createElement('p');
-    price.className = 'q-product-card__price';
-    const numPrice = Number(this.product.price ?? 0);
-    const currency = this.product.currency || 'USD';
-    price.textContent = `${currency} ${numPrice.toFixed(2)}`;
+    price.className = 'q-product-card-price';
+    price.textContent = this.data.priceLabel;
 
-    // Action button: "Agregar al carrito"
-    const actionBtn = document.createElement('button');
-    actionBtn.type = 'button';
-    actionBtn.className = 'q-product-card__action';
-    actionBtn.textContent = 'Agregar al carrito';
-    actionBtn.setAttribute('aria-label', `Agregar al carrito: ${this.product.name || 'producto'}`);
-    actionBtn.addEventListener('click', (e) => {
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'q-product-card-action';
+    action.textContent = variant === 'featured' ? 'Añadir' : 'Añadir al carrito';
+    action.setAttribute('aria-label', `${action.textContent}: ${this.data.name}`);
+    action.addEventListener('click', (e) => {
       e.preventDefault();
+      if (typeof this.onAddToCart === 'function') {
+        this.onAddToCart(this.data.id);
+      }
     });
 
-    content.appendChild(title);
-    content.appendChild(price);
-    content.appendChild(actionBtn);
-
-    card.appendChild(imageContainer);
-    card.appendChild(content);
+    info.appendChild(seller);
+    info.appendChild(title);
+    info.appendChild(rating);
+    info.appendChild(price);
+    info.appendChild(action);
+    card.appendChild(info);
 
     this.element = card;
     return this.element;
   }
 
-  /**
-   * Mounts the product card into a container.
-   * @param {HTMLElement} container
-   * @returns {HTMLElement}
-   */
+  _renderImage() {
+    const image = document.createElement('div');
+    image.className = 'q-product-card-image';
+
+    if (this.data.imageUrl) {
+      const photo = document.createElement('img');
+      photo.className = 'q-product-card-photo';
+      photo.src = this.data.imageUrl;
+      photo.alt = this.data.name;
+      photo.loading = 'lazy';
+      image.appendChild(photo);
+      return image;
+    }
+
+    // Placeholder: the existing placeholder-mark.svg from featured-products
+    const mark = document.createElement('span');
+    mark.className = 'q-product-card-mark';
+
+    const markImg = document.createElement('img');
+    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
+    markImg.alt = '';
+    markImg.setAttribute('width', '24.7071');
+    markImg.setAttribute('height', '24.7071');
+    mark.appendChild(markImg);
+
+    const label = document.createElement('p');
+    label.className = 'q-product-card-image-label';
+    label.textContent = 'Imagen del producto';
+
+    image.appendChild(mark);
+    image.appendChild(label);
+    return image;
+  }
+
   mount(container) {
     const el = this.render();
     container.appendChild(el);
     return el;
   }
 
-  /**
-   * Removes element from DOM and clears reference.
-   */
   destroy() {
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);

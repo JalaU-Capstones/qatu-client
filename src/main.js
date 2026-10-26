@@ -15,6 +15,7 @@ import './views/components/shipping-banner.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
+import './views/components/product-card.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';

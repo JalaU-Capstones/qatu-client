@@ -105,7 +105,32 @@ export class CatalogView {
       this._grid.appendChild(empty);
     } else {
       vm.products.forEach((product) => {
-        const cardView = new ProductCardView(product);
+        const cardView = new ProductCardView(
+          {
+            id: product.id,
+            name: product.name,
+            sellerLine: product.seller || '', // Catalog may not have seller — leave empty
+            priceLabel: `${product.currency || 'USD'} ${Number(product.price || 0).toFixed(2)}`,
+            ratingLabel: product.average_rating
+              ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
+              : 'Sin reseñas',
+            ratingAccessible: product.average_rating
+              ? `Calificación ${Number(product.average_rating).toFixed(1)} de 5, ${product.ratings_count || 0} reseñas`
+              : 'Sin reseñas',
+            starsFilled: Array.from(
+              { length: 5 },
+              (_, i) => Number(product.average_rating) >= i + 0.5
+            ),
+            imageUrl: product.primary_image_path || null,
+            isNew: false,
+          },
+          {
+            variant: 'default',
+            onAddToCart: () => {
+              // no-op for now — cart wiring is out of scope
+            },
+          }
+        );
         this._grid.appendChild(cardView.render());
       });
     }
