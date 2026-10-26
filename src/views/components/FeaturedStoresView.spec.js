@@ -28,19 +28,22 @@ describe('FeaturedStoresView', () => {
     expect(el.querySelector('.q-section-container')).not.toBeNull();
   });
 
-  it('should contain header with title, subtitle, and see-all link', () => {
+  it('should contain header with title and see-all link', () => {
     const el = view.render();
     const title = el.querySelector('#q-featured-stores-title');
-    const subtitle = el.querySelector('.q-featured-stores__subtitle');
     const seeAll = el.querySelector('.q-featured-stores__see-all');
 
     expect(title).not.toBeNull();
     expect(title.textContent).toBe('Tiendas destacadas');
-    expect(subtitle).not.toBeNull();
-    expect(subtitle.textContent).toBe('Conoce a quienes crean');
     expect(seeAll).not.toBeNull();
     expect(seeAll.textContent).toContain('Ver tiendas');
     expect(seeAll.getAttribute('href')).toBe('/tiendas');
+  });
+
+  it('render() does NOT include a .q-featured-stores__subtitle element when subtitle is empty', () => {
+    const el = view.render();
+    const subtitle = el.querySelector('.q-featured-stores__subtitle');
+    expect(subtitle).toBeNull();
   });
 
   it('eyebrow renders above title in DOM order', () => {

@@ -47,13 +47,15 @@ export class FeaturedStoresView {
     title.className = 'q-featured-stores__title';
     title.textContent = this.viewModel.title;
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-featured-stores__subtitle';
-    subtitle.textContent = this.viewModel.subtitle;
-
     titleGroup.appendChild(eyebrow);
     titleGroup.appendChild(title);
-    titleGroup.appendChild(subtitle);
+
+    if (this.viewModel.subtitle) {
+      const subtitle = document.createElement('p');
+      subtitle.className = 'q-featured-stores__subtitle';
+      subtitle.textContent = this.viewModel.subtitle;
+      titleGroup.appendChild(subtitle);
+    }
 
     const seeAll = document.createElement('a');
     seeAll.className = 'q-featured-stores__see-all';

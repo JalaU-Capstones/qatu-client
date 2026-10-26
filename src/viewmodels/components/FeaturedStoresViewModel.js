@@ -18,7 +18,7 @@ export class FeaturedStoresViewModel {
   constructor(options = {}) {
     this.eyebrow = options.eyebrow || 'Conoce a quienes crean';
     this.title = options.title || 'Tiendas destacadas';
-    this.subtitle = options.subtitle || 'Conoce a quienes crean';
+    this.subtitle = options.subtitle || '';
     this.seeAllLabel = options.seeAllLabel || 'Ver tiendas';
     this.seeAllHref = options.seeAllHref || '/tiendas';
     const rawStores = options.stores || FeaturedStoresViewModel.defaultStores();

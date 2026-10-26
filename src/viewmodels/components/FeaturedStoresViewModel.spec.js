@@ -19,7 +19,7 @@ describe('FeaturedStoresViewModel', () => {
 
   it('should initialize with default title, subtitle, and see-all values', () => {
     expect(viewModel.title).toBe('Tiendas destacadas');
-    expect(viewModel.subtitle).toBe('Conoce a quienes crean');
+    expect(viewModel.subtitle).toBe('');
     expect(viewModel.seeAllLabel).toBe('Ver tiendas');
     expect(viewModel.seeAllHref).toBe('/tiendas');
   });
