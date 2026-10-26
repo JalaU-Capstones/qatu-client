@@ -90,6 +90,71 @@
   box-sizing: border-box;
 }
 
+/* ── Ambient background utility ────────────────────────────────
+ * Reusable decorative blob container. Wrap a section or page in
+ * `.q-ambient` and add 1-3 `.q-ambient__blob` children with a
+ * modifier (`--pink`, `--cyan`) and positional utility classes.
+ * The blobs are pointer-events: none and sit at z-index 0; the
+ * section content must be at z-index >= 1.
+ * ──────────────────────────────────────────────────────────── */
+.q-ambient {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.q-ambient > *:not(.q-ambient__blob) {
+  position: relative;
+  z-index: 1;
+}
+
+.q-ambient__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--q-ambient-blur, 80px));
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.q-ambient__blob--pink {
+  background: radial-gradient(circle, var(--q-ambient-pink), transparent 70%);
+}
+
+.q-ambient__blob--cyan {
+  background: radial-gradient(circle, var(--q-ambient-cyan), transparent 70%);
+}
+
+/* Positional utilities — pass size/position via inline style on the
+ * blob when the layout is page-specific. */
+.q-ambient__blob--top-left {
+  top: -200px;
+  left: -200px;
+  width: 600px;
+  height: 600px;
+}
+
+.q-ambient__blob--bottom-right {
+  bottom: -180px;
+  right: -180px;
+  width: 500px;
+  height: 500px;
+}
+
+@media (max-width: 1023px) {
+  .q-ambient__blob {
+    filter: blur(60px);
+    opacity: 0.3;
+  }
+}
+
+@media (max-width: 767px) {
+  .q-ambient__blob {
+    filter: blur(40px);
+    opacity: 0.2;
+  }
+}
+
 @media (max-width: 768px) {
   .q-section-container {
     padding-left: 16px;

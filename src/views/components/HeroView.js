@@ -25,16 +25,16 @@ export class HeroView {
     }
 
     const section = document.createElement('section');
-    section.className = 'q-hero';
+    section.className = 'q-hero q-ambient';
     section.setAttribute('aria-labelledby', 'q-hero-title');
 
     // Decorative background blobs
     const pinkBlob = document.createElement('div');
-    pinkBlob.className = 'q-hero__bg-blob q-hero__bg-blob--pink';
+    pinkBlob.className = 'q-ambient__blob q-ambient__blob--pink q-ambient__blob--top-left';
     pinkBlob.setAttribute('aria-hidden', 'true');
 
     const cyanBlob = document.createElement('div');
-    cyanBlob.className = 'q-hero__bg-blob q-hero__bg-blob--cyan';
+    cyanBlob.className = 'q-ambient__blob q-ambient__blob--cyan q-ambient__blob--bottom-right';
     cyanBlob.setAttribute('aria-hidden', 'true');
 
     section.appendChild(pinkBlob);

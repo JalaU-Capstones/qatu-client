@@ -120,7 +120,7 @@
 
 .q-product-card:hover {
   border-color: var(--q-border-strong, #171717);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--q-shadow-sm);
 }
 
 .q-product-card-image {

@@ -84,7 +84,7 @@ a.q-featured-stores__see-all:hover {
 
 .q-store-card:hover {
   border-color: var(--q-border-strong, #171717);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--q-shadow-sm);
 }
 
 .q-store-card__avatar {
@@ -165,7 +165,7 @@ a.q-store-card__cta {
 
 a.q-store-card__cta:hover {
   background-color: var(--q-fg-primary, #171717);
-  color: #ffffff !important;
+  color: var(--q-bg-page) !important;
 }
 
 a.q-store-card__cta:focus-visible {
