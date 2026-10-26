@@ -16,6 +16,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jasmine-browser-runner runSpecs",
+    "test:matrix": "node scripts/visual-matrix.mjs",
     "test:watch": "jasmine-browser-runner runSpecs --watch",
     "tokens:build": "style-dictionary build --config ./style-dictionary.config.js",
     "prepare": "husky"
