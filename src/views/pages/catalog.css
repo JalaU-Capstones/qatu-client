@@ -38,6 +38,9 @@
   gap: calc(var(--q-geist-space-6x, 24) * 1px);
   width: 100%;
   box-sizing: border-box;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 /* Tablet (768px to 1023px): 2 columns */

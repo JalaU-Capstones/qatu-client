@@ -45,8 +45,8 @@ export class CatalogView {
     headerDiv.appendChild(subtitle);
     inner.appendChild(headerDiv);
 
-    // Product grid container
-    const grid = document.createElement('div');
+    // Product grid container — must be <ul> because ProductCardView renders <li> cards
+    const grid = document.createElement('ul');
     grid.className = 'q-catalog__grid';
     grid.id = 'q-catalog-grid';
     this._grid = grid;
