@@ -17,6 +17,7 @@ import './views/pages/catalog.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
+import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
 import { themeStore } from './store/themeStore.js';
 import { FooterView } from './views/components/FooterView.js';
@@ -97,7 +98,13 @@ if (app) {
       mode,
       authApi,
       authStore,
-      onNavigate: (path) => router.navigate(path),
+      onNavigate: (path) => {
+        // AuthViewModel calls onNavigate('/') on successful login/registration.
+        // If the user was redirected here from another page, return them there.
+        const returnTo = authRedirectStore.getReturnTo();
+        authRedirectStore.clearReturnTo();
+        router.navigate(returnTo || path || '/');
+      },
       onModeChange: (newMode) => {
         const targetPath = newMode === 'register' ? '/register' : '/login';
         if (window.location.pathname !== targetPath) {
@@ -116,7 +123,10 @@ if (app) {
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
-  header.viewModel.onLoginClick = () => router.navigate('/login');
+  header.viewModel.onLoginClick = () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
+    router.navigate('/login');
+  };
   header.viewModel.onLogoClick = () => router.navigate('/');
 
   // Wire logout: clear session and redirect to /login
@@ -127,6 +137,7 @@ if (app) {
 
   // Wire 401 expiry event dispatched by apiFetch on expired JWT
   window.addEventListener('qatu:auth-expired', () => {
+    authRedirectStore.setReturnTo(window.location.pathname);
     authStore.clearSession();
     router.navigate('/login');
   });
