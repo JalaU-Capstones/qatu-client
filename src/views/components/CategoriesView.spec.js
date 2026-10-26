@@ -28,7 +28,7 @@ describe('CategoriesView', () => {
     expect(el.querySelector('.q-section-container')).not.toBeNull();
   });
 
-  it('should contain header with title, subtitle, and see-all link', () => {
+  it('should contain header with title, and see-all link; no subtitle by default', () => {
     const el = view.render();
     const title = el.querySelector('#q-categories-title');
     const subtitle = el.querySelector('.q-categories__subtitle');
@@ -36,8 +36,7 @@ describe('CategoriesView', () => {
 
     expect(title).not.toBeNull();
     expect(title.textContent).toBe('Explora por categoría');
-    expect(subtitle).not.toBeNull();
-    expect(subtitle.textContent).toBe('Encuentra tu próximo favorito');
+    expect(subtitle).toBeNull();
     expect(seeAll).not.toBeNull();
     expect(seeAll.textContent).toContain('Ver todas');
     expect(seeAll.getAttribute('href')).toBe('/categorias');

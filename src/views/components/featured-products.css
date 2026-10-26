@@ -123,6 +123,59 @@
   box-shadow: var(--q-shadow-sm);
 }
 
+/* Media wrapper — contains image, badge, and heart button */
+.q-product-card-media {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* "Nuevo" badge — top-left pill */
+.q-product-card-new-badge {
+  position: absolute;
+  top: calc(var(--q-geist-space-2x, 8) * 1px);
+  left: calc(var(--q-geist-space-2x, 8) * 1px);
+  padding: 2px calc(var(--q-geist-space-2x, 8) * 1px);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  line-height: 1.5;
+  color: #fff;
+  background-color: var(--q-accent, #e91e8c);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+/* Heart / Wishlist button — top-right circle */
+.q-product-card-heart-btn {
+  position: absolute;
+  top: calc(var(--q-geist-space-2x, 8) * 1px);
+  right: calc(var(--q-geist-space-2x, 8) * 1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--q-featured-ink);
+  cursor: pointer;
+  background-color: var(--q-featured-card-bg);
+  border: 1px solid var(--q-featured-card-border);
+  border-radius: 50%;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+}
+
+.q-product-card:hover .q-product-card-heart-btn,
+.q-product-card-heart-btn:focus-visible {
+  opacity: 1;
+}
+
+.q-product-card-heart-btn:hover {
+  color: var(--q-accent, #e91e8c);
+}
+
 .q-product-card-image {
   display: flex;
   flex-direction: column;
@@ -192,10 +245,29 @@
 
 .q-product-card-rating {
   display: flex;
+  align-items: center;
   gap: calc(var(--q-geist-space-space-gap-quarter, 6) * 1px);
   margin: 0;
   font-size: calc(var(--q-text-xs, 12) * 1px);
   line-height: normal;
+  color: var(--q-featured-muted);
+}
+
+.q-product-card-stars {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.q-product-card-star {
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  color: var(--q-featured-muted);
+}
+
+.q-product-card-star.is-filled {
+  color: #f59e0b;
+}
+
+.q-product-card-rating-value {
   color: var(--q-featured-muted);
 }
 
@@ -215,23 +287,20 @@ button.q-product-card-action {
   height: calc(var(--q-geist-form-large-height, 40) * 1px);
   padding: 0 calc(var(--q-geist-space-4x, 16) * 1px);
   font-family: inherit;
-  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
   font-weight: var(--q-font-weight-bold, 700);
   line-height: 1.5;
-  color: var(--q-featured-ink);
+  color: #fff;
   white-space: nowrap;
   cursor: pointer;
-  background-color: var(--q-featured-card-bg);
-  border: 1px solid var(--q-featured-ink);
-  border-radius: 0 0 calc(var(--q-radius-lg, 8) * 1px) calc(var(--q-radius-lg, 8) * 1px);
-  transition:
-    background-color 150ms ease,
-    color 150ms ease;
+  background-color: var(--q-accent, #e91e8c);
+  border: none;
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  transition: background-color 150ms ease;
 }
 
 button.q-product-card-action:hover {
-  color: var(--q-featured-card-bg);
-  background-color: var(--q-featured-ink);
+  background-color: color-mix(in srgb, var(--q-accent, #e91e8c) 85%, #000);
 }
 
 /* Tablet: 2 columns */

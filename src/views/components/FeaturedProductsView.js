@@ -161,8 +161,35 @@ export class FeaturedProductsView {
     card.className = 'q-product-card';
     card.dataset.productId = product.id;
 
-    card.appendChild(this._renderImage(product));
+    // --- Media wrapper (image + badge + heart) ---
+    const media = document.createElement('div');
+    media.className = 'q-product-card-media';
 
+    media.appendChild(this._renderImage(product));
+
+    if (this.viewModel.isNewProduct(product)) {
+      const badge = document.createElement('span');
+      badge.className = 'q-product-card-new-badge';
+      badge.textContent = 'Nuevo';
+      badge.setAttribute('aria-label', 'Producto nuevo');
+      media.appendChild(badge);
+    }
+
+    const heartBtn = document.createElement('button');
+    heartBtn.type = 'button';
+    heartBtn.className = 'q-product-card-heart-btn';
+    heartBtn.setAttribute('aria-label', `Guardar ${product.name} en favoritos`);
+    heartBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    heartBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    media.appendChild(heartBtn);
+
+    card.appendChild(media);
+
+    // --- Info ---
     const info = document.createElement('div');
     info.className = 'q-product-card-info';
 
@@ -174,14 +201,22 @@ export class FeaturedProductsView {
     title.className = 'q-product-card-title';
     title.textContent = product.name;
 
+    // Rating row: dynamic star icons + numeric label
     const rating = document.createElement('p');
     rating.className = 'q-product-card-rating';
 
-    const stars = document.createElement('span');
-    stars.setAttribute('aria-hidden', 'true');
-    stars.textContent = '☆☆☆☆☆';
+    const starsWrapper = document.createElement('span');
+    starsWrapper.className = 'q-product-card-stars';
+    starsWrapper.setAttribute('aria-hidden', 'true');
+    this.viewModel.getStarsFilled(product).forEach((filled) => {
+      const star = document.createElement('span');
+      star.className = `q-product-card-star${filled ? ' is-filled' : ''}`;
+      star.textContent = filled ? '★' : '☆';
+      starsWrapper.appendChild(star);
+    });
 
     const ratingValue = document.createElement('span');
+    ratingValue.className = 'q-product-card-rating-value';
     ratingValue.setAttribute('aria-hidden', 'true');
     ratingValue.textContent = this.viewModel.getRatingLabel(product);
 
@@ -189,7 +224,7 @@ export class FeaturedProductsView {
     ratingText.className = 'q-sr-only';
     ratingText.textContent = this.viewModel.getRatingAccessibleLabel(product);
 
-    rating.appendChild(stars);
+    rating.appendChild(starsWrapper);
     rating.appendChild(ratingValue);
     rating.appendChild(ratingText);
 
@@ -197,11 +232,12 @@ export class FeaturedProductsView {
     price.className = 'q-product-card-price';
     price.textContent = this.viewModel.getPriceLabel(product);
 
+    const addLabel = this.viewModel.getAddButtonLabel();
     const action = document.createElement('button');
     action.type = 'button';
     action.className = 'q-product-card-action';
-    action.textContent = this.viewModel.addToCartLabel;
-    action.setAttribute('aria-label', `${this.viewModel.addToCartLabel}: ${product.name}`);
+    action.textContent = addLabel;
+    action.setAttribute('aria-label', `${addLabel}: ${product.name}`);
     action.addEventListener('click', (e) => {
       e.preventDefault();
       this.viewModel.addToCart(product.id);

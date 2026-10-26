@@ -30,7 +30,7 @@ describe('FeaturedProductsView', () => {
     expect(title.textContent).toBe('Destacados de la semana');
     expect(el.getAttribute('aria-labelledby')).toBe(title.id);
 
-    expect(el.querySelector('.q-featured-eyebrow').textContent).toBe('PRODUCTOS DESTACADOS');
+    expect(el.querySelector('.q-featured-eyebrow').textContent).toBe('Seleccionados para ti');
     expect(el.querySelector('.q-featured-subtitle').textContent).toBe('Seleccionados para ti');
   });
 
@@ -69,8 +69,7 @@ describe('FeaturedProductsView', () => {
     expect(card.querySelector('.q-product-card-price').textContent).toBe('US$ 40.00');
 
     const rating = card.querySelector('.q-product-card-rating');
-    expect(rating.textContent).toContain('☆☆☆☆☆');
-    expect(rating.textContent).toContain('4.9 (24)');
+    expect(rating.querySelector('.q-product-card-rating-value').textContent).toContain('4.9 (24)');
     expect(rating.querySelector('.q-sr-only').textContent).toBe(
       'Calificación 4.9 de 5, 24 reseñas'
     );
@@ -78,7 +77,7 @@ describe('FeaturedProductsView', () => {
 
   it('should render the image placeholder with the Figma mark when there is no image', () => {
     const el = view.render();
-    const image = el.querySelector('.q-product-card-image');
+    const image = el.querySelector('.q-product-card-media .q-product-card-image');
 
     expect(image.querySelector('.q-product-card-image-label').textContent).toBe(
       'Imagen del producto'
@@ -119,10 +118,8 @@ describe('FeaturedProductsView', () => {
 
     expect(buttons.length).toBe(8);
     expect(buttons[0].type).toBe('button');
-    expect(buttons[0].textContent).toBe('Add to cart');
-    expect(buttons[0].getAttribute('aria-label')).toBe(
-      'Add to cart: Aguayo tradicional de Tarabuco'
-    );
+    expect(buttons[0].textContent).toBe('Añadir');
+    expect(buttons[0].getAttribute('aria-label')).toBe('Añadir: Aguayo tradicional de Tarabuco');
   });
 
   it('should call onAddToCart with the clicked product', () => {
@@ -185,5 +182,72 @@ describe('FeaturedProductsView', () => {
 
     expect(container.querySelectorAll('.q-featured').length).toBe(1);
     expect(container.querySelectorAll('.q-product-card').length).toBe(3);
+  });
+
+  it('should wrap image, badge and heart inside .q-product-card-media', () => {
+    const el = view.render();
+    const card = el.querySelector('.q-product-card');
+    const media = card.querySelector('.q-product-card-media');
+    expect(media).not.toBeNull();
+    expect(media.querySelector('.q-product-card-image')).not.toBeNull();
+    expect(media.querySelector('.q-product-card-heart-btn')).not.toBeNull();
+  });
+
+  it('should render a "Nuevo" badge for the first two products by default', () => {
+    const el = view.render();
+    const cards = el.querySelectorAll('.q-product-card');
+    expect(cards[0].querySelector('.q-product-card-new-badge')).not.toBeNull();
+    expect(cards[1].querySelector('.q-product-card-new-badge')).not.toBeNull();
+    expect(cards[2].querySelector('.q-product-card-new-badge')).toBeNull();
+  });
+
+  it('should not render a badge when product.isNew is explicitly false', () => {
+    viewModel.setProducts([
+      {
+        id: 'p1',
+        name: 'P1',
+        seller: 'S',
+        price: 1,
+        currency: 'USD',
+        rating: 4,
+        ratingsCount: 1,
+        isNew: false,
+      },
+    ]);
+    const el = view.render();
+    expect(el.querySelector('.q-product-card-new-badge')).toBeNull();
+  });
+
+  it('should render 5 star spans with .is-filled matching getStarsFilled', () => {
+    const el = view.render();
+    const card = el.querySelector('.q-product-card');
+    const stars = card.querySelectorAll('.q-product-card-star');
+    expect(stars.length).toBe(5);
+    const filled = viewModel.getStarsFilled(viewModel.products[0]);
+    stars.forEach((star, i) => {
+      expect(star.classList.contains('is-filled')).toBe(filled[i]);
+    });
+  });
+
+  it('should render the action button with getAddButtonLabel text', () => {
+    const el = view.render();
+    const btn = el.querySelector('button.q-product-card-action');
+    expect(btn.textContent).toBe(viewModel.getAddButtonLabel());
+  });
+
+  it('should call viewModel.addToCart when the action button is clicked', () => {
+    spyOn(viewModel, 'addToCart').and.returnValue(true);
+    const el = view.render();
+    el.querySelector('button.q-product-card-action').click();
+    expect(viewModel.addToCart).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render one heart button per card and clicking it does not propagate addToCart', () => {
+    spyOn(viewModel, 'addToCart');
+    const el = view.render();
+    const hearts = el.querySelectorAll('.q-product-card-heart-btn');
+    expect(hearts.length).toBe(8);
+    hearts[0].click();
+    expect(viewModel.addToCart).not.toHaveBeenCalled();
   });
 });

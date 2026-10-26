@@ -17,7 +17,7 @@ describe('CategoriesViewModel', () => {
   it('should initialize with default title, subtitle, eyebrow, and see-all values', () => {
     expect(viewModel.eyebrow).toBe('Encuentra tu próximo favorito');
     expect(viewModel.title).toBe('Explora por categoría');
-    expect(viewModel.subtitle).toBe('Encuentra tu próximo favorito');
+    expect(viewModel.subtitle).toBe('');
     expect(viewModel.seeAllLabel).toBe('Ver todas');
     expect(viewModel.seeAllHref).toBe('/categorias');
   });

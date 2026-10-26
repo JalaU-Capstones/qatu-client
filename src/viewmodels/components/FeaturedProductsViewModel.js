@@ -24,7 +24,7 @@ export class FeaturedProductsViewModel {
    * @param {Function} [options.onAddToCart] Called with the product when "Add to cart" is pressed.
    */
   constructor(options = {}) {
-    this.eyebrow = options.eyebrow || 'PRODUCTOS DESTACADOS';
+    this.eyebrow = options.eyebrow || 'Seleccionados para ti';
     this.title = options.title || 'Destacados de la semana';
     this.subtitle = options.subtitle || 'Seleccionados para ti';
     this.link = options.link || { label: 'Ver catálogo →', href: '/products' };
@@ -110,6 +110,38 @@ export class FeaturedProductsViewModel {
    */
   getOriginLabel(product) {
     return product.country ? `${product.seller} · ${product.country}` : product.seller;
+  }
+
+  /**
+   * Returns an array of 5 booleans indicating which stars are filled
+   * for the given product's rating (e.g. 4.2 → [true, true, true, true, false]).
+   * @param {{ rating: number }} product
+   * @returns {boolean[]}
+   */
+  getStarsFilled(product) {
+    const rounded = Math.round(Number(product.rating) || 0);
+    return Array.from({ length: 5 }, (_, i) => i < rounded);
+  }
+
+  /**
+   * Returns the label for the "Add to cart" action button.
+   * @returns {string}
+   */
+  getAddButtonLabel() {
+    return 'Añadir';
+  }
+
+  /**
+   * Returns true when the given product should display the "Nuevo" badge.
+   * Checks `product.isNew` first; falls back to checking the product's
+   * position in `this.products` (index < 2).
+   * @param {Object} product
+   * @returns {boolean}
+   */
+  isNewProduct(product) {
+    if (typeof product.isNew === 'boolean') return product.isNew;
+    const idx = this.products.findIndex((p) => p.id === product.id);
+    return idx >= 0 && idx < 2;
   }
 
   /**

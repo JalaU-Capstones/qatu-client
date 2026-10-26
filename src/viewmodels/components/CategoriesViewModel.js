@@ -16,6 +16,7 @@ const CATEGORY_STYLES = {
   electronica: { color: 'purple', icon: 'headphones' },
   'hogar-y-decoracion': { color: 'teal', icon: 'home' },
   hogar: { color: 'teal', icon: 'home' },
+  textiles: { color: 'pink', icon: 'vase' },
   deportes: { color: 'green', icon: 'ball' },
 };
 
@@ -52,7 +53,7 @@ export class CategoriesViewModel {
   constructor(options = {}) {
     this.eyebrow = options.eyebrow || 'Encuentra tu próximo favorito';
     this.title = options.title || 'Explora por categoría';
-    this.subtitle = options.subtitle || 'Encuentra tu próximo favorito';
+    this.subtitle = options.subtitle || '';
     this.seeAllLabel = options.seeAllLabel || 'Ver todas';
     this.seeAllHref = options.seeAllHref || '/categorias';
     this.categories = normalizeCategories(
