@@ -96,12 +96,14 @@ export class FeaturedProductsView {
     title.className = 'q-featured-title';
     title.textContent = this.viewModel.title;
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-featured-subtitle';
-    subtitle.textContent = this.viewModel.subtitle;
-
     copy.appendChild(title);
-    copy.appendChild(subtitle);
+
+    if (this.viewModel.subtitle) {
+      const subtitle = document.createElement('p');
+      subtitle.className = 'q-featured-subtitle';
+      subtitle.textContent = this.viewModel.subtitle;
+      copy.appendChild(subtitle);
+    }
 
     const link = document.createElement('a');
     link.className = 'q-featured-link';

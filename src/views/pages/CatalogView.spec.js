@@ -139,7 +139,7 @@ describe('CatalogView', () => {
       '#q-catalog-grid .q-product-card button.q-product-card-action'
     );
     expect(buttons.length).toBe(3);
-    expect(buttons[0].textContent).toBe('Añadir al carrito');
+    expect(buttons[0].textContent).toBe('Añadir');
 
     view.destroy();
   });

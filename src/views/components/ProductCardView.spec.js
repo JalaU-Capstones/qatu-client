@@ -14,7 +14,7 @@ describe('ProductCardView', () => {
     }
   });
 
-  it('render() with variant \'default\' produces outline CTA "Añadir al carrito"', () => {
+  it('render() with variant \'default\' produces outline CTA "Añadir"', () => {
     const cardView = new ProductCardView(
       { id: 'p1', name: 'Mochila', priceLabel: 'USD 50.00' },
       { variant: 'default' }
@@ -24,8 +24,8 @@ describe('ProductCardView', () => {
     expect(el.classList.contains('q-product-card--default')).toBe(true);
     const cta = el.querySelector('button.q-product-card-action');
     expect(cta).not.toBeNull();
-    expect(cta.textContent).toBe('Añadir al carrito');
-    expect(cta.getAttribute('aria-label')).toBe('Añadir al carrito: Mochila');
+    expect(cta.textContent).toBe('Añadir');
+    expect(cta.getAttribute('aria-label')).toBe('Añadir: Mochila');
   });
 
   it('render() with variant \'featured\' produces filled CTA "Añadir"', () => {
@@ -146,6 +146,44 @@ describe('ProductCardView', () => {
     expect(mark).not.toBeNull();
     expect(mark.getAttribute('src')).toContain('placeholder-mark.svg');
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
+  });
+
+  it('render() with variant \'default\' CTA text is "Añadir"', () => {
+    const cardView = new ProductCardView({ id: 'cta-d', name: 'Sombrero' }, { variant: 'default' });
+    const el = cardView.render();
+    expect(el.querySelector('button.q-product-card-action').textContent).toBe('Añadir');
+  });
+
+  it('render() with variant \'featured\' CTA text is "Añadir"', () => {
+    const cardView = new ProductCardView({ id: 'cta-f', name: 'Poncho' }, { variant: 'featured' });
+    const el = cardView.render();
+    expect(el.querySelector('button.q-product-card-action').textContent).toBe('Añadir');
+  });
+
+  it('_renderImage renders placeholder immediately when imageUrl is null', () => {
+    const cardView = new ProductCardView({ id: 'img-null', name: 'Item', imageUrl: null });
+    const el = cardView.render();
+    expect(el.querySelector('.q-product-card-photo')).toBeNull();
+    expect(el.querySelector('.q-product-card-mark')).not.toBeNull();
+    expect(el.querySelector('.q-product-card-image-label')).not.toBeNull();
+    expect(el.querySelector('.q-product-card-image-label').textContent).toBe('Imagen del producto');
+  });
+
+  it('_renderImage renders placeholder when imageUrl fails to load', () => {
+    const cardView = new ProductCardView({
+      id: 'img-err',
+      name: 'Item',
+      imageUrl: 'https://invalid-url.example/x.jpg',
+    });
+    const el = cardView.render();
+    const img = el.querySelector('.q-product-card-photo');
+    expect(img).not.toBeNull();
+    // Trigger the error event synchronously
+    img.dispatchEvent(new Event('error'));
+    // After error, the img should be removed and placeholder present
+    expect(el.querySelector('.q-product-card-photo')).toBeNull();
+    expect(el.querySelector('.q-product-card-mark')).not.toBeNull();
+    expect(el.querySelector('.q-product-card-image-label')).not.toBeNull();
   });
 
   it('mounts into container and cleans up on destroy', () => {

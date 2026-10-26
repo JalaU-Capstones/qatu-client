@@ -11,7 +11,7 @@ describe('FeaturedProductsViewModel', () => {
   it('should initialize with the section copy from the design', () => {
     expect(viewModel.eyebrow).toBe('Seleccionados para ti');
     expect(viewModel.title).toBe('Destacados de la semana');
-    expect(viewModel.subtitle).toBe('Seleccionados para ti');
+    expect(viewModel.subtitle).toBe('');
     expect(viewModel.link.label).toBe('Ver catálogo →');
     expect(viewModel.addToCartLabel).toBe('Add to cart');
   });

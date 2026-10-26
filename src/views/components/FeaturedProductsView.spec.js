@@ -31,7 +31,12 @@ describe('FeaturedProductsView', () => {
     expect(el.getAttribute('aria-labelledby')).toBe(title.id);
 
     expect(el.querySelector('.q-featured-eyebrow').textContent).toBe('Seleccionados para ti');
-    expect(el.querySelector('.q-featured-subtitle').textContent).toBe('Seleccionados para ti');
+    expect(el.querySelector('.q-featured-subtitle')).toBeNull();
+  });
+
+  it('render() does NOT include a .q-featured-subtitle element when subtitle is empty', () => {
+    const el = view.render();
+    expect(el.querySelector('.q-featured-subtitle')).toBeNull();
   });
 
   it('should render the catalog link without navigating', () => {
@@ -108,7 +113,7 @@ describe('FeaturedProductsView', () => {
 
     const photo = el.querySelector('.q-product-card-photo');
     expect(photo.getAttribute('src')).toBe('https://example.com/foto.jpg');
-    expect(photo.getAttribute('alt')).toBe('Con foto');
+    expect(photo.getAttribute('alt')).toBe('');
     expect(el.querySelector('.q-product-card-mark')).toBeNull();
   });
 

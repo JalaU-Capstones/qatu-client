@@ -125,7 +125,7 @@ export class ProductCardView {
     const action = document.createElement('button');
     action.type = 'button';
     action.className = 'q-product-card-action';
-    action.textContent = variant === 'featured' ? 'Añadir' : 'Añadir al carrito';
+    action.textContent = 'Añadir';
     action.setAttribute('aria-label', `${action.textContent}: ${this.data.name}`);
     action.addEventListener('click', (e) => {
       e.preventDefault();
@@ -149,33 +149,42 @@ export class ProductCardView {
     const image = document.createElement('div');
     image.className = 'q-product-card-image';
 
-    if (this.data.imageUrl) {
-      const photo = document.createElement('img');
-      photo.className = 'q-product-card-photo';
-      photo.src = this.data.imageUrl;
-      photo.alt = this.data.name;
-      photo.loading = 'lazy';
-      image.appendChild(photo);
+    const showPlaceholder = () => {
+      image.innerHTML = '';
+
+      const mark = document.createElement('span');
+      mark.className = 'q-product-card-mark';
+
+      const markImg = document.createElement('img');
+      markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
+      markImg.alt = '';
+      markImg.setAttribute('width', '24.7071');
+      markImg.setAttribute('height', '24.7071');
+      mark.appendChild(markImg);
+
+      const label = document.createElement('p');
+      label.className = 'q-product-card-image-label';
+      label.textContent = 'Imagen del producto';
+
+      image.appendChild(mark);
+      image.appendChild(label);
+    };
+
+    // No image URL → placeholder immediately
+    if (!this.data.imageUrl) {
+      showPlaceholder();
       return image;
     }
 
-    // Placeholder: the existing placeholder-mark.svg from featured-products
-    const mark = document.createElement('span');
-    mark.className = 'q-product-card-mark';
+    // Has a URL → try to load; on failure fall back to placeholder
+    const photo = document.createElement('img');
+    photo.className = 'q-product-card-photo';
+    photo.alt = '';
+    photo.loading = 'lazy';
+    photo.addEventListener('error', showPlaceholder);
+    photo.src = this.data.imageUrl;
+    image.appendChild(photo);
 
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', '24.7071');
-    markImg.setAttribute('height', '24.7071');
-    mark.appendChild(markImg);
-
-    const label = document.createElement('p');
-    label.className = 'q-product-card-image-label';
-    label.textContent = 'Imagen del producto';
-
-    image.appendChild(mark);
-    image.appendChild(label);
     return image;
   }
 

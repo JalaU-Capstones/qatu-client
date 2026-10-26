@@ -26,7 +26,7 @@ export class FeaturedProductsViewModel {
   constructor(options = {}) {
     this.eyebrow = options.eyebrow || 'Seleccionados para ti';
     this.title = options.title || 'Destacados de la semana';
-    this.subtitle = options.subtitle || 'Seleccionados para ti';
+    this.subtitle = options.subtitle || '';
     this.link = options.link || { label: 'Ver catálogo →', href: '/products' };
     this.addToCartLabel = options.addToCartLabel || 'Add to cart';
     this.imagePlaceholderLabel = options.imagePlaceholderLabel || 'Imagen del producto';

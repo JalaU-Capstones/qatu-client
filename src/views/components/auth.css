@@ -311,7 +311,7 @@
 }
 
 .q-auth-link {
-  color: var(--q-color-primary);
+  color: var(--q-accent);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -327,16 +327,16 @@
   text-decoration: underline;
 }
 
-/* Submit Button with primary brand tokens */
+/* Submit Button with accent (pink) brand tokens */
 .q-auth-submit-btn {
   width: 100%;
   height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--q-color-primary);
-  color: var(--q-ds-white, #ffffff);
-  border: 1px solid var(--q-color-primary);
+  background-color: var(--q-accent);
+  color: var(--q-bg-page);
+  border: 1px solid var(--q-accent);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: 0.875rem;
@@ -350,12 +350,12 @@
 }
 
 .q-auth-submit-btn:hover {
-  background-color: var(--q-color-primary-hover);
-  border-color: var(--q-color-primary-hover);
+  background-color: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
 }
 
 .q-auth-submit-btn:active {
-  background-color: var(--q-color-primary-active);
+  background-color: var(--q-accent-hover);
   transform: scale(0.99);
 }
 
@@ -399,7 +399,7 @@
 .q-auth-switch-link button {
   background: none;
   border: none;
-  color: var(--q-color-primary);
+  color: var(--q-accent);
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
