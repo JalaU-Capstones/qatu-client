@@ -133,16 +133,18 @@
 /* "Nuevo" badge — top-left pill */
 .q-product-card-new-badge {
   position: absolute;
-  top: calc(var(--q-geist-space-2x, 8) * 1px);
-  left: calc(var(--q-geist-space-2x, 8) * 1px);
-  padding: 2px calc(var(--q-geist-space-2x, 8) * 1px);
-  font-size: calc(var(--q-text-xs, 12) * 1px);
-  font-weight: var(--q-font-weight-bold, 700);
-  line-height: 1.5;
-  color: #fff;
-  background-color: var(--q-accent, #e91e8c);
-  border-radius: 999px;
-  pointer-events: none;
+  top: 12px;
+  left: 12px;
+  padding: 3px 10px;
+  background-color: var(--q-bg-elevated);
+  color: var(--q-fg-primary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 9999px;
+  border: 1px solid var(--q-border-default);
+  z-index: 2;
 }
 
 /* Heart / Wishlist button — top-right circle */
@@ -300,7 +302,9 @@ button.q-product-card-action {
 }
 
 button.q-product-card-action:hover {
-  background-color: color-mix(in srgb, var(--q-accent, #e91e8c) 85%, #000);
+  background-color: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
+  color: var(--q-bg-page);
 }
 
 /* Tablet: 2 columns */

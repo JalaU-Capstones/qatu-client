@@ -119,8 +119,8 @@ export class FeaturedProductsViewModel {
    * @returns {boolean[]}
    */
   getStarsFilled(product) {
-    const rounded = Math.round(Number(product.rating) || 0);
-    return Array.from({ length: 5 }, (_, i) => i < rounded);
+    const rating = Number(product.rating) || 0;
+    return Array.from({ length: 5 }, (_, i) => rating >= i + 0.5);
   }
 
   /**
