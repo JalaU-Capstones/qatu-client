@@ -8,8 +8,9 @@ describe('HeroViewModel', () => {
   });
 
   it('should initialize with default options', () => {
-    expect(viewModel.eyebrow).toBe('Inspirado en nuestras ferias');
-    expect(viewModel.title).toBe('Lo mejor de Latinoamérica, en un solo lugar.');
+    expect(viewModel.eyebrow).toBe('Inspirado en nuestra tierra');
+    expect(viewModel.titleMain).toBe('Lo mejor de Latinoamérica,');
+    expect(viewModel.titleAccent).toBe('en un solo lugar.');
     expect(viewModel.subtitle).toContain('Descubre productos únicos');
     expect(viewModel.searchPlaceholder).toBe('¿Qué estás buscando hoy?');
     expect(viewModel.searchButtonLabel).toBe('Buscar');
@@ -27,7 +28,8 @@ describe('HeroViewModel', () => {
   it('should allow custom options in constructor', () => {
     const customVM = new HeroViewModel({
       eyebrow: 'Custom Eyebrow',
-      title: 'Custom Title',
+      titleMain: 'Custom Main',
+      titleAccent: 'Custom Accent',
       subtitle: 'Custom Subtitle',
       searchPlaceholder: 'Search here...',
       searchButtonLabel: 'Go',
@@ -38,7 +40,8 @@ describe('HeroViewModel', () => {
     });
 
     expect(customVM.eyebrow).toBe('Custom Eyebrow');
-    expect(customVM.title).toBe('Custom Title');
+    expect(customVM.titleMain).toBe('Custom Main');
+    expect(customVM.titleAccent).toBe('Custom Accent');
     expect(customVM.quickLinks.length).toBe(1);
     expect(customVM.visualBadgeLabel).toBe('50%');
     expect(customVM.floatingCardLabel).toBe('Made Locally');

@@ -55,7 +55,17 @@ export class HeroView {
     const title = document.createElement('h1');
     title.id = 'q-hero-title';
     title.className = 'q-hero__title';
-    title.textContent = this.viewModel.title;
+
+    const titleMain = document.createElement('span');
+    titleMain.className = 'q-hero__title-main';
+    titleMain.textContent = this.viewModel.titleMain;
+
+    const titleAccent = document.createElement('span');
+    titleAccent.className = 'q-hero__title-accent';
+    titleAccent.textContent = ' ' + this.viewModel.titleAccent;
+
+    title.appendChild(titleMain);
+    title.appendChild(titleAccent);
 
     const subtitle = document.createElement('p');
     subtitle.className = 'q-hero__subtitle';

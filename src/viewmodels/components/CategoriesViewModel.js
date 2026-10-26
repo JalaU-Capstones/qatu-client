@@ -2,21 +2,62 @@
  * ViewModel for Categories component.
  * Manages category list and section header configuration.
  */
+
+/**
+ * Visual style per category, keyed by slug.
+ * Unknown slugs fall back to a rotating palette in construction order.
+ * Icon names map to the SVG factory in CategoriesView.
+ */
+const CATEGORY_STYLES = {
+  tecnologia: { color: 'pink', icon: 'laptop' },
+  'alimentos-y-bebidas': { color: 'amber', icon: 'coffee' },
+  alimentos: { color: 'amber', icon: 'coffee' },
+  artesanias: { color: 'pink', icon: 'vase' },
+  electronica: { color: 'purple', icon: 'headphones' },
+  'hogar-y-decoracion': { color: 'teal', icon: 'home' },
+  hogar: { color: 'teal', icon: 'home' },
+  deportes: { color: 'green', icon: 'ball' },
+};
+
+const COLOR_CYCLE = ['pink', 'amber', 'teal', 'purple', 'green'];
+const ICON_CYCLE = ['laptop', 'coffee', 'vase', 'home', 'ball', 'headphones'];
+
+function normalizeCategories(categories) {
+  return (categories || []).map((cat, i) => {
+    const known =
+      CATEGORY_STYLES[cat.slug] ||
+      CATEGORY_STYLES[cat.id] ||
+      CATEGORY_STYLES[cat.name?.toLowerCase()] ||
+      (cat.name ? CATEGORY_STYLES[cat.name.toLowerCase().replace(/\s+/g, '-')] : null);
+    return {
+      ...cat,
+      style: known || {
+        color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+        icon: ICON_CYCLE[i % ICON_CYCLE.length],
+      },
+    };
+  });
+}
+
 export class CategoriesViewModel {
   /**
    * @param {Object} [options]
    * @param {Array<{id: string, name: string, productCount: number, href: string}>} [options.categories]
+   * @param {string} [options.eyebrow]
    * @param {string} [options.title]
    * @param {string} [options.subtitle]
    * @param {string} [options.seeAllLabel]
    * @param {string} [options.seeAllHref]
    */
   constructor(options = {}) {
-    this.categories = options.categories || CategoriesViewModel.defaultCategories();
+    this.eyebrow = options.eyebrow || 'Encuentra tu próximo favorito';
     this.title = options.title || 'Explora por categoría';
     this.subtitle = options.subtitle || 'Encuentra tu próximo favorito';
     this.seeAllLabel = options.seeAllLabel || 'Ver todas';
     this.seeAllHref = options.seeAllHref || '/categorias';
+    this.categories = normalizeCategories(
+      options.categories || CategoriesViewModel.defaultCategories()
+    );
     this._listeners = new Set();
   }
 
@@ -60,7 +101,7 @@ export class CategoriesViewModel {
    * @param {Array<{id: string, name: string, productCount: number, href: string}>} categories
    */
   setCategories(categories) {
-    this.categories = categories;
+    this.categories = normalizeCategories(categories);
     this._notify();
   }
 

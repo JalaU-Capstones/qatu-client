@@ -1,7 +1,8 @@
 export class HeroViewModel {
   constructor(options = {}) {
-    this.eyebrow = options.eyebrow || 'Inspirado en nuestras ferias';
-    this.title = options.title || 'Lo mejor de Latinoamérica, en un solo lugar.';
+    this.eyebrow = options.eyebrow || 'Inspirado en nuestra tierra';
+    this.titleMain = options.titleMain || 'Lo mejor de Latinoamérica,';
+    this.titleAccent = options.titleAccent || 'en un solo lugar.';
     this.subtitle =
       options.subtitle ||
       'Descubre productos únicos de productores, artesanos y negocios locales de toda la región. Compra con propósito y apoya a quienes mantienen vivas sus tradiciones.';

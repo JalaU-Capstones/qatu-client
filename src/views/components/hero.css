@@ -46,6 +46,10 @@
   margin: calc(var(--q-geist-space-3x, 12) * 1px) 0;
 }
 
+.q-hero__title-accent {
+  color: var(--q-accent);
+}
+
 .q-hero__subtitle {
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-lg, 18) * 1px);
@@ -91,8 +95,8 @@
   padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
   border: none;
   border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background: var(--q-fg-primary, #171717);
-  color: var(--q-bg-page, #ffffff);
+  background: var(--q-accent);
+  color: var(--q-bg-page);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-base, 16) * 1px);
   font-weight: var(--q-font-weight-semibold, 600);
@@ -106,12 +110,12 @@
 }
 
 .q-hero__search-button:hover {
-  background: var(--q-color-primary, #0070f3);
-  color: #ffffff;
+  background: var(--q-accent-hover);
+  color: var(--q-bg-page);
 }
 
 .q-hero__search-button:focus-visible {
-  outline: 2px solid var(--q-color-focus, #0070f3);
+  outline: 2px solid var(--q-accent);
   outline-offset: 2px;
 }
 

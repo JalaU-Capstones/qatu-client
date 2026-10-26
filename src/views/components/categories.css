@@ -22,6 +22,15 @@
   flex-direction: column;
 }
 
+.q-categories__eyebrow {
+  margin: 0 0 4px 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--q-accent-fg);
+}
+
 .q-categories__title {
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-2xl, 24) * 1px);
@@ -96,26 +105,53 @@ a.q-category-card:focus-visible {
   outline-offset: 2px;
 }
 
-.q-category-card__image-placeholder {
-  height: 110px;
-  background-color: var(--q-bg-surface, #f9fafb);
-  border-radius: calc(var(--q-radius-md, 6) * 1px);
-  overflow: hidden;
+a.q-category-card--pink {
+  border-color: var(--q-cat-pink);
+}
+a.q-category-card--amber {
+  border-color: var(--q-cat-amber);
+}
+a.q-category-card--teal {
+  border-color: var(--q-cat-teal);
+}
+a.q-category-card--purple {
+  border-color: var(--q-cat-purple);
+}
+a.q-category-card--green {
+  border-color: var(--q-cat-green);
+}
+
+a.q-category-card--pink .q-category-card__icon {
+  color: var(--q-cat-pink);
+}
+a.q-category-card--amber .q-category-card__icon {
+  color: var(--q-cat-amber);
+}
+a.q-category-card--teal .q-category-card__icon {
+  color: var(--q-cat-teal);
+}
+a.q-category-card--purple .q-category-card__icon {
+  color: var(--q-cat-purple);
+}
+a.q-category-card--green .q-category-card__icon {
+  color: var(--q-cat-green);
+}
+
+.q-category-card__icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
+  height: 48px;
   margin-bottom: calc(var(--q-geist-space-3x, 12) * 1px);
-  color: var(--q-fg-muted, #999999);
-  font-size: calc(var(--q-text-lg, 18) * 1px);
-  user-select: none;
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background-color: var(--q-bg-surface);
+  color: var(--q-fg-primary);
 }
 
-.q-category-card__image-placeholder img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-  display: block;
+.q-category-card__icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 .q-category-card__name {
@@ -153,9 +189,5 @@ a.q-category-card:focus-visible {
   .q-categories__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: calc(var(--q-geist-space-2x, 8) * 1px);
-  }
-
-  .q-category-card__image-placeholder {
-    height: 90px;
   }
 }

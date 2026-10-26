@@ -1,6 +1,24 @@
 import { CategoriesViewModel } from '../../viewmodels/components/CategoriesViewModel.js';
 
 /**
+ * Inline SVG icon factory for category cards.
+ * Returns an SVG string ready for innerHTML.
+ * @param {string} name
+ * @returns {string}
+ */
+function categoryIconSvg(name) {
+  const icons = {
+    laptop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>`,
+    coffee: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8z"/><path d="M17 10h2a2 2 0 1 1 0 4h-2"/><line x1="5" y1="2" x2="5" y2="5"/><line x1="10" y1="2" x2="10" y2="5"/><line x1="15" y1="2" x2="15" y2="5"/></svg>`,
+    vase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l-1 5c2 2 3 4 3 7a6 6 0 0 1-6 6 6 6 0 0 1-6-6c0-3 1-5 3-7L8 3z"/></svg>`,
+    home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>`,
+    ball: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>`,
+    headphones: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>`,
+  };
+  return icons[name] || icons.home;
+}
+
+/**
  * View component for the Categories section.
  * Renders category cards in a responsive grid.
  */
@@ -38,6 +56,10 @@ export class CategoriesView {
     const titleGroup = document.createElement('div');
     titleGroup.className = 'q-categories__title-group';
 
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'q-categories__eyebrow';
+    eyebrow.textContent = this.viewModel.eyebrow;
+
     const title = document.createElement('h2');
     title.id = 'q-categories-title';
     title.className = 'q-categories__title';
@@ -47,6 +69,7 @@ export class CategoriesView {
     subtitle.className = 'q-categories__subtitle';
     subtitle.textContent = this.viewModel.subtitle;
 
+    titleGroup.appendChild(eyebrow);
     titleGroup.appendChild(title);
     titleGroup.appendChild(subtitle);
 
@@ -93,18 +116,13 @@ export class CategoriesView {
       item.className = 'q-categories__item';
 
       const card = document.createElement('a');
-      card.className = 'q-category-card';
+      card.className = `q-category-card q-category-card--${category.style?.color || 'pink'}`;
       card.href = category.href;
 
-      const placeholder = document.createElement('div');
-      placeholder.className = 'q-category-card__image-placeholder';
-      placeholder.setAttribute('aria-hidden', 'true');
-
-      const img = document.createElement('img');
-      img.src = 'https://placehold.co/400x300/F9FAFB/9CA3AF?text=Categor%C3%ADa';
-      img.alt = '';
-      img.loading = 'lazy';
-      placeholder.appendChild(img);
+      const iconWrapper = document.createElement('div');
+      iconWrapper.className = 'q-category-card__icon';
+      iconWrapper.setAttribute('aria-hidden', 'true');
+      iconWrapper.innerHTML = categoryIconSvg(category.style?.icon);
 
       const name = document.createElement('h3');
       name.className = 'q-category-card__name';
@@ -114,7 +132,7 @@ export class CategoriesView {
       count.className = 'q-category-card__count';
       count.textContent = `${category.productCount} productos`;
 
-      card.appendChild(placeholder);
+      card.appendChild(iconWrapper);
       card.appendChild(name);
       card.appendChild(count);
 
