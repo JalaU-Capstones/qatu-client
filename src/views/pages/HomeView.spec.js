@@ -51,6 +51,18 @@ describe('HomeView', () => {
     view.destroy();
   });
 
+  it('constructor accepts onAddToCart and forwards it to the FeaturedProductsViewModel', () => {
+    const onAddToCart = jasmine.createSpy('onAddToCart');
+    const view = new HomeView({ onAddToCart });
+    view.mount(container);
+
+    const product = { id: 'prod-99', name: 'Alpaca Sweater' };
+    view._featuredProducts.viewModel.onAddToCart(product);
+
+    expect(onAddToCart).toHaveBeenCalledWith('prod-99');
+    view.destroy();
+  });
+
   it('should default onAddToCart to a no-op when not provided', () => {
     const view = new HomeView();
     view.mount(container);

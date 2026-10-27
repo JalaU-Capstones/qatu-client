@@ -8,9 +8,15 @@ import { ProductCardView } from '../components/ProductCardView.js';
 export class CatalogView {
   /**
    * @param {CatalogViewModel} [viewModel]
+   * @param {Object} [options]
+   * @param {Function} [options.onAddToCart]
    */
-  constructor(viewModel = new CatalogViewModel()) {
+  constructor(
+    viewModel = new CatalogViewModel(),
+    { onAddToCart = () => Promise.resolve({ status: 'added' }) } = {}
+  ) {
     this.viewModel = viewModel;
+    this.onAddToCart = onAddToCart;
     this._section = null;
     this._grid = null;
     this._pagination = null;
@@ -128,7 +134,7 @@ export class CatalogView {
           },
           {
             variant: 'default',
-            onAddToCart: () => Promise.resolve({ status: 'added' }),
+            onAddToCart: (id) => this.onAddToCart(id),
           }
         );
         this._grid.appendChild(cardView.render());

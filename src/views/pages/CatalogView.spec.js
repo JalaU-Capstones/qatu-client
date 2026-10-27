@@ -250,4 +250,21 @@ describe('CatalogView', () => {
 
     view.destroy();
   });
+
+  it('constructor accepts onAddToCart and forwards it to each ProductCardView', () => {
+    const onAddToCart = jasmine.createSpy('onAddToCart');
+    mockViewModel.products = [{ id: 'p-cart-1', name: 'Aguayo', price: 40, currency: 'USD' }];
+    mockViewModel.meta = { page: 1, per_page: 20, total: 1, total_pages: 1 };
+
+    const view = new CatalogView(mockViewModel, { onAddToCart });
+    view.mount(container);
+
+    const btn = container.querySelector(
+      '#q-catalog-grid .q-product-card button.q-product-card-action'
+    );
+    btn.click();
+
+    expect(onAddToCart).toHaveBeenCalledWith('p-cart-1');
+    view.destroy();
+  });
 });
