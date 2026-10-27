@@ -175,6 +175,7 @@ export class FeaturedProductsView {
         variant: 'featured',
         onAddToCart: (id) => this.viewModel.addToCart(id),
         onToggleFavorite: () => {},
+        detailHref: `/products/${product.id}`,
       }
     );
     return cardView.render();

@@ -80,14 +80,56 @@ Styles are layered in the following order:
 
 The full design system is documented in `Architecture/UI-Design-System` in the Wiki.
 
-## 2.6 Testing Strategy per Component
+## 2.6 Routes and Pages
+
+The client uses a small History API router (`src/router/Router.js`) that supports
+static paths and dynamic segments. Handlers receive `(path, params)`, so a route
+such as `/products/:id` can read `params.id` without changing the signature used
+by the existing static routes.
+
+| Route           | View                | ViewModel                                  | Data source                         |
+| --------------- | ------------------- | ------------------------------------------ | ----------------------------------- |
+| `/`             | `HomeView`          | `FeaturedProductsViewModel`, component VMs | `ProductsApi.getFeaturedProducts()` |
+| `/products`     | `CatalogView`       | `CatalogViewModel`                         | `ProductsApi.getProducts()`         |
+| `/products/:id` | `ProductDetailView` | `ProductDetailViewModel`                   | `ProductsApi.getProductById()`      |
+| `/cart`         | `CartView`          | `CartViewModel`                            | `cartStore`                         |
+| `/login`        | `AuthPageView`      | `AuthViewModel`                            | `AuthApi`                           |
+| `/register`     | `AuthPageView`      | `AuthViewModel`                            | `AuthApi`                           |
+
+### Product detail and cart (frontend-only lab)
+
+The product detail and shopping cart pages are currently a **frontend-only
+wireframe**. They do not call the backend:
+
+- `ProductsApi` exposes a local catalog of eight products with detail fields
+  (`description`, `attributes`, `gallery`, `reviews`, `stock`, seller metadata).
+  `getProductById(id)` returns one product and `getSimilarProducts(id, limit)`
+  returns related in-stock products, prioritising the same category.
+- `cartStore` (schema **v2**) stores product snapshots (`name`, `price`,
+  `currency`, `imageUrl`, `seller`) plus the quantity. It persists to
+  `localStorage` under `qatu.cart` for anonymous and authenticated visitors
+  alike, and it is **not** cleared on login/logout.
+- Totals are derived from the stored snapshots: subtotal, shipping and total.
+  Shipping is free from `US$ 50`; below that a flat `US$ 4.99` applies.
+- Adding to cart from Home, Catalog or the detail page writes directly into
+  `cartStore`; no authentication gate or `CartService`/`CartApi` call is
+  involved in the current shell.
+- `CartService`, `CartApi` and `pendingCartActionStore` remain in the codebase
+  (and keep their specs) for the future backend-backed flow, but the app shell
+  no longer wires them.
+
+When the backend cart endpoints are ready, the snapshot-based store can be
+replaced or hydrated from `GET /cart` using the legacy `setFromGet` helper
+without changing the Views.
+
+## 2.7 Testing Strategy per Component
 
 - **Models:** Unit tests with Jasmine, mocking Fetch API calls.
 - **ViewModels:** Unit tests with Jasmine, mocking Models.
 - **Views:** Integration tests with Jasmine + browser runner (DOM assertions).
 - **Utils:** Pure unit tests.
 
-## 2.7 Technology Stack
+## 2.8 Technology Stack
 
 | Component     | Technology                               | ADR     |
 | ------------- | ---------------------------------------- | ------- |
@@ -100,7 +142,7 @@ The full design system is documented in `Architecture/UI-Design-System` in the W
 | Linting       | ESLint                                   | —       |
 | Formatting    | Prettier                                 | —       |
 
-## 2.8 Architecture Decision Records
+## 2.9 Architecture Decision Records
 
 - **ADR-001** to **ADR-004**: See Wiki for backend/general ADRs.
 - **ADR-005**: Backend Architecture.
@@ -110,7 +152,7 @@ The full design system is documented in `Architecture/UI-Design-System` in the W
 
 _Refer to the Wiki for full details._
 
-## 2.9 References
+## 2.10 References
 
 - Wiki: `Architecture/Frontend`, `Architecture/Overview`, `Architecture/Testing-Strategy`.
 - ADR-006, ADR-007, ADR-008.

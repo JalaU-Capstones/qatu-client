@@ -1,5 +1,9 @@
 /**
  * Client-side Router using HTML5 History API.
+ *
+ * Supports static routes (`/products`) and dynamic segments (`/products/:id`).
+ * Handlers receive `(path, params)`, so existing one-argument handlers keep
+ * working unchanged.
  */
 export class Router {
   /**
@@ -8,6 +12,8 @@ export class Router {
    */
   constructor(options = {}) {
     this.routes = new Map();
+    /** @type {Array<{ keys: string[], regex: RegExp, handler: Function }>} */
+    this._dynamicRoutes = [];
     this.root = options.root || '/';
     this.currentPath = null;
     this._onPopState = this._handlePopState.bind(this);
@@ -18,11 +24,20 @@ export class Router {
   /**
    * Registers a route path and handler.
    * @param {string} path
-   * @param {Function} handler
+   * @param {Function} handler Called with `(path, params)`.
    * @returns {Router}
    */
   addRoute(path, handler) {
-    this.routes.set(this._normalizePath(path), handler);
+    const normalized = this._normalizePath(path);
+
+    if (normalized.includes(':')) {
+      const compiled = this._compileRoute(normalized);
+      this._dynamicRoutes = this._dynamicRoutes.filter((route) => route.pattern !== normalized);
+      this._dynamicRoutes.push({ ...compiled, pattern: normalized, handler });
+      return this;
+    }
+
+    this.routes.set(normalized, handler);
     return this;
   }
 
@@ -50,13 +65,9 @@ export class Router {
     const targetPath = this._normalizePath(path || window.location.pathname);
     this.currentPath = targetPath;
 
-    let handler = this.routes.get(targetPath);
-    if (!handler) {
-      handler = this.routes.get('/') || this.routes.get('*');
-    }
-
-    if (typeof handler === 'function') {
-      handler(targetPath);
+    const match = this._match(targetPath);
+    if (typeof match.handler === 'function') {
+      match.handler(targetPath, match.params);
     }
   }
 
@@ -82,6 +93,60 @@ export class Router {
       this._isStarted = false;
     }
     this.routes.clear();
+    this._dynamicRoutes = [];
+  }
+
+  /**
+   * Finds the handler and params for a normalized path.
+   * @param {string} path
+   * @returns {{ handler: Function|undefined, params: Object }}
+   * @private
+   */
+  _match(path) {
+    const exactHandler = this.routes.get(path);
+    if (exactHandler) {
+      return { handler: exactHandler, params: {} };
+    }
+
+    for (const route of this._dynamicRoutes) {
+      const result = path.match(route.regex);
+      if (!result) continue;
+
+      const params = {};
+      route.keys.forEach((key, index) => {
+        const rawValue = result[index + 1];
+        try {
+          params[key] = decodeURIComponent(rawValue);
+        } catch {
+          params[key] = rawValue;
+        }
+      });
+      return { handler: route.handler, params };
+    }
+
+    return { handler: this.routes.get('/') || this.routes.get('*'), params: {} };
+  }
+
+  /**
+   * Turns `/products/:id` into a RegExp with named keys.
+   * @param {string} path
+   * @returns {{ keys: string[], regex: RegExp }}
+   * @private
+   */
+  _compileRoute(path) {
+    const keys = [];
+    const pattern = path
+      .split('/')
+      .map((segment) => {
+        if (segment.startsWith(':')) {
+          keys.push(segment.slice(1));
+          return '([^/]+)';
+        }
+        return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      })
+      .join('/');
+
+    return { keys, regex: new RegExp(`^${pattern}$`) };
   }
 
   /**

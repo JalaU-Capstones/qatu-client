@@ -57,6 +57,7 @@ The Figma source: [Q-atu Design System](https://www.figma.com/design/CdDUOKZHnmo
 Detailed documentation is available in the `.docs/` directory:
 
 - [Architecture](.docs/ARCHITECTURE.md) — MVVM pattern, components, folder structure, cross-cutting concerns, and testing strategy.
+- [Product Detail and Shopping Cart](.docs/PRODUCT-DETAIL-AND-CART.md) — frontend-only detail/cart flow, local catalog, cart persistence, totals and responsive behavior.
 - [Design System](.docs/DESIGN-SYSTEM.md) — Overview of design tokens, token build pipeline, Bulma overrides, fonts, and dark mode.
 - [Troubleshooting](.docs/TROUBLESHOOTING.md) — Common issues with pnpm, Node.js, Vite, Bulma, Jasmine, Husky, ESLint, and Supabase.
 - [Git Rules](.docs/GIT_RULES.md) — Branching strategy (GitFlow), commit message convention (Conventional Commits), merge request guidelines, and remote configuration.

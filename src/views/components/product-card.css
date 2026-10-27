@@ -103,6 +103,21 @@
   color: var(--q-fg-primary, #1b1b1f);
 }
 
+.q-product-card-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.q-product-card-title-link:hover {
+  color: var(--q-accent, #e91e8c);
+  text-decoration: underline;
+}
+
+.q-product-card-title-link:focus-visible {
+  outline: 2px solid var(--q-accent, #e91e8c);
+  outline-offset: 2px;
+}
+
 .q-product-card-rating {
   display: flex;
   align-items: center;

@@ -134,7 +134,8 @@ export class CatalogView {
           },
           {
             variant: 'default',
-            onAddToCart: (id) => this.onAddToCart(id),
+            onAddToCart: () => this.onAddToCart(product, 1),
+            detailHref: `/products/${product.id}`,
           }
         );
         this._grid.appendChild(cardView.render());

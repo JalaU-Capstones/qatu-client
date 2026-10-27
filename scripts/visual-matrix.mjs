@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 4 routes × 2 themes × 3 viewports = 24 combinations.
+ * Visual matrix E2E — 6 routes × 2 themes × 3 viewports = 36 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -26,6 +26,8 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
+  { name: 'product-detail', path: '/products/aguayo-tradicional-tarabuco' },
+  { name: 'cart', path: '/cart' },
 ];
 
 const THEMES = ['light', 'dark'];
@@ -111,6 +113,28 @@ for (const route of ROUTES) {
                 grid: check('.q-catalog__grid'),
                 footer: check('.q-footer'),
               };
+            case 'product-detail':
+              return {
+                header: check('.q-header'),
+                detailSection: check('.q-product-detail'),
+                breadcrumb: check('.q-breadcrumb'),
+                title: check('.q-product-detail__title'),
+                gallery: check('.q-product-detail__main-image'),
+                quantity: check('.q-quantity-selector'),
+                addToCart: check('.q-product-detail__add'),
+                tabs: check('.q-product-detail__tablist'),
+                recommendations: check('.q-recommendation-card'),
+                footer: check('.q-footer'),
+              };
+            case 'cart':
+              return {
+                header: check('.q-header'),
+                cartSection: check('.q-cart'),
+                title: check('.q-cart__title'),
+                emptyState: check('.q-cart__empty'),
+                continueShopping: check('.q-cart__continue'),
+                footer: check('.q-footer'),
+              };
             default:
               return {};
           }
@@ -157,7 +181,7 @@ for (const route of ROUTES) {
       if (combo.errors.length > 0) combo.status = 'FAIL';
       results.push(combo);
       console.log(
-        `[${combo.status}] ${route.name.padEnd(8)} ${theme.padEnd(5)} ${vp.name.padEnd(8)}` +
+        `[${combo.status}] ${route.name.padEnd(14)} ${theme.padEnd(5)} ${vp.name.padEnd(8)}` +
           (combo.errors.length ? ' → ' + combo.errors.join(' | ') : '')
       );
     }

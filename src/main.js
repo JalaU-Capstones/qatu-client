@@ -16,21 +16,24 @@ import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/components/product-card.css';
+import './views/components/quantity-selector.css';
+import './views/components/recommendation-card.css';
+import './views/pages/product-detail.css';
+import './views/pages/cart.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
-import { CartApi } from './models/api/CartApi.js';
 import { Router } from './router/Router.js';
-import { CartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
-import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
+import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { HomeView } from './views/pages/HomeView.js';
+import { ProductDetailView } from './views/pages/ProductDetailView.js';
 
 const app = document.getElementById('app');
 
@@ -39,17 +42,11 @@ if (app) {
   themeStore.init();
 
   const authApi = new AuthApi();
-  const cartApi = new CartApi();
-  const cartService = new CartService({
-    cartApi,
-    cartStore,
-    authStore,
-    pendingCartActionStore,
-  });
 
-  // Hydrate session from localStorage before mounting anything that reads user state
+  // Hydrate session from localStorage before mounting anything that reads user state.
+  // The local cart hydrates itself in the CartStore constructor, so it survives
+  // page reloads for anonymous visitors too.
   authStore.loadFromStorage();
-  cartStore.setUser(authStore.getUser()?.id ?? null);
 
   // Persistent shell
   const header = new HeaderView();
@@ -97,6 +94,21 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderProductDetail = (productId) => {
+    clearCurrentView();
+    currentPageView = new ProductDetailView({
+      productId,
+      onBuyNow: () => router.navigate('/cart'),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderCart = () => {
+    clearCurrentView();
+    currentPageView = new CartView();
+    currentPageView.mount(mainEl);
+  };
+
   const renderAuth = (mode) => {
     // Preserve sliding animation: if we are already on an auth page,
     // switch mode in place instead of remounting.
@@ -116,15 +128,6 @@ if (app) {
       onNavigate: (path) => {
         const returnTo = authRedirectStore.getReturnTo();
         authRedirectStore.clearReturnTo();
-
-        // Fire-and-forget: process any pending cart add queued before login.
-        // Not awaited — we want the user to land on their return route immediately.
-        // The cartStore notification will update the header badge ~200ms later.
-        cartService.processPending().catch((err) => {
-          // eslint-disable-next-line no-console
-          console.warn('[main] processPending failed:', err?.message || err);
-        });
-
         router.navigate(returnTo || path || '/');
       },
       onModeChange: (newMode) => {
@@ -140,38 +143,31 @@ if (app) {
   };
 
   /**
-   * Called by ProductCardView when the user clicks "Añadir".
-   * Returns the CartService result union (added | auth-required | error).
-   * Handles the two redirect triggers:
-   *   - auth-required: user not logged in at click time → queue + redirect
-   *   - SESSION_EXPIRED mid-request: token expired during the API call → queue
-   *     the pending defensively (the qatu:auth-expired listener already redirected)
+   * Called by the product cards on Home/Catalog when the user clicks "Añadir".
+   * The current lab is frontend-only: the product snapshot is written straight
+   * into the local cart, so no authentication or backend call is required.
+   *
+   * @param {Object} product Product snapshot (id, name, price, currency, ...).
+   * @param {number} [quantity=1]
+   * @returns {Promise<{ status: 'added'|'error', item?: Object, error?: Error }>}
    */
-  const onAddToCartHandler = async (productId) => {
-    const result = await cartService.addToCart(productId, 1);
-
-    if (result.status === 'auth-required') {
-      // CartService already queued pendingCartActionStore internally
-      // (skipPendingWrite: false default). Capture return path + redirect.
-      authRedirectStore.setReturnTo(window.location.pathname);
-      router.navigate('/login');
-      return result;
+  const onAddToCartHandler = (product, quantity = 1) => {
+    if (!product) {
+      return Promise.resolve({
+        status: 'error',
+        error: new Error('Producto no disponible'),
+      });
     }
 
-    if (result.status === 'error' && result.error?.code === 'SESSION_EXPIRED') {
-      // Rare: user was authenticated at click time but the JWT expired
-      // between the auth check and the API response. The qatu:auth-expired
-      // listener already fired synchronously (during apiFetch) and did the
-      // redirect + setReturnTo. We only need to preserve the intent.
-      pendingCartActionStore.set({ productId, quantity: 1 });
-    }
-
-    return result;
+    const item = cartStore.addItem(product, quantity);
+    return Promise.resolve({ status: 'added', item });
   };
 
   const router = new Router();
   router.addRoute('/', () => renderHome());
   router.addRoute('/products', () => renderCatalog());
+  router.addRoute('/products/:id', (_path, params) => renderProductDetail(params.id));
+  router.addRoute('/cart', () => renderCart());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
@@ -180,6 +176,7 @@ if (app) {
     router.navigate('/login');
   };
   header.viewModel.onLogoClick = () => router.navigate('/');
+  header.viewModel.onCartClick = () => router.navigate('/cart');
 
   // Wire logout: clear session and redirect to /login
   header.viewModel.onLogoutClick = () => {
@@ -197,9 +194,8 @@ if (app) {
 
   authStore.subscribe((store) => {
     header.viewModel.setUser(store.getUser());
-    cartStore.setUser(store.getUser()?.id ?? null);
-    // cartStore.setUser(null) clears the items + localStorage (per-user scope).
-    // On login, it hydrates from localStorage for that user.
+    // The local cart is intentionally not scoped per user: logging in or out
+    // must not discard the products the shopper already selected.
   });
 
   cartStore.subscribe((store) => {

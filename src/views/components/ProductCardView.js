@@ -26,6 +26,7 @@
  * @property {'featured'|'default'} [variant='default']
  * @property {Function} [onAddToCart]     Called with productId
  * @property {Function} [onToggleFavorite]
+ * @property {string} [detailHref]        When set, the title links to the product detail page.
  */
 
 export class ProductCardView {
@@ -38,6 +39,7 @@ export class ProductCardView {
     this.variant = options.variant || 'default';
     this.onAddToCart = options.onAddToCart || null;
     this.onToggleFavorite = options.onToggleFavorite || null;
+    this.detailHref = options.detailHref || null;
     this.element = null;
     this._status = 'idle'; // 'idle' | 'loading' | 'success' | 'error' | 'disabled'
     this._errorMessage = '';
@@ -97,7 +99,16 @@ export class ProductCardView {
 
     const title = document.createElement('h3');
     title.className = 'q-product-card-title';
-    title.textContent = this.data.name;
+    if (this.detailHref) {
+      const titleLink = document.createElement('a');
+      titleLink.className = 'q-product-card-title-link';
+      titleLink.href = this.detailHref;
+      titleLink.dataset.route = '';
+      titleLink.textContent = this.data.name;
+      title.appendChild(titleLink);
+    } else {
+      title.textContent = this.data.name;
+    }
 
     const rating = document.createElement('p');
     rating.className = 'q-product-card-rating';

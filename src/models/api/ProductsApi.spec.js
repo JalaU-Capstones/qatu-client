@@ -159,4 +159,77 @@ describe('ProductsApi', () => {
       await expectAsync(api.getProducts()).toBeRejectedWith(networkError);
     });
   });
+
+  // ─── getProductById ─────────────────────────────────────────────────────────
+
+  describe('getProductById', () => {
+    it('should return the matching product with detail fields', async () => {
+      const product = await api.getProductById('aguayo-tradicional-tarabuco');
+
+      expect(product).not.toBeNull();
+      expect(product.name).toBe('Aguayo tradicional de Tarabuco');
+      expect(typeof product.description).toBe('string');
+      expect(product.description.length).toBeGreaterThan(0);
+      expect(Array.isArray(product.attributes)).toBe(true);
+      expect(product.attributes.length).toBeGreaterThan(0);
+      expect(Array.isArray(product.gallery)).toBe(true);
+      expect(product.gallery.length).toBeGreaterThanOrEqual(3);
+      expect(Array.isArray(product.reviews)).toBe(true);
+      expect(typeof product.stock).toBe('number');
+    });
+
+    it('should return null for an unknown product id', async () => {
+      const product = await api.getProductById('does-not-exist');
+      expect(product).toBeNull();
+    });
+
+    it('should return a fresh copy that cannot mutate the catalog', async () => {
+      const first = await api.getProductById('cafe-especialidad-cusco');
+      first.name = 'Changed';
+      first.attributes[0].value = 'Changed';
+
+      const second = await api.getProductById('cafe-especialidad-cusco');
+      expect(second.name).toBe('Café de especialidad de Cusco 500 g');
+      expect(second.attributes[0].value).not.toBe('Changed');
+    });
+  });
+
+  // ─── getSimilarProducts ────────────────────────────────────────────────────
+
+  describe('getSimilarProducts', () => {
+    it('should return three recommendations by default, excluding the current product', async () => {
+      const similar = await api.getSimilarProducts('aguayo-tradicional-tarabuco');
+
+      expect(similar.length).toBe(3);
+      expect(similar.some((product) => product.id === 'aguayo-tradicional-tarabuco')).toBe(false);
+      similar.forEach((product) => {
+        expect(typeof product.id).toBe('string');
+        expect(typeof product.name).toBe('string');
+        expect(typeof product.price).toBe('number');
+        expect(product.stock).toBeGreaterThan(0);
+      });
+    });
+
+    it('should prioritise products from the same category', async () => {
+      const similar = await api.getSimilarProducts('cafe-especialidad-cusco', 2);
+
+      expect(similar[0].category).toBe('Alimentos');
+      expect(similar[0].id).toBe('chocolate-cacao-esmeraldas');
+    });
+
+    it('should respect the requested limit', async () => {
+      const similar = await api.getSimilarProducts('cafe-especialidad-cusco', 5);
+      expect(similar.length).toBe(5);
+    });
+
+    it('should return an empty array for an unknown product', async () => {
+      const similar = await api.getSimilarProducts('does-not-exist');
+      expect(similar).toEqual([]);
+    });
+
+    it('should return an empty array when the limit is zero or negative', async () => {
+      expect(await api.getSimilarProducts('cafe-especialidad-cusco', 0)).toEqual([]);
+      expect(await api.getSimilarProducts('cafe-especialidad-cusco', -2)).toEqual([]);
+    });
+  });
 });
