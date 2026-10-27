@@ -15,7 +15,7 @@ export class HomeView {
    *   "Add to cart" button is clicked. The app shell uses this to update the
    *   header cart badge. Defaults to a no-op.
    */
-  constructor({ onAddToCart = () => {} } = {}) {
+  constructor({ onAddToCart = () => Promise.resolve({ status: 'added' }) } = {}) {
     this.onAddToCart = onAddToCart;
     this._hero = null;
     this._categories = null;
@@ -35,9 +35,7 @@ export class HomeView {
     this._categories.mount(container);
 
     this._featuredProducts = new FeaturedProductsView();
-    this._featuredProducts.viewModel.onAddToCart = () => {
-      this.onAddToCart();
-    };
+    this._featuredProducts.viewModel.onAddToCart = (product) => this.onAddToCart(product?.id);
     this._featuredProducts.mount(container);
     this._featuredProducts.viewModel.load();
 

@@ -4,6 +4,17 @@ const CURRENCY_LABELS = {
   USD: 'US$',
 };
 
+const FEATURED_PRODUCTS_SEED = [
+  { id: 'aguayo-tradicional-tarabuco', stock: 15, state: 'published' },
+  { id: 'cafe-especialidad-cusco', stock: 8, state: 'published' },
+  { id: 'jarron-barro-negro-oaxaca', stock: 0, state: 'published' },
+  { id: 'bolso-cuero-artesanal', stock: 12, state: 'published' },
+  { id: 'audifonos-inalambricos-anc-pro', stock: 5, state: 'published' },
+  { id: 'chocolate-cacao-esmeraldas', stock: 20, state: 'published' },
+  { id: 'mochila-trekking-45l', stock: 0, state: 'published' },
+  { id: 'huipil-bordado-guatemalteco', stock: 6, state: 'published' },
+];
+
 /**
  * ViewModel for the Featured products section of the home page.
  * Holds the section copy, the loading state, the product list and the "Add to cart" interaction.
@@ -33,7 +44,17 @@ export class FeaturedProductsViewModel {
     this.loadErrorMessage =
       options.loadErrorMessage || 'No pudimos cargar los productos destacados.';
     this.productsApi = options.productsApi || new ProductsApi();
-    this.products = options.products || [];
+    this.products = Array.isArray(options.products)
+      ? options.products.map((p) => {
+          const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
+          if (!seed) return p;
+          return {
+            ...p,
+            stock: typeof p.stock === 'number' ? p.stock : seed.stock,
+            state: p.state || seed.state,
+          };
+        })
+      : [];
     /** @type {'idle' | 'loading' | 'ready' | 'error'} */
     this.status = options.products ? 'ready' : 'idle';
     this.errorMessage = '';
@@ -51,8 +72,17 @@ export class FeaturedProductsViewModel {
     this.errorMessage = '';
 
     try {
-      const products = await this.productsApi.getFeaturedProducts();
-      this.products = Array.isArray(products) ? products : [];
+      const rawProducts = await this.productsApi.getFeaturedProducts();
+      const products = Array.isArray(rawProducts) ? rawProducts : [];
+      this.products = products.map((p) => {
+        const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
+        if (!seed) return p;
+        return {
+          ...p,
+          stock: typeof p.stock === 'number' ? p.stock : seed.stock,
+          state: p.state || seed.state,
+        };
+      });
       this.status = 'ready';
     } catch {
       this.products = [];
@@ -68,7 +98,17 @@ export class FeaturedProductsViewModel {
    * @param {Array<Object>} products
    */
   setProducts(products) {
-    this.products = Array.isArray(products) ? products : [];
+    this.products = Array.isArray(products)
+      ? products.map((p) => {
+          const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
+          if (!seed) return p;
+          return {
+            ...p,
+            stock: typeof p.stock === 'number' ? p.stock : seed.stock,
+            state: p.state || seed.state,
+          };
+        })
+      : [];
     this.status = 'ready';
     this.errorMessage = '';
     this._notify();
@@ -146,17 +186,20 @@ export class FeaturedProductsViewModel {
 
   /**
    * Triggers the "Add to cart" action for a product.
+   * Returns the promise from `onAddToCart` so the caller (ProductCardView)
+   * can drive the button state machine.
+   *
    * @param {string} productId
-   * @returns {boolean} true when the product exists
+   * @returns {Promise<{ status: string, error?: Error } | { status: 'not-found' }>}
    */
-  addToCart(productId) {
+  async addToCart(productId) {
     const product = this.products.find((item) => item.id === productId);
-    if (!product) return false;
-
+    if (!product) return { status: 'not-found' };
     if (typeof this.onAddToCart === 'function') {
-      this.onAddToCart(product);
+      const result = await this.onAddToCart(product);
+      return result || { status: 'added' };
     }
-    return true;
+    return { status: 'added' };
   }
 
   /**

@@ -195,4 +195,166 @@ describe('ProductCardView', () => {
     expect(container.querySelector('.q-product-card')).toBeNull();
     expect(cardView.element).toBeNull();
   });
+
+  describe('state machine', () => {
+    it('renders "Añadir" button in idle state by default', () => {
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      expect(btn.textContent).toBe('Añadir');
+      expect(btn.disabled).toBe(false);
+      expect(btn.classList.contains('is-disabled')).toBe(false);
+    });
+
+    it('renders "Sin stock" disabled button when stock is 0', () => {
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item', stock: 0 });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      expect(btn.textContent).toBe('Sin stock');
+      expect(btn.disabled).toBe(true);
+      expect(btn.classList.contains('is-disabled')).toBe(true);
+      expect(btn.getAttribute('aria-label')).toBe('Sin stock: Item');
+    });
+
+    it('renders "Sin stock" disabled button when stock is negative', () => {
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item', stock: -1 });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      expect(btn.textContent).toBe('Sin stock');
+      expect(btn.disabled).toBe(true);
+      expect(btn.classList.contains('is-disabled')).toBe(true);
+    });
+
+    it('renders "No disponible" disabled button when state is not "published"', () => {
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item', state: 'draft' });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      expect(btn.textContent).toBe('No disponible');
+      expect(btn.disabled).toBe(true);
+      expect(btn.classList.contains('is-disabled')).toBe(true);
+      expect(btn.getAttribute('aria-label')).toBe('No disponible: Item');
+    });
+
+    it('does NOT call onAddToCart when button is clicked and stock is 0', () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart');
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item', stock: 0 }, { onAddToCart });
+      const el = cardView.render();
+      el.querySelector('button.q-product-card-action').click();
+      expect(onAddToCart).not.toHaveBeenCalled();
+    });
+
+    it('clicking the button sets is-loading class and text "Añadiendo…"', () => {
+      let resolvePromise;
+      const onAddToCart = () =>
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        });
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      btn.click();
+      expect(btn.classList.contains('is-loading')).toBe(true);
+      expect(btn.disabled).toBe(true);
+      expect(btn.textContent).toBe('Añadiendo…');
+      resolvePromise({ status: 'added' });
+    });
+
+    it('successful result sets is-success class and text "✓ Añadido"', async () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      btn.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(btn.classList.contains('is-success')).toBe(true);
+      expect(btn.textContent).toBe('✓ Añadido');
+      expect(btn.disabled).toBe(false);
+    });
+
+    it('success state reverts to idle after 1500ms', async () => {
+      jasmine.clock().install();
+      try {
+        const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+        const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+        const el = cardView.render();
+        const btn = el.querySelector('button.q-product-card-action');
+        btn.click();
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(btn.classList.contains('is-success')).toBe(true);
+
+        jasmine.clock().tick(1500);
+        expect(btn.classList.contains('is-success')).toBe(false);
+        expect(btn.textContent).toBe('Añadir');
+        expect(btn.disabled).toBe(false);
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
+
+    it('auth-required result sets is-success (flash) before reverting', async () => {
+      const onAddToCart = jasmine
+        .createSpy('onAddToCart')
+        .and.resolveTo({ status: 'auth-required' });
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      btn.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(btn.classList.contains('is-success')).toBe(true);
+      expect(btn.textContent).toBe('✓ Añadido');
+    });
+
+    it('error result sets is-error class and renders .q-product-card-error with the message', async () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({
+        status: 'error',
+        error: new Error('Sin conexión'),
+      });
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      btn.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(btn.classList.contains('is-error')).toBe(true);
+      expect(btn.textContent).toBe('Añadir');
+      const errEl = el.querySelector('.q-product-card-error');
+      expect(errEl).not.toBeNull();
+      expect(errEl.textContent).toBe('Sin conexión');
+      expect(errEl.getAttribute('role')).toBe('alert');
+    });
+
+    it('destroy() clears the success timer', async () => {
+      spyOn(window, 'clearTimeout').and.callThrough();
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      cardView.render();
+      cardView._actionBtn.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(cardView._successTimer).not.toBeNull();
+
+      cardView.destroy();
+      expect(window.clearTimeout).toHaveBeenCalled();
+      expect(cardView._successTimer).toBeNull();
+    });
+
+    it('clicking while loading is a no-op (does not double-fire)', () => {
+      let resolvePromise;
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.returnValue(
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        })
+      );
+      const cardView = new ProductCardView({ id: 'p1', name: 'Item' }, { onAddToCart });
+      const el = cardView.render();
+      const btn = el.querySelector('button.q-product-card-action');
+      btn.click();
+      btn.click();
+      expect(onAddToCart).toHaveBeenCalledTimes(1);
+      resolvePromise({ status: 'added' });
+    });
+  });
 });

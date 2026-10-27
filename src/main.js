@@ -18,9 +18,13 @@ import './views/pages/catalog.css';
 import './views/components/product-card.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
+import { CartApi } from './models/api/CartApi.js';
 import { Router } from './router/Router.js';
+import { CartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
+import { cartStore } from './store/cartStore.js';
+import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
@@ -35,13 +39,22 @@ if (app) {
   themeStore.init();
 
   const authApi = new AuthApi();
+  const cartApi = new CartApi();
+  const cartService = new CartService({
+    cartApi,
+    cartStore,
+    authStore,
+    pendingCartActionStore,
+  });
 
   // Hydrate session from localStorage before mounting anything that reads user state
   authStore.loadFromStorage();
+  cartStore.setUser(authStore.getUser()?.id ?? null);
 
   // Persistent shell
   const header = new HeaderView();
   header.viewModel.setUser(authStore.getUser());
+  header.viewModel.setCartCount(cartStore.getCount());
   header.mount(app);
   themeStore.subscribe((store) => {
     header.viewModel.setTheme(store.getResolved());
@@ -71,16 +84,16 @@ if (app) {
   const renderHome = () => {
     clearCurrentView();
     currentPageView = new HomeView({
-      onAddToCart: () => {
-        header.viewModel.setCartCount(header.viewModel.cartCount + 1);
-      },
+      onAddToCart: onAddToCartHandler,
     });
     currentPageView.mount(mainEl);
   };
 
   const renderCatalog = () => {
     clearCurrentView();
-    currentPageView = new CatalogView();
+    currentPageView = new CatalogView(undefined, {
+      onAddToCart: onAddToCartHandler,
+    });
     currentPageView.mount(mainEl);
   };
 
@@ -101,10 +114,17 @@ if (app) {
       authApi,
       authStore,
       onNavigate: (path) => {
-        // AuthViewModel calls onNavigate('/') on successful login/registration.
-        // If the user was redirected here from another page, return them there.
         const returnTo = authRedirectStore.getReturnTo();
         authRedirectStore.clearReturnTo();
+
+        // Fire-and-forget: process any pending cart add queued before login.
+        // Not awaited — we want the user to land on their return route immediately.
+        // The cartStore notification will update the header badge ~200ms later.
+        cartService.processPending().catch((err) => {
+          // eslint-disable-next-line no-console
+          console.warn('[main] processPending failed:', err?.message || err);
+        });
+
         router.navigate(returnTo || path || '/');
       },
       onModeChange: (newMode) => {
@@ -117,6 +137,36 @@ if (app) {
     view.mount(mainEl);
     currentPageView = view;
     activeAuth = view;
+  };
+
+  /**
+   * Called by ProductCardView when the user clicks "Añadir".
+   * Returns the CartService result union (added | auth-required | error).
+   * Handles the two redirect triggers:
+   *   - auth-required: user not logged in at click time → queue + redirect
+   *   - SESSION_EXPIRED mid-request: token expired during the API call → queue
+   *     the pending defensively (the qatu:auth-expired listener already redirected)
+   */
+  const onAddToCartHandler = async (productId) => {
+    const result = await cartService.addToCart(productId, 1);
+
+    if (result.status === 'auth-required') {
+      // CartService already queued pendingCartActionStore internally
+      // (skipPendingWrite: false default). Capture return path + redirect.
+      authRedirectStore.setReturnTo(window.location.pathname);
+      router.navigate('/login');
+      return result;
+    }
+
+    if (result.status === 'error' && result.error?.code === 'SESSION_EXPIRED') {
+      // Rare: user was authenticated at click time but the JWT expired
+      // between the auth check and the API response. The qatu:auth-expired
+      // listener already fired synchronously (during apiFetch) and did the
+      // redirect + setReturnTo. We only need to preserve the intent.
+      pendingCartActionStore.set({ productId, quantity: 1 });
+    }
+
+    return result;
   };
 
   const router = new Router();
@@ -147,6 +197,13 @@ if (app) {
 
   authStore.subscribe((store) => {
     header.viewModel.setUser(store.getUser());
+    cartStore.setUser(store.getUser()?.id ?? null);
+    // cartStore.setUser(null) clears the items + localStorage (per-user scope).
+    // On login, it hydrates from localStorage for that user.
+  });
+
+  cartStore.subscribe((store) => {
+    header.viewModel.setCartCount(store.getCount());
   });
 
   router.start();

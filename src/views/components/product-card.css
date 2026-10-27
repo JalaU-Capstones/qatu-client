@@ -260,3 +260,42 @@ button.q-product-card-action:focus-visible {
     height: 220px;
   }
 }
+
+/* ─── Action button state machine ──────────────────────────── */
+
+button.q-product-card-action.is-loading {
+  background-color: var(--q-accent);
+  opacity: 0.7;
+  cursor: wait;
+}
+
+button.q-product-card-action.is-success {
+  background-color: var(--q-color-success);
+  border-color: var(--q-color-success);
+  color: var(--q-bg-page);
+}
+
+button.q-product-card-action.is-error {
+  background-color: var(--q-accent);
+  border-color: var(--q-color-error);
+}
+
+button.q-product-card-action.is-disabled,
+button.q-product-card-action:disabled {
+  background-color: var(--q-bg-surface);
+  border-color: var(--q-border-default);
+  color: var(--q-fg-muted);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.q-product-card-error {
+  margin: 8px 16px 16px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  color: var(--q-color-error);
+  background-color: var(--q-bg-surface);
+  border: 1px solid var(--q-color-error);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  text-align: center;
+}

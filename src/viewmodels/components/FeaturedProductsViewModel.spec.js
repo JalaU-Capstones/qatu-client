@@ -178,29 +178,53 @@ describe('FeaturedProductsViewModel', () => {
   });
 
   describe('add to cart', () => {
-    it('should call onAddToCart with the product and return true', () => {
-      const onAddToCart = jasmine.createSpy('onAddToCart');
+    it('should call onAddToCart with the product and return its result', async () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
       viewModel.onAddToCart = onAddToCart;
 
-      const result = viewModel.addToCart('cafe-especialidad-cusco');
+      const result = await viewModel.addToCart('cafe-especialidad-cusco');
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ status: 'added' });
       expect(onAddToCart).toHaveBeenCalledTimes(1);
       expect(onAddToCart.calls.mostRecent().args[0].name).toBe(
         'Café de especialidad de Cusco 500 g'
       );
     });
 
-    it('should return false and not call onAddToCart for an unknown product', () => {
+    it('addToCart returns Promise<{ status: "not-found" }> when productId is unknown', async () => {
       const onAddToCart = jasmine.createSpy('onAddToCart');
       viewModel.onAddToCart = onAddToCart;
 
-      expect(viewModel.addToCart('does-not-exist')).toBe(false);
+      const res = await viewModel.addToCart('does-not-exist');
+      expect(res).toEqual({ status: 'not-found' });
       expect(onAddToCart).not.toHaveBeenCalled();
     });
 
-    it('should not fail when no onAddToCart handler is set', () => {
-      expect(() => viewModel.addToCart('cafe-especialidad-cusco')).not.toThrow();
+    it('addToCart calls onAddToCart with the full product object', async () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+      viewModel.onAddToCart = onAddToCart;
+
+      await viewModel.addToCart('aguayo-tradicional-tarabuco');
+      expect(onAddToCart).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          id: 'aguayo-tradicional-tarabuco',
+          name: 'Aguayo tradicional de Tarabuco',
+        })
+      );
+    });
+
+    it('addToCart returns the promise value from onAddToCart', async () => {
+      const customResult = { status: 'error', error: new Error('fail') };
+      viewModel.onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo(customResult);
+
+      const result = await viewModel.addToCart('aguayo-tradicional-tarabuco');
+      expect(result).toBe(customResult);
+    });
+
+    it('addToCart returns { status: "added" } when onAddToCart is not set', async () => {
+      viewModel.onAddToCart = null;
+      const result = await viewModel.addToCart('cafe-especialidad-cusco');
+      expect(result).toEqual({ status: 'added' });
     });
   });
 

@@ -229,4 +229,42 @@ describe('CatalogView', () => {
     expect(container.querySelector('section.q-catalog')).toBeNull();
     expect(listeners.size).toBe(0);
   });
+
+  it('cards receive stock and state from the API product', () => {
+    mockViewModel.products = [
+      { id: 'p1', name: 'Aguayo', price: 40, currency: 'USD', stock: 0, state: 'published' },
+      { id: 'p2', name: 'Café', price: 14, currency: 'USD', stock: 5, state: 'draft' },
+    ];
+    mockViewModel.meta = { page: 1, per_page: 20, total: 2, total_pages: 1 };
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const buttons = container.querySelectorAll(
+      '#q-catalog-grid .q-product-card button.q-product-card-action'
+    );
+    expect(buttons[0].textContent).toBe('Sin stock');
+    expect(buttons[0].disabled).toBe(true);
+    expect(buttons[1].textContent).toBe('No disponible');
+    expect(buttons[1].disabled).toBe(true);
+
+    view.destroy();
+  });
+
+  it('constructor accepts onAddToCart and forwards it to each ProductCardView', () => {
+    const onAddToCart = jasmine.createSpy('onAddToCart');
+    mockViewModel.products = [{ id: 'p-cart-1', name: 'Aguayo', price: 40, currency: 'USD' }];
+    mockViewModel.meta = { page: 1, per_page: 20, total: 1, total_pages: 1 };
+
+    const view = new CatalogView(mockViewModel, { onAddToCart });
+    view.mount(container);
+
+    const btn = container.querySelector(
+      '#q-catalog-grid .q-product-card button.q-product-card-action'
+    );
+    btn.click();
+
+    expect(onAddToCart).toHaveBeenCalledWith('p-cart-1');
+    view.destroy();
+  });
 });

@@ -168,13 +168,13 @@ export class FeaturedProductsView {
         starsFilled: this.viewModel.getStarsFilled(product),
         imageUrl: product.imageUrl || null,
         isNew: this.viewModel.isNewProduct(product),
+        stock: typeof product.stock === 'number' ? product.stock : null,
+        state: product.state || 'published',
       },
       {
         variant: 'featured',
         onAddToCart: (id) => this.viewModel.addToCart(id),
-        onToggleFavorite: () => {
-          // no-op for now
-        },
+        onToggleFavorite: () => {},
       }
     );
     return cardView.render();

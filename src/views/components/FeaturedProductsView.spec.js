@@ -255,4 +255,26 @@ describe('FeaturedProductsView', () => {
     hearts[0].click();
     expect(viewModel.addToCart).not.toHaveBeenCalled();
   });
+
+  it('_renderCard passes stock from the product to ProductCardView', () => {
+    const cardEl = view._renderCard({
+      id: 'p-test',
+      name: 'Test Product',
+      stock: 0,
+    });
+    const btn = cardEl.querySelector('button.q-product-card-action');
+    expect(btn.textContent).toBe('Sin stock');
+    expect(btn.disabled).toBe(true);
+  });
+
+  it('_renderCard defaults state to "published" when product.state is missing', () => {
+    const cardEl = view._renderCard({
+      id: 'p-test-2',
+      name: 'Test Product 2',
+      stock: 5,
+    });
+    const btn = cardEl.querySelector('button.q-product-card-action');
+    expect(btn.textContent).toBe('Añadir');
+    expect(btn.disabled).toBe(false);
+  });
 });
