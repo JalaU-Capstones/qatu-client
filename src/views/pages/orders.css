@@ -1,0 +1,236 @@
+/**
+ * Orders page styling
+ * Aligned with Qatu design tokens and strict MVVM architecture.
+ */
+
+.q-orders-page {
+  width: 100%;
+  padding-top: calc(var(--q-geist-space-10x, 40) * 1px);
+  padding-bottom: calc(var(--q-geist-space-16x, 64) * 1px);
+  box-sizing: border-box;
+}
+
+.q-orders-page__header {
+  margin-bottom: calc(var(--q-geist-space-8x, 32) * 1px);
+}
+
+.q-orders-page__title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-3xl, 30) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  color: var(--q-fg-primary);
+  margin: 0 0 calc(var(--q-geist-space-2x, 8) * 1px) 0;
+  line-height: var(--q-leading-tight, 1.25);
+}
+
+.q-orders-page__subtitle {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-base, 16) * 1px);
+  color: var(--q-fg-muted);
+  margin: 0;
+  line-height: var(--q-leading-normal, 1.5);
+}
+
+/* Alerts */
+.q-orders-alert {
+  padding: calc(var(--q-geist-space-4x, 16) * 1px);
+  border-radius: calc(var(--q-radius-md, 8) * 1px);
+  margin-bottom: calc(var(--q-geist-space-6x, 24) * 1px);
+  font-size: calc(var(--q-text-base, 15) * 1px);
+}
+
+.q-orders-alert--forbidden {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--q-color-error, #ef4444);
+  color: var(--q-color-error, #ef4444);
+}
+
+.q-orders-alert--error {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--q-color-warning, #f59e0b);
+  color: var(--q-color-warning, #f59e0b);
+}
+
+/* Empty State */
+.q-orders-empty {
+  text-align: center;
+  padding: calc(var(--q-geist-space-12x, 48) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
+  background-color: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-lg, 12) * 1px);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.q-orders-empty-icon {
+  margin-bottom: calc(var(--q-geist-space-4x, 16) * 1px);
+  color: var(--q-fg-muted);
+}
+
+.q-orders-empty-message,
+.q-orders-empty-title {
+  font-size: calc(var(--q-text-xl, 20) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  color: var(--q-fg-primary);
+  margin: 0 0 calc(var(--q-geist-space-2x, 8) * 1px) 0;
+}
+
+.q-orders-empty-subtitle {
+  font-size: calc(var(--q-text-base, 15) * 1px);
+  color: var(--q-fg-muted);
+  margin: 0 0 calc(var(--q-geist-space-6x, 24) * 1px) 0;
+  line-height: var(--q-leading-normal, 1.5);
+}
+
+.q-orders-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Orders Grid & Card */
+.q-orders-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--q-geist-space-4x, 16) * 1px);
+}
+
+.q-order-card {
+  background-color: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 8) * 1px);
+  padding: calc(var(--q-geist-space-5x, 20) * 1px);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.q-order-card:hover {
+  border-color: var(--q-color-primary);
+  box-shadow: var(--q-shadow-sm);
+}
+
+.q-order-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--q-border-default);
+  padding-bottom: calc(var(--q-geist-space-3x, 12) * 1px);
+  margin-bottom: calc(var(--q-geist-space-4x, 16) * 1px);
+}
+
+.q-order-id {
+  font-weight: 700;
+  font-family: monospace;
+  font-size: calc(var(--q-text-base, 15) * 1px);
+  color: var(--q-fg-primary);
+}
+
+.q-order-date {
+  font-size: calc(var(--q-text-sm, 13) * 1px);
+  color: var(--q-fg-muted);
+}
+
+.q-order-card__body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.q-order-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.q-order-status--pending {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--q-color-warning, #d97706);
+}
+
+.q-order-status--confirmed {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--q-color-primary, #2563eb);
+}
+
+.q-order-status--shipped {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #7c3aed;
+}
+
+.q-order-status--delivered {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--q-color-success, #059669);
+}
+
+.q-order-status--cancelled,
+.q-order-status--refunded {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--q-color-error, #dc2626);
+}
+
+.q-order-total {
+  font-size: calc(var(--q-text-lg, 18) * 1px);
+  font-weight: 700;
+  color: var(--q-fg-primary);
+}
+
+.q-order-card__items {
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  color: var(--q-fg-secondary);
+}
+
+/* Pagination */
+.q-orders-page__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--q-geist-space-4x, 16) * 1px);
+  margin-top: calc(var(--q-geist-space-8x, 32) * 1px);
+}
+
+.q-pagination-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--q-border-default);
+  background: var(--q-bg-surface);
+  color: var(--q-fg-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.q-pagination-btn:hover:not(:disabled) {
+  border-color: var(--q-color-primary);
+  color: var(--q-color-primary);
+}
+
+.q-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.q-pagination-info {
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  color: var(--q-fg-muted);
+}
+
+/* Loading */
+.q-orders-loading {
+  text-align: center;
+  padding: 48px;
+  color: var(--q-fg-muted);
+}
