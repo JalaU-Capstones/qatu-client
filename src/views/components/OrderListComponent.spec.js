@@ -69,4 +69,3 @@ describe('OrderListComponent', () => {
     expect(clickSpy).toHaveBeenCalledWith(sampleOrder);
   });
 });
-

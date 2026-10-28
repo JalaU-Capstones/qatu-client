@@ -177,4 +177,3 @@ export class OrderListComponent {
     return container;
   }
 }
-

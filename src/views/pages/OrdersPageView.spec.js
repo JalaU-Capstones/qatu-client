@@ -133,4 +133,3 @@ describe('OrdersPageView', () => {
     expect(info.textContent).toBe('Página 1 de 2');
   });
 });
-

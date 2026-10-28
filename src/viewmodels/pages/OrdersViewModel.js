@@ -144,4 +144,3 @@ export class OrdersViewModel {
     return Promise.resolve();
   }
 }
-
