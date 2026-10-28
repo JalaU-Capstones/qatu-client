@@ -15,6 +15,7 @@ import './views/components/shipping-banner.css';
 import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
+import './views/pages/orders.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
 import './views/components/recommendation-card.css';
@@ -38,6 +39,7 @@ import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { HomeView } from './views/pages/HomeView.js';
+import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 
 const app = document.getElementById('app');
@@ -144,6 +146,14 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderOrders = () => {
+    clearCurrentView();
+    currentPageView = new OrdersPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  };
+
   const renderAuth = (mode) => {
     // Preserve sliding animation: if we are already on an auth page,
     // switch mode in place instead of remounting.
@@ -210,6 +220,7 @@ if (app) {
   router.addRoute('/products', () => renderCatalog());
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());
+  router.addRoute('/orders', () => renderOrders());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
@@ -219,6 +230,7 @@ if (app) {
   };
   header.viewModel.onLogoClick = () => router.navigate('/');
   header.viewModel.onCartClick = () => router.navigate('/cart');
+  header.viewModel.onOrdersClick = () => router.navigate('/orders');
 
   // Logout: best-effort server invalidation, THEN local clear, THEN navigate.
   // The API call is wrapped in try/catch so a backend hiccup does not leave
