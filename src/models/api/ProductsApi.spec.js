@@ -107,6 +107,56 @@ describe('ProductsApi', () => {
       expect(calledUrl).toContain('limit=10');
     });
 
+    it('should send search and filters with the API parameter names', async () => {
+      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
+        ok: true,
+        json: () => Promise.resolve({ data: [], meta: mockMeta }),
+      });
+
+      await api.getProducts({
+        page: 1,
+        limit: 20,
+        search: 'phone case',
+        categoryId: '11111111-1111-1111-1111-111111111111',
+        minPrice: 100,
+        maxPrice: 500,
+      });
+
+      const params = new URL(window.fetch.calls.first().args[0]).searchParams;
+      expect(params.get('search')).toBe('phone case');
+      expect(params.get('category_id')).toBe('11111111-1111-1111-1111-111111111111');
+      expect(params.get('min_price')).toBe('100');
+      expect(params.get('max_price')).toBe('500');
+    });
+
+    it('should keep a price of 0 and leave empty filters out of the URL', async () => {
+      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
+        ok: true,
+        json: () => Promise.resolve({ data: [], meta: mockMeta }),
+      });
+
+      await api.getProducts({ search: '', categoryId: '', minPrice: 0, maxPrice: null });
+
+      const params = new URL(window.fetch.calls.first().args[0]).searchParams;
+      expect(params.has('search')).toBe(false);
+      expect(params.has('category_id')).toBe(false);
+      expect(params.get('min_price')).toBe('0');
+      expect(params.has('max_price')).toBe(false);
+    });
+
+    it('should encode special characters in the search term', async () => {
+      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
+        ok: true,
+        json: () => Promise.resolve({ data: [], meta: mockMeta }),
+      });
+
+      await api.getProducts({ search: '100% café & té' });
+
+      const calledUrl = window.fetch.calls.first().args[0];
+      expect(calledUrl).not.toContain('& té');
+      expect(new URL(calledUrl).searchParams.get('search')).toBe('100% café & té');
+    });
+
     it('should return parsed data and meta on a successful response', async () => {
       window.fetch = jasmine.createSpy('fetch').and.resolveTo({
         ok: true,
