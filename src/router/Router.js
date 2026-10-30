@@ -47,7 +47,7 @@ export class Router {
    * @param {string} [path]
    */
   resolve(path) {
-    const targetPath = this._normalizePath(path || window.location.pathname);
+    const targetPath = this._normalizePath(this._stripQuery(path || window.location.pathname));
     this.currentPath = targetPath;
 
     let handler = this.routes.get(targetPath);
@@ -113,6 +113,17 @@ export class Router {
   }
 
   /**
+   * Routes match on the pathname only; the query string and hash stay in the URL.
+   * @param {string} path e.g. "/products?q=phone"
+   * @returns {string} e.g. "/products"
+   * @private
+   */
+  _stripQuery(path) {
+    return path.split(/[?#]/)[0];
+  }
+
+  /**
+   * Normalizes slashes on the pathname and keeps any query string or hash.
    * @param {string} path
    * @returns {string}
    * @private
@@ -120,6 +131,10 @@ export class Router {
   _normalizePath(path) {
     if (!path) return '/';
     const trimmed = path.trim();
+    const suffixStart = trimmed.search(/[?#]/);
+    if (suffixStart !== -1) {
+      return `${this._normalizePath(trimmed.slice(0, suffixStart))}${trimmed.slice(suffixStart)}`;
+    }
     if (!trimmed.startsWith('/')) {
       return `/${trimmed}`;
     }

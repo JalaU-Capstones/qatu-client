@@ -26,6 +26,7 @@ import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
 import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
+import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -85,13 +86,22 @@ if (app) {
     clearCurrentView();
     currentPageView = new HomeView({
       onAddToCart: onAddToCartHandler,
+      onSearch: (term) => {
+        const query = term.trim();
+        router.navigate(query ? `/products?q=${encodeURIComponent(query)}` : '/products');
+      },
     });
     currentPageView.mount(mainEl);
   };
 
   const renderCatalog = () => {
     clearCurrentView();
-    currentPageView = new CatalogView(undefined, {
+    // Each applied filter gets a history entry; Back re-renders the catalog from the URL.
+    const catalogViewModel = new CatalogViewModel({
+      onFiltersChange: (query) => window.history.pushState({}, '', `/products${query}`),
+    });
+    catalogViewModel.setFiltersFromQuery(window.location.search);
+    currentPageView = new CatalogView(catalogViewModel, {
       onAddToCart: onAddToCartHandler,
     });
     currentPageView.mount(mainEl);

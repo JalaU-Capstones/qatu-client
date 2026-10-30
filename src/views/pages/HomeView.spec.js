@@ -77,6 +77,17 @@ describe('HomeView', () => {
     view.destroy();
   });
 
+  it('should forward hero search to onSearch', () => {
+    const onSearch = jasmine.createSpy('onSearch');
+    const view = new HomeView({ onSearch });
+    view.mount(container);
+
+    view._hero.viewModel.onSearch('phone');
+
+    expect(onSearch).toHaveBeenCalledWith('phone');
+    view.destroy();
+  });
+
   it('should call destroy on all child views when destroy() is called', () => {
     const view = new HomeView();
     view.mount(container);
