@@ -18,16 +18,16 @@ describe('AuthViewModel', () => {
     mockAuthApi = {
       register: jasmine.createSpy('register').and.resolveTo({
         data: {
-          token: 'token-abc',
           user: { id: 'u1', username: 'zzz', email: 'user@example.com' },
           profile: { id: 'u1', username: 'zzz', full_name: 'Usuario ZZZ' },
+          roles: [{ id: 'r1', name: 'buyer' }],
         },
       }),
       login: jasmine.createSpy('login').and.resolveTo({
         data: {
-          token: 'token-login-xyz',
           user: { id: 'u1', username: 'zzz', email: 'user@example.com' },
           profile: { id: 'u1', username: 'zzz', full_name: 'Usuario ZZZ' },
+          roles: [{ id: 'r1', name: 'buyer' }],
         },
       }),
     };
@@ -147,6 +147,7 @@ describe('AuthViewModel', () => {
     let capturedData = null;
     let navigatedPath = null;
     let successCalled = false;
+    let successPayload = null;
 
     viewModel.onLogin = (data) => {
       capturedData = data;
@@ -154,8 +155,9 @@ describe('AuthViewModel', () => {
     viewModel.onNavigate = (path) => {
       navigatedPath = path;
     };
-    viewModel.onLoginSuccess = () => {
+    viewModel.onLoginSuccess = (payload) => {
       successCalled = true;
+      successPayload = payload;
     };
 
     viewModel.setLoginField('email', 'user@example.com');
@@ -168,8 +170,21 @@ describe('AuthViewModel', () => {
       email: 'user@example.com',
       password: 'password123',
     });
-    expect(mockAuthStore.getToken()).toBe('token-login-xyz');
+    expect(mockAuthStore.isAuthenticated()).toBe(true);
+    expect(mockAuthStore.getUser()).toEqual({
+      id: 'u1',
+      username: 'zzz',
+      email: 'user@example.com',
+    });
     expect(successCalled).toBe(true);
+    expect(successPayload).toEqual(
+      jasmine.objectContaining({
+        user: jasmine.any(Object),
+        profile: jasmine.any(Object),
+        roles: jasmine.any(Array),
+      })
+    );
+    expect(successPayload.token).toBeUndefined();
     expect(navigatedPath).toBe('/');
     expect(viewModel.errorMessage).toBe('');
   });
@@ -210,11 +225,18 @@ describe('AuthViewModel', () => {
   it('should succeed register submit and call API with payload', async () => {
     let capturedData = null;
     let navigatedPath = null;
+    let successCalled = false;
+    let successPayload = null;
+
     viewModel.onRegister = (data) => {
       capturedData = data;
     };
     viewModel.onNavigate = (path) => {
       navigatedPath = path;
+    };
+    viewModel.onRegisterSuccess = (payload) => {
+      successCalled = true;
+      successPayload = payload;
     };
 
     viewModel.setRegisterField('name', 'Usuario ZZZ');
@@ -236,7 +258,21 @@ describe('AuthViewModel', () => {
       username: 'zzz',
       full_name: 'Usuario ZZZ',
     });
-    expect(mockAuthStore.getToken()).toBe('token-abc');
+    expect(mockAuthStore.isAuthenticated()).toBe(true);
+    expect(mockAuthStore.getUser()).toEqual({
+      id: 'u1',
+      username: 'zzz',
+      email: 'user@example.com',
+    });
+    expect(successCalled).toBe(true);
+    expect(successPayload).toEqual(
+      jasmine.objectContaining({
+        user: jasmine.any(Object),
+        profile: jasmine.any(Object),
+        roles: jasmine.any(Array),
+      })
+    );
+    expect(successPayload.token).toBeUndefined();
     expect(navigatedPath).toBe('/');
   });
 
@@ -296,7 +332,6 @@ describe('AuthViewModel', () => {
     const rolesData = [{ id: 'r1', name: 'buyer' }];
     mockAuthApi.login = jasmine.createSpy('login').and.resolveTo({
       data: {
-        token: 'tok-role-login',
         user: { id: 'u1', username: 'zzz' },
         profile: { id: 'u1', full_name: 'ZZZ' },
         roles: rolesData,
@@ -309,7 +344,7 @@ describe('AuthViewModel', () => {
     await viewModel.submitLogin();
 
     expect(mockAuthStore.setSession).toHaveBeenCalledWith(
-      jasmine.objectContaining({ roles: rolesData })
+      jasmine.objectContaining({ user: jasmine.any(Object), roles: rolesData })
     );
   });
 
@@ -317,7 +352,6 @@ describe('AuthViewModel', () => {
     const rolesData = [{ id: 'r2', name: 'seller' }];
     mockAuthApi.register = jasmine.createSpy('register').and.resolveTo({
       data: {
-        token: 'tok-role-register',
         user: { id: 'u2', username: 'new_user' },
         profile: { id: 'u2', full_name: 'New User' },
         roles: rolesData,
@@ -334,7 +368,7 @@ describe('AuthViewModel', () => {
     await viewModel.submitRegister();
 
     expect(mockAuthStore.setSession).toHaveBeenCalledWith(
-      jasmine.objectContaining({ roles: rolesData })
+      jasmine.objectContaining({ user: jasmine.any(Object), roles: rolesData })
     );
   });
 });

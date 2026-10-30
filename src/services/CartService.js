@@ -34,6 +34,20 @@ export class CartService {
   }
 
   /**
+   * ⚠️ Boot-race assumption: `authStore.isAuthenticated()` is derived from
+   * the `sessionStorage` cache (see `authStore.js`). During the ~100-300ms
+   * window between page load and `GET /auth/me` resolving (FE-35-03), it
+   * returns `false` even when a valid HttpOnly cookie exists. This method
+   * will queue a pending action + trigger the caller's redirect to `/login`
+   * in that window. Acceptable for MVP because:
+   *   1. Returning users have `sessionStorage` populated → no race.
+   *   2. First-time visitors legitimately need to log in → correct.
+   *   3. The rare bad case (reload + click within 300ms) is recoverable:
+   *      after `/me` resolves, the user is authenticated and can retry.
+   * FE-35-03 boot flow mitigates this further by rendering the header from
+   * cache before enabling interactive UI.
+   */
+  /**
    * Adds a product to the cart for the authenticated user, or queues a
    * pending action when unauthenticated.
    *
