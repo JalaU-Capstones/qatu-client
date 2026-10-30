@@ -1,10 +1,11 @@
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';
+import { OrderDetailComponent } from '../components/OrderDetailComponent.js';
 import { OrderListComponent } from '../components/OrderListComponent.js';
 
 /**
  * Orders page view mounted inside <main class="q-main">.
- * Manages rendering of orders, empty states, pagination controls, and 403 Forbidden errors.
+ * Manages rendering of orders, order details, empty states, pagination controls, and 403 Forbidden errors.
  */
 export class OrdersPageView {
   /**
@@ -16,7 +17,12 @@ export class OrdersPageView {
     this.viewModel = viewModel;
     this.onNavigate = onNavigate;
     this.element = null;
-    this._orderList = new OrderListComponent();
+    this._orderList = new OrderListComponent({
+      onOrderClick: (order) => this.viewModel.loadOrderById(order.id),
+    });
+    this._orderDetail = new OrderDetailComponent({
+      onBack: () => this.viewModel.clearSelectedOrder(),
+    });
     this._unsubscribe = null;
   }
 
@@ -173,12 +179,21 @@ export class OrdersPageView {
       return;
     }
 
-    // 3. Render Order List Component
+    // 3. Render Order Detail View (if an order is selected)
+    if (this.viewModel.selectedOrder) {
+      content.innerHTML = '';
+      this._orderDetail.setOrder(this.viewModel.selectedOrder);
+      content.appendChild(this._orderDetail.render());
+      pagination.innerHTML = '';
+      return;
+    }
+
+    // 4. Render Order List Component
     content.innerHTML = '';
     this._orderList.setOrders(this.viewModel.orders);
     content.appendChild(this._orderList.render());
 
-    // 4. Render Pagination Controls
+    // 5. Render Pagination Controls
     pagination.innerHTML = '';
     const { page, total_pages: totalPages } = this.viewModel.meta;
     if (totalPages > 1) {

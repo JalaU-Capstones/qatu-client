@@ -162,10 +162,27 @@ export class OrderListComponent {
         body.appendChild(itemsPreview);
       }
 
+      // Actions / View detail button
+      const actionsDiv = document.createElement('div');
+      actionsDiv.className = 'q-order-card__actions';
+
+      const viewDetailBtn = document.createElement('button');
+      viewDetailBtn.type = 'button';
+      viewDetailBtn.className = 'q-button q-button--secondary q-order-card__action-btn';
+      viewDetailBtn.setAttribute('data-testid', 'view-order-details-btn');
+      viewDetailBtn.textContent = 'Ver detalle';
+
       if (this.onOrderClick) {
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => this.onOrderClick(order));
+        viewDetailBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.onOrderClick(order);
+        });
       }
+
+      actionsDiv.appendChild(viewDetailBtn);
+      body.appendChild(actionsDiv);
 
       card.appendChild(header);
       card.appendChild(body);

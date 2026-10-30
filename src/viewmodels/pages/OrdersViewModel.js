@@ -116,6 +116,16 @@ export class OrdersViewModel {
   }
 
   /**
+   * Clears the currently selected order and returns to the orders list.
+   */
+  clearSelectedOrder() {
+    this.selectedOrder = null;
+    this.errorMessage = '';
+    this.forbiddenError = false;
+    this._notify();
+  }
+
+  /**
    * Updates the order status filter and reloads page 1.
    * @param {string} status
    */

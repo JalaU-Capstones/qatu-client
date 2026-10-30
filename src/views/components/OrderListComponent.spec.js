@@ -68,4 +68,27 @@ describe('OrderListComponent', () => {
 
     expect(clickSpy).toHaveBeenCalledWith(sampleOrder);
   });
+
+  it('triggers onOrderClick when "Ver detalle" action button is clicked', () => {
+    const sampleOrder = {
+      id: 'ord-123',
+      order_number: 'ORD-00100042',
+      status: 'confirmed',
+      total: 50,
+      created_at: '2026-10-14T11:00:00.000Z',
+    };
+    const clickSpy = jasmine.createSpy('onOrderClick');
+
+    const component = new OrderListComponent({
+      orders: [sampleOrder],
+      onOrderClick: clickSpy,
+    });
+    const el = component.render();
+
+    const btn = el.querySelector('[data-testid="view-order-details-btn"]');
+    expect(btn).not.toBeNull();
+    btn.click();
+
+    expect(clickSpy).toHaveBeenCalledWith(sampleOrder);
+  });
 });

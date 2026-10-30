@@ -132,4 +132,60 @@ describe('OrdersPageView', () => {
     expect(nextBtn.disabled).toBeFalse();
     expect(info.textContent).toBe('Página 1 de 2');
   });
+
+  it('renders order detail view when an order is selected, and returns to list on back', async () => {
+    mockApi.getOrderById.and.returnValue(
+      Promise.resolve({
+        data: {
+          ...sampleOrder,
+          shipping_address: '123 Fake Street',
+          items: [
+            {
+              id: 'it-1',
+              product_name: 'Super Gadget',
+              quantity: 1,
+              unit_price: 89.99,
+              subtotal: 89.99,
+            },
+          ],
+        },
+      })
+    );
+
+    view = new OrdersPageView({ viewModel });
+    view.mount(container);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Initially shows list
+    expect(container.querySelector('[data-testid="order-list"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="order-detail"]')).toBeNull();
+
+    // Click "Ver detalle" button
+    const viewBtn = container.querySelector('[data-testid="view-order-details-btn"]');
+    expect(viewBtn).not.toBeNull();
+    viewBtn.click();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Now shows order detail
+    expect(container.querySelector('[data-testid="order-detail"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="order-detail-title"]').textContent).toContain(
+      'ORD-00100042'
+    );
+    expect(container.querySelector('[data-testid="order-item-name"]').textContent).toBe(
+      'Super Gadget'
+    );
+
+    // Click back button to return to order list
+    const backBtn = container.querySelector('[data-testid="order-detail-back-btn"]');
+    expect(backBtn).not.toBeNull();
+    backBtn.click();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Returned to order list
+    expect(container.querySelector('[data-testid="order-detail"]')).toBeNull();
+    expect(container.querySelector('[data-testid="order-list"]')).not.toBeNull();
+  });
 });

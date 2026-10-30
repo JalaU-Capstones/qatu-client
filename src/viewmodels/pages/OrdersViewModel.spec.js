@@ -96,6 +96,17 @@ describe('OrdersViewModel', () => {
     expect(viewModel.selectedOrder.id).toBe('ord-1');
   });
 
+  it('clearSelectedOrder clears selectedOrder and notifies listeners', () => {
+    viewModel.selectedOrder = { id: 'ord-1' };
+    const notifySpy = jasmine.createSpy('notify');
+    viewModel.subscribe(notifySpy);
+
+    viewModel.clearSelectedOrder();
+
+    expect(viewModel.selectedOrder).toBeNull();
+    expect(notifySpy).toHaveBeenCalled();
+  });
+
   it('loadOrderById sets forbiddenError on 403 Forbidden', async () => {
     const error = new Error('You do not have permission to access this order');
     error.statusCode = 403;
