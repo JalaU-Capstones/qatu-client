@@ -58,7 +58,7 @@ src/
 
 ## 2.5 Cross-Cutting Concerns
 
-- **Authentication:** Supabase Auth is used. JWTs are stored in memory, not localStorage.
+- **Authentication:** Supabase Auth. Access and refresh JWTs live in **HttpOnly cookies** set by the backend (`access_token`, `refresh_token`). The frontend caches `{ user, profile, roles }` in `sessionStorage` under `qatu.auth.session` (schema v2) for optimistic UI paint — **no token is ever stored in JS-accessible storage**. See ADR-012. CSRF defense uses a double-submit cookie: a readable `csrf_token` cookie + an `X-CSRF-Token` header on mutating requests (handled transparently by `apiFetch`). Session rehydration on boot calls `GET /auth/me`; 401 → anonymous; network/5xx → preserves cached state.
 - **HTTP Communication:** Fetch API is used via clients in `models/api/`.
 - **State Management:** Custom store handles global state (e.g., authenticated user, cart).
 - **Routing:** Client-side routing maps URLs to Views and ViewModels.
@@ -66,6 +66,28 @@ src/
 - **Error Handling:** Errors from API clients propagate to ViewModels and are displayed in Views.
 - **Validation:** `models/validation/` is used for form validation.
 - **Styling:** Bulma is imported globally, with overrides in `views/styles/`.
+
+### 2.5.1 Auth Flow (Cookie-Based)
+
+The session lifecycle lives across four layers:
+
+| Layer                                   | Responsibility                                                                                                                                                                                                                                                                               |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend                                 | Sets `access_token` + `refresh_token` (HttpOnly, Secure-in-prod, SameSite=Strict) and `csrf_token` (readable) on login/register/refresh. Enforces auth via `authMiddleware` (cookie-first, Bearer fallback during migration).                                                                |
+| `src/models/api/client.js` (`apiFetch`) | Sends `credentials: 'include'` always; attaches `X-CSRF-Token` on mutating non-`/auth/*` paths; on `401 REFRESH_REQUIRED` calls `/auth/refresh` and retries once; on other 401 clears session + emits `qatu:auth-expired`. Auth-path 401s propagate raw (bad credentials ≠ expired session). |
+| `src/services/AuthBootstrapService.js`  | Called once on boot after the shell mounts. Fires `GET /auth/me` fire-and-forget. On success → `authStore.setSession`; on 401 → `clearSession`; on network/5xx → keeps the `sessionStorage` cache.                                                                                           |
+| `src/store/authStore.js`                | Caches `{ user, profile, roles }` in `sessionStorage` (schema v2). No token. `isAuthenticated()` = `Boolean(user?.id)` — an optimistic signal, not a security check.                                                                                                                         |
+
+#### SameSite=Strict deployment requirement
+
+`SameSite=Strict` cookies are only sent when the frontend and backend share the same site (eTLD+1):
+
+- **Valid:** `qatu.com` + `api.qatu.com` (same-site), `qatu.app` + `qatu.app/api` (reverse proxy), `localhost:5173` + `localhost:3000` (same-site)
+- **Invalid:** `qatu.vercel.app` + `qatu-api.onrender.com` (cross-site → cookies dropped)
+
+If production ever requires a cross-site deployment, change `sameSite` to `'none'` in the backend `cookieHelper.js` (requires HTTPS). The CSRF double-submit pattern already covers CSRF defense regardless of SameSite value.
+
+See ADR-012 for the full rationale.
 
 ### Styling Architecture
 
