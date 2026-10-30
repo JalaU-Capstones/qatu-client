@@ -1,33 +1,28 @@
+import { apiFetch } from './client.js';
+
 /**
  * API service for Authentication endpoints.
+ *
+ * All methods use `apiFetch` so cookies (`access_token`, `refresh_token`,
+ * `csrf_token`) are sent automatically. Auth endpoints are CSRF-exempt —
+ * `apiFetch` skips the X-CSRF-Token header for `/auth/*` paths.
  */
 export class AuthApi {
   /**
-   * @param {Object} [options]
-   * @param {string} [options.baseUrl='']
-   */
-  constructor(options = {}) {
-    this.baseUrl = options.baseUrl || '';
-  }
-
-  /**
    * Registers a new buyer user account.
-   * Sends POST to /v1/auth/register with { email, password, username, full_name }.
+   * Sends POST to /v1/auth/register. On success, the backend sets the
+   * session cookies via Set-Cookie headers (handled by the browser).
    *
    * @param {Object} payload
    * @param {string} payload.email
    * @param {string} payload.password
    * @param {string} payload.username
    * @param {string} [payload.full_name]
-   * @returns {Promise<Object>} API response payload
+   * @returns {Promise<{ data: { user: Object, profile: Object, roles: Array }, meta: Object }>}
    */
   async register({ email, password, username, full_name }) {
-    const url = `${this.baseUrl}/v1/auth/register`;
-    const response = await fetch(url, {
+    const response = await apiFetch('/auth/register', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ email, password, username, full_name }),
     });
 
@@ -50,20 +45,17 @@ export class AuthApi {
 
   /**
    * Authenticates an existing user.
-   * Sends POST to /v1/auth/login with { email, password }.
+   * Sends POST to /v1/auth/login. On success, the backend sets the session
+   * cookies via Set-Cookie headers.
    *
    * @param {Object} credentials
    * @param {string} credentials.email
    * @param {string} credentials.password
-   * @returns {Promise<Object>} API response payload
+   * @returns {Promise<{ data: { user: Object, profile: Object, roles: Array }, meta: Object }>}
    */
   async login({ email, password }) {
-    const url = `${this.baseUrl}/v1/auth/login`;
-    const response = await fetch(url, {
+    const response = await apiFetch('/auth/login', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ email, password }),
     });
 
@@ -82,5 +74,76 @@ export class AuthApi {
     }
 
     return data;
+  }
+
+  /**
+   * Fetches the current authenticated user's profile and roles.
+   * Used on application boot to restore user context from the HttpOnly
+   * cookie session. Requires a valid session cookie.
+   *
+   * @returns {Promise<{ data: { user: Object, profile: Object, roles: Array }, meta: Object }>}
+   */
+  async me() {
+    const response = await apiFetch('/auth/me');
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage = data?.error?.message || data?.message || 'No se pudo cargar el usuario';
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  }
+
+  /**
+   * Refreshes the access token using the `refresh_token` cookie. Rotated
+   * cookies are set by the backend via Set-Cookie.
+   *
+   * Note: `apiFetch` handles the refresh-then-retry automatically on 401
+   * `REFRESH_REQUIRED`. This method is available for explicit invocation
+   * (e.g. a future "Refresh session" button in the profile). Most UI code
+   * does NOT need to call this directly.
+   *
+   * @returns {Promise<{ data: { user: Object, profile: Object, roles: Array }, meta: Object }>}
+   */
+  async refresh() {
+    const response = await apiFetch('/auth/refresh', { method: 'POST' });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage =
+        data?.error?.message || data?.message || 'No se pudo refrescar la sesión';
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  }
+
+  /**
+   * Invalidates the current session on the server and clears the session
+   * cookies. Always succeeds from the client's perspective — the endpoint
+   * returns 204 even when the session was already revoked (idempotent).
+   *
+   * @returns {Promise<void>}
+   */
+  async logout() {
+    const response = await apiFetch('/auth/logout', { method: 'POST' });
+    // 204 expected. Propagate other errors (rare).
+    if (!response.ok && response.status !== 204) {
+      const data = await response.json().catch(() => ({}));
+      const errorMessage = data?.error?.message || data?.message || 'No se pudo cerrar sesión';
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
   }
 }

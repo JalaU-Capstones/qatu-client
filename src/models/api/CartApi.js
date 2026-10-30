@@ -38,7 +38,6 @@ export class CartApi {
 
     const response = await this._fetch('/cart/items', {
       method: 'POST',
-      withAuth: true,
       body: JSON.stringify({ product_id: productId, quantity }),
     });
 

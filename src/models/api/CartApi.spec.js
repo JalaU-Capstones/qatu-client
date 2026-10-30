@@ -56,13 +56,12 @@ describe('CartApi', () => {
     }
   });
 
-  it('addItem calls apiFetch with POST /cart/items and { withAuth: true }', async () => {
+  it('addItem calls apiFetch with POST /cart/items', async () => {
     await api.addItem({ productId: 'p1', quantity: 2 });
     expect(fetchSpy).toHaveBeenCalledWith(
       '/cart/items',
       jasmine.objectContaining({
         method: 'POST',
-        withAuth: true,
       })
     );
   });
