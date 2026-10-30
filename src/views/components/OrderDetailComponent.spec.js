@@ -51,6 +51,7 @@ describe('OrderDetailComponent', () => {
 
     const totalEl = el.querySelector('[data-testid="order-detail-total"]');
     expect(totalEl.textContent).toContain('120.00');
+    expect(totalEl.textContent).toContain('USD');
 
     const shippingCard = el.querySelector('[data-testid="order-shipping-card"]');
     expect(shippingCard).not.toBeNull();
@@ -66,11 +67,11 @@ describe('OrderDetailComponent', () => {
 
     const currentStep = el.querySelector('.q-order-tracker__step--current');
     expect(currentStep).not.toBeNull();
-    expect(currentStep.textContent).toContain('Confirmada');
+    expect(currentStep.textContent).toContain('confirmed');
 
     const completedStep = el.querySelector('.q-order-tracker__step--completed');
     expect(completedStep).not.toBeNull();
-    expect(completedStep.textContent).toContain('Pendiente');
+    expect(completedStep.textContent).toContain('pending');
   });
 
   it('renders cancelled notice when order is cancelled', () => {
@@ -80,7 +81,7 @@ describe('OrderDetailComponent', () => {
 
     const notice = el.querySelector('[data-testid="order-cancelled-notice"]');
     expect(notice).not.toBeNull();
-    expect(notice.textContent).toContain('Orden Cancelada');
+    expect(notice.textContent).toContain('cancelled');
   });
 
   it('invokes onBack callback when back button is clicked', () => {

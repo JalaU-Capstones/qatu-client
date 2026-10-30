@@ -133,6 +133,21 @@ describe('OrdersPageView', () => {
     expect(info.textContent).toBe('Página 1 de 2');
   });
 
+  it('triggers setStatusFilter on status filter select change', async () => {
+    spyOn(viewModel, 'setStatusFilter');
+
+    view = new OrdersPageView({ viewModel });
+    view.mount(container);
+
+    const select = container.querySelector('[data-testid="order-status-filter"]');
+    expect(select).not.toBeNull();
+
+    select.value = 'shipped';
+    select.dispatchEvent(new Event('change'));
+
+    expect(viewModel.setStatusFilter).toHaveBeenCalledWith('shipped');
+  });
+
   it('renders order detail view when an order is selected, and returns to list on back', async () => {
     mockApi.getOrderById.and.returnValue(
       Promise.resolve({

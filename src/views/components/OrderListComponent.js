@@ -52,13 +52,15 @@ export class OrderListComponent {
 
   /**
    * Formats currency and total amount.
-   * @param {number} total
-   * @param {string} [currency='USD']
+   * Uses currency code returned by the API; does not assume USD.
+   * @param {number|string} total
+   * @param {string} [currency='']
    * @returns {string}
    */
-  _formatTotal(total, currency = 'USD') {
+  _formatTotal(total, currency = '') {
     const num = Number(total) || 0;
-    return `${currency} $${num.toFixed(2)}`;
+    const formattedNum = num.toFixed(2);
+    return currency ? `${currency} ${formattedNum}` : formattedNum;
   }
 
   /**

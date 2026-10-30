@@ -28,7 +28,7 @@ export class OrdersApi {
     if (status) params.append('status', status);
 
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    const response = await this._fetch(`/orders${queryString}`, {
+    const response = await this._fetch(`/v1/orders${queryString}`, {
       method: 'GET',
       withAuth: true,
     });
@@ -61,7 +61,7 @@ export class OrdersApi {
       throw err;
     }
 
-    const response = await this._fetch(`/orders/${encodeURIComponent(orderId)}`, {
+    const response = await this._fetch(`/v1/orders/${encodeURIComponent(orderId)}`, {
       method: 'GET',
       withAuth: true,
     });

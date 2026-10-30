@@ -87,6 +87,46 @@ export class OrdersPageView {
 
     header.appendChild(title);
     header.appendChild(subtitle);
+
+    // Status filter dropdown (aligned with API contract: pending, confirmed, shipped, delivered, cancelled)
+    const filterContainer = document.createElement('div');
+    filterContainer.className = 'q-orders-filter';
+
+    const filterLabel = document.createElement('label');
+    filterLabel.htmlFor = 'order-status-filter';
+    filterLabel.className = 'q-orders-filter__label';
+    filterLabel.textContent = 'Estado:';
+
+    const filterSelect = document.createElement('select');
+    filterSelect.id = 'order-status-filter';
+    filterSelect.className = 'q-orders-filter__select';
+    filterSelect.setAttribute('data-testid', 'order-status-filter');
+
+    const statuses = [
+      { value: '', label: 'Todos' },
+      { value: 'pending', label: 'pending' },
+      { value: 'confirmed', label: 'confirmed' },
+      { value: 'shipped', label: 'shipped' },
+      { value: 'delivered', label: 'delivered' },
+      { value: 'cancelled', label: 'cancelled' },
+    ];
+
+    statuses.forEach((s) => {
+      const opt = document.createElement('option');
+      opt.value = s.value;
+      opt.textContent = s.label;
+      if (this.viewModel.statusFilter === s.value) opt.selected = true;
+      filterSelect.appendChild(opt);
+    });
+
+    filterSelect.addEventListener('change', (e) => {
+      this.viewModel.setStatusFilter(e.target.value);
+    });
+
+    filterContainer.appendChild(filterLabel);
+    filterContainer.appendChild(filterSelect);
+    header.appendChild(filterContainer);
+
     container.appendChild(header);
 
     // Alerts area (for 403 Forbidden and general errors)

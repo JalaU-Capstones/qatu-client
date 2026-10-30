@@ -55,17 +55,21 @@ export class OrderDetailComponent {
 
   /**
    * Formats currency amounts.
-   * @param {number} amount
-   * @param {string} [currency='USD']
+   * Uses currency from order object; does not hardcode USD.
+   * @param {number|string} amount
+   * @param {string} [currency='']
    * @returns {string}
    */
-  _formatCurrency(amount, currency = 'USD') {
+  _formatCurrency(amount, currency = '') {
+    if (amount === undefined || amount === null) return '0.00';
     const num = Number(amount) || 0;
-    return `${currency} $${num.toFixed(2)}`;
+    const formattedNum = num.toFixed(2);
+    return currency ? `${currency} ${formattedNum}` : formattedNum;
   }
 
   /**
    * Renders the status progress tracker.
+   * Only uses valid API contract statuses: pending, confirmed, shipped, delivered, cancelled.
    * @param {string} currentStatus
    * @returns {HTMLElement}
    */
@@ -75,21 +79,18 @@ export class OrderDetailComponent {
     tracker.setAttribute('data-testid', 'order-tracker');
 
     const steps = [
-      { key: 'pending', label: 'Pendiente' },
-      { key: 'confirmed', label: 'Confirmada' },
-      { key: 'shipped', label: 'Enviada' },
-      { key: 'delivered', label: 'Entregada' },
+      { key: 'pending', label: 'pending' },
+      { key: 'confirmed', label: 'confirmed' },
+      { key: 'shipped', label: 'shipped' },
+      { key: 'delivered', label: 'delivered' },
     ];
 
-    const isCancelled = currentStatus === 'cancelled' || currentStatus === 'refunded';
-
-    if (isCancelled) {
+    if (currentStatus === 'cancelled') {
       const cancelledAlert = document.createElement('div');
       cancelledAlert.className = 'q-order-tracker__cancelled';
       cancelledAlert.setAttribute('data-testid', 'order-cancelled-notice');
       cancelledAlert.innerHTML = `
-        <span class="q-order-tracker__cancelled-badge">Orden ${currentStatus === 'refunded' ? 'Reembolsada' : 'Cancelada'}</span>
-        <p class="q-order-tracker__cancelled-desc">Esta orden no continuará su proceso de entrega.</p>
+        <span class="q-order-tracker__cancelled-badge">cancelled</span>
       `;
       tracker.appendChild(cancelledAlert);
       return tracker;
@@ -259,8 +260,8 @@ export class OrderDetailComponent {
         const qtySpan = document.createElement('span');
         qtySpan.className = 'q-order-detail__item-qty';
         qtySpan.setAttribute('data-testid', 'order-item-qty');
-        const unitPriceStr = this._formatCurrency(item.unit_price || item.price, order.currency);
-        qtySpan.textContent = `Cantidad: ${item.quantity || 1} × ${unitPriceStr}`;
+        const unitPriceStr = this._formatCurrency(item.unit_price, order.currency);
+        qtySpan.textContent = `x${item.quantity} · ${unitPriceStr}`;
 
         infoDiv.appendChild(nameSpan);
         infoDiv.appendChild(qtySpan);
@@ -268,9 +269,7 @@ export class OrderDetailComponent {
         const subtotalSpan = document.createElement('span');
         subtotalSpan.className = 'q-order-detail__item-subtotal';
         subtotalSpan.setAttribute('data-testid', 'order-item-subtotal');
-        const itemSubtotal =
-          item.subtotal ?? Number(item.quantity || 1) * Number(item.unit_price || item.price || 0);
-        subtotalSpan.textContent = this._formatCurrency(itemSubtotal, order.currency);
+        subtotalSpan.textContent = this._formatCurrency(item.subtotal, order.currency);
 
         itemEl.appendChild(imgDiv);
         itemEl.appendChild(infoDiv);
@@ -299,27 +298,28 @@ export class OrderDetailComponent {
     const summaryRows = document.createElement('div');
     summaryRows.className = 'q-order-detail__summary-rows';
 
-    const subtotal = order.subtotal !== undefined ? order.subtotal : order.total || 0;
-    const shipping = order.shipping_cost ?? 0;
-    const tax = order.tax ?? 0;
-    const total = order.total !== undefined ? order.total : subtotal + shipping + tax;
+    // Use values directly from API response without recalculating or fallbacks
+    const subtotalText = this._formatCurrency(order.subtotal, order.currency);
+    const shippingText = this._formatCurrency(order.shipping_cost, order.currency);
+    const taxText = this._formatCurrency(order.tax, order.currency);
+    const totalText = this._formatCurrency(order.total, order.currency);
 
     summaryRows.innerHTML = `
       <div class="q-order-detail__summary-row">
         <span>Subtotal</span>
-        <span>${this._formatCurrency(subtotal, order.currency)}</span>
+        <span>${subtotalText}</span>
       </div>
       <div class="q-order-detail__summary-row">
         <span>Envío</span>
-        <span>${shipping > 0 ? this._formatCurrency(shipping, order.currency) : 'Gratis'}</span>
+        <span>${shippingText}</span>
       </div>
       <div class="q-order-detail__summary-row">
         <span>Impuestos</span>
-        <span>${tax > 0 ? this._formatCurrency(tax, order.currency) : '$0.00'}</span>
+        <span>${taxText}</span>
       </div>
       <div class="q-order-detail__summary-row q-order-detail__summary-row--total">
         <span>Total</span>
-        <span data-testid="order-detail-total">${this._formatCurrency(total, order.currency)}</span>
+        <span data-testid="order-detail-total">${totalText}</span>
       </div>
     `;
     summaryCard.appendChild(summaryRows);
