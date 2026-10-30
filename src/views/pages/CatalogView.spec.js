@@ -12,7 +12,21 @@ describe('CatalogView', () => {
       meta: initialState.meta || { page: 1, per_page: 20, total: 0, total_pages: 0 },
       isLoading: initialState.isLoading || false,
       errorMessage: initialState.errorMessage || '',
+      filters: { search: '', category: '', minPrice: null, maxPrice: null },
+      filterError: '',
+      categories: [],
+      noResultsSuggestions: ['Revisa la ortografía.', 'Quita algunos filtros.'],
+      hasActiveFilters: false,
+      isNoResults: false,
+      activeFilterChips: [],
+      title: 'Catálogo',
+      resultsLabel: '0 resultados encontrados',
       loadProducts: jasmine.createSpy('loadProducts'),
+      loadCategories: jasmine.createSpy('loadCategories'),
+      search: jasmine.createSpy('search'),
+      applyFilters: jasmine.createSpy('applyFilters'),
+      removeFilter: jasmine.createSpy('removeFilter'),
+      clearFilters: jasmine.createSpy('clearFilters'),
       nextPage: jasmine.createSpy('nextPage'),
       prevPage: jasmine.createSpy('prevPage'),
       subscribe(fn) {
@@ -61,6 +75,9 @@ describe('CatalogView', () => {
     expect(container.querySelector('.q-catalog__pagination')).not.toBeNull();
 
     expect(mockViewModel.loadProducts).toHaveBeenCalledWith(1);
+    expect(mockViewModel.loadCategories).toHaveBeenCalled();
+    expect(container.querySelector('.q-catalog__search')).not.toBeNull();
+    expect(container.querySelector('.q-catalog__filters')).not.toBeNull();
     view.destroy();
   });
 
@@ -266,5 +283,109 @@ describe('CatalogView', () => {
 
     expect(onAddToCart).toHaveBeenCalledWith('p-cart-1');
     view.destroy();
+  });
+
+  describe('search and filters (US-06)', () => {
+    it('should submit the search form with the current input value', () => {
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      const input = container.querySelector('#q-catalog-search-input');
+      const form = container.querySelector('.q-catalog__search');
+      input.value = 'phone';
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      expect(mockViewModel.search).toHaveBeenCalledWith('phone');
+      view.destroy();
+    });
+
+    it('should apply category and price filters from the panel', () => {
+      mockViewModel.categories = [{ id: 'c1', name: 'Electronics', slug: 'electronics' }];
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      const category = container.querySelector('#q-catalog-filter-category');
+      const minPrice = container.querySelector('#q-catalog-filter-min-price');
+      const maxPrice = container.querySelector('#q-catalog-filter-max-price');
+      category.value = 'electronics';
+      minPrice.value = '100';
+      maxPrice.value = '500';
+
+      container
+        .querySelector('.q-catalog__filters-form')
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      expect(mockViewModel.applyFilters).toHaveBeenCalledWith({
+        search: '',
+        category: 'electronics',
+        minPrice: '100',
+        maxPrice: '500',
+      });
+      view.destroy();
+    });
+
+    it('should show a filter validation error', () => {
+      mockViewModel.filterError = 'El precio máximo debe ser mayor o igual al precio mínimo.';
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      const error = container.querySelector('.q-catalog__filters-error');
+      expect(error.hidden).toBe(false);
+      expect(error.textContent).toContain('precio máximo');
+      view.destroy();
+    });
+
+    it('should render removable chips for active filters', () => {
+      mockViewModel.hasActiveFilters = true;
+      mockViewModel.activeFilterChips = [
+        { key: 'search', label: '«phone»' },
+        { key: 'category', label: 'Electronics' },
+      ];
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      const chips = container.querySelectorAll('.q-catalog__chip');
+      expect(chips.length).toBe(2);
+
+      chips[0].querySelector('.q-catalog__chip-remove').click();
+      expect(mockViewModel.removeFilter).toHaveBeenCalledWith('search');
+      view.destroy();
+    });
+
+    it('should render no-results message, suggestions, and a clear action', () => {
+      mockViewModel.hasActiveFilters = true;
+      mockViewModel.isNoResults = true;
+      mockViewModel.title = 'Resultados para «zzzzzz»';
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      const empty = container.querySelector('.q-catalog__message--no-results');
+      expect(empty).not.toBeNull();
+      expect(empty.textContent).toContain('No se encontraron resultados');
+      expect(container.querySelectorAll('.q-catalog__no-results-suggestions li').length).toBe(2);
+
+      container.querySelector('.q-catalog__no-results-clear').click();
+      expect(mockViewModel.clearFilters).toHaveBeenCalled();
+      view.destroy();
+    });
+
+    it('should update the heading when a search is applied', () => {
+      const view = new CatalogView(mockViewModel);
+      view.mount(container);
+
+      mockViewModel.filters = { ...mockViewModel.filters, search: 'phone' };
+      mockViewModel.hasActiveFilters = true;
+      mockViewModel.title = 'Resultados para «phone»';
+      mockViewModel.resultsLabel = '3 resultados encontrados';
+      mockViewModel.notify();
+
+      expect(container.querySelector('.q-catalog__title').textContent).toBe(
+        'Resultados para «phone»'
+      );
+      expect(container.querySelector('.q-catalog__eyebrow').textContent).toBe(
+        '3 resultados encontrados'
+      );
+      view.destroy();
+    });
   });
 });

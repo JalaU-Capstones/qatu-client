@@ -146,4 +146,24 @@ describe('Router', () => {
 
     a.remove();
   });
+
+  it('should match /products even when the URL has a search query', () => {
+    const handler = jasmine.createSpy('handler');
+    router.addRoute('/products', handler);
+
+    router.resolve('/products?q=phone&category=electronics');
+
+    expect(handler).toHaveBeenCalledWith('/products');
+  });
+
+  it('should keep the query string in history when navigating', () => {
+    spyOn(window.history, 'pushState');
+    const handler = jasmine.createSpy('handler');
+    router.addRoute('/products', handler);
+
+    router.navigate('/products?q=phone');
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, '', '/products?q=phone');
+    expect(handler).toHaveBeenCalledWith('/products');
+  });
 });

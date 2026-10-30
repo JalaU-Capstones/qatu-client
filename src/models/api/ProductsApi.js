@@ -106,15 +106,26 @@ export class ProductsApi {
   }
 
   /**
-   * Fetches a paginated list of products from the API.
+   * Fetches a paginated list of products from the API, optionally searched and filtered.
+   * Empty filters are left out of the query string.
    * @param {Object} [params]
    * @param {number} [params.page=1]   Page number (1-based).
    * @param {number} [params.limit=20] Items per page.
+   * @param {string} [params.search]   Keyword matched against name and description.
+   * @param {string} [params.categoryId] Category UUID.
+   * @param {number|null} [params.minPrice]
+   * @param {number|null} [params.maxPrice]
    * @returns {Promise<{ data: Array<Object>, meta: Object }>}
    * @throws {Error} When the server responds with a non-2xx status.
    */
-  async getProducts({ page = 1, limit = 20 } = {}) {
-    const url = `${BASE_URL}/products?page=${page}&limit=${limit}`;
+  async getProducts({ page = 1, limit = 20, search, categoryId, minPrice, maxPrice } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set('search', search);
+    if (categoryId) params.set('category_id', categoryId);
+    if (typeof minPrice === 'number') params.set('min_price', String(minPrice));
+    if (typeof maxPrice === 'number') params.set('max_price', String(maxPrice));
+
+    const url = `${BASE_URL}/products?${params.toString()}`;
     const response = await fetch(url);
 
     if (!response.ok) {
