@@ -20,6 +20,7 @@ import './views/components/product-card.css';
 import { AuthApi } from './models/api/AuthApi.js';
 import { CartApi } from './models/api/CartApi.js';
 import { Router } from './router/Router.js';
+import { AuthBootstrapService } from './services/AuthBootstrapService.js';
 import { CartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
@@ -48,11 +49,14 @@ if (app) {
     pendingCartActionStore,
   });
 
-  // Hydrate session from localStorage before mounting anything that reads user state
+  // Boot step 1: synchronous cache paint. Returning users see their avatar
+  // immediately; first-time visitors see anonymous. No network yet.
   authStore.loadFromStorage();
   cartStore.setUser(authStore.getUser()?.id ?? null);
 
-  // Persistent shell
+  // Persistent shell — mount BEFORE async boot so the page is interactive
+  // while /me resolves. The header renders from `authStore.getUser()` (which
+  // was just hydrated from cache).
   const header = new HeaderView();
   header.viewModel.setUser(authStore.getUser());
   header.viewModel.setCartCount(cartStore.getCount());
@@ -69,6 +73,12 @@ if (app) {
 
   const footer = new FooterView();
   footer.mount(app);
+
+  // Boot step 2: async /me hydration. Fire-and-forget — must never block
+  // the UI. On success, updates authStore (and thus the header via the
+  // subscription below). On 401, clears cache. On network/5xx, keeps cache.
+  const bootstrapService = new AuthBootstrapService({ authApi, authStore });
+  void bootstrapService.bootstrap();
 
   let currentPageView = null;
   let activeAuth = null;
@@ -191,17 +201,28 @@ if (app) {
   };
   header.viewModel.onLogoClick = () => router.navigate('/');
 
-  // Wire logout: clear session and redirect to /login
-  header.viewModel.onLogoutClick = () => {
-    authRedirectStore.setReturnTo(window.location.pathname);
+  // Logout: best-effort server invalidation, THEN local clear, THEN navigate.
+  // The API call is wrapped in try/catch so a backend hiccup does not leave
+  // the user stuck logged in locally.
+  header.viewModel.onLogoutClick = async () => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[main] logout API call failed; clearing local state anyway:',
+        err?.message || err
+      );
+    }
     authStore.clearSession();
     router.navigate('/login');
   };
 
-  // Wire 401 expiry event dispatched by apiFetch on expired JWT
+  // 401 on a non-auth request: client.js#_handleHardAuthFailure already
+  // cleared the store and dispatched this event. Here we only redirect +
+  // preserve the return path. No clearSession (avoids double-clear).
   window.addEventListener('qatu:auth-expired', () => {
     authRedirectStore.setReturnTo(window.location.pathname);
-    authStore.clearSession();
     router.navigate('/login');
   });
 

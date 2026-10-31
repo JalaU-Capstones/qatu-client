@@ -39,3 +39,43 @@ pnpm test:matrix
 - Requires a running backend (`http://localhost:3000/health`) and Vite dev server (`http://localhost:5173`).
 - Override the base URL with `MATRIX_BASE_URL=http://other-host:port`.
 - Screenshots are `fullPage: true` — for mobile this can be very tall (e.g. 8000+ px on Home). That's intentional for review.
+
+## `e2e-auth-cookies.mjs`
+
+End-to-end smoke test for the HttpOnly cookie authentication flow. Runs 6 scenarios against a live backend + frontend. Used in Sprint 4 to verify US-35 (auth session refactor).
+
+### Usage
+
+```bash
+# Terminal 1: backend (see ../api)
+cd ../api && pnpm dev
+
+# Terminal 2: frontend
+pnpm dev
+
+# Terminal 3: E2E
+pnpm test:e2e:auth
+# (runs node scripts/e2e-auth-cookies.mjs)
+```
+
+### Scenarios
+
+| #   | Name                        | What it verifies                                              |
+| --- | --------------------------- | ------------------------------------------------------------- |
+| 1   | Fresh visit                 | Anonymous header, no cookies, empty sessionStorage            |
+| 2   | Login                       | Avatar renders, sessionStorage has `v:2` without `token`      |
+| 3   | Reload                      | Avatar persists across reload (cache paint + `/me` rehydrate) |
+| 4   | Logout                      | Cookies cleared, sessionStorage cleared, redirect to `/login` |
+| 5   | Session expiry              | Cookie deletion → boot `/me` returns 401 → anonymous          |
+| 6   | Rehydrate after cache clear | Delete sessionStorage, keep cookies, reload → avatar returns  |
+
+### Exit codes
+
+- `0` — all 6 scenarios PASS
+- `1` — any scenario fails (assertion details in stderr)
+
+### Notes
+
+- Requires `puppeteer` (already a devDependency from FE-09).
+- The script seeds a throwaway user on the real backend (`POST /v1/auth/register`) and cleans up via logout. No persistent data is left behind except the seed user itself (harmless).
+- Override base URLs with `E2E_BASE_URL` and `E2E_API_URL` env vars if running on non-default ports.

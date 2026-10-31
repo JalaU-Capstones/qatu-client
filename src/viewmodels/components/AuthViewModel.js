@@ -13,9 +13,9 @@ export class AuthViewModel {
    * @param {AuthApi} [options.authApi]
    * @param {import('../../store/authStore.js').AuthStore} [options.authStore]
    * @param {Function} [options.onLogin] Callback receiving { email, password, rememberMe }
-   * @param {Function} [options.onLoginSuccess] Callback receiving { token, user, profile, response }
+   * @param {Function} [options.onLoginSuccess] Callback receiving { user, profile, roles, response }
    * @param {Function} [options.onRegister] Callback receiving { name, full_name, username, email, password, confirmPassword, acceptTerms }
-   * @param {Function} [options.onRegisterSuccess] Callback receiving { token, user, profile, response }
+   * @param {Function} [options.onRegisterSuccess] Callback receiving { user, profile, roles, response }
    * @param {Function} [options.onNavigate] Callback for navigation, e.g. (path) => router.navigate(path)
    * @param {Function} [options.onModeChange] Callback receiving the new mode ('login' | 'register')
    * @param {Function} [options.onGoogleAuth] Callback for Google authentication
@@ -154,22 +154,16 @@ export class AuthViewModel {
         });
         this.setLoading(false);
 
-        const token =
-          response?.data?.token ||
-          response?.token ||
-          response?.data?.accessToken ||
-          response?.accessToken ||
-          null;
         const user = response?.data?.user || response?.user || null;
         const profile = response?.data?.profile || response?.profile || user || null;
         const roles = response?.data?.roles || response?.roles || [];
 
         if (this.authStore && typeof this.authStore.setSession === 'function') {
-          this.authStore.setSession({ token, user, profile, roles });
+          this.authStore.setSession({ user, profile, roles });
         }
 
         if (typeof this.onLoginSuccess === 'function') {
-          this.onLoginSuccess({ token, user, profile, response });
+          this.onLoginSuccess({ user, profile, roles, response });
         }
 
         if (typeof this.onNavigate === 'function') {
@@ -239,22 +233,16 @@ export class AuthViewModel {
         const response = await this.authApi.register(payload);
         this.setLoading(false);
 
-        const token =
-          response?.data?.token ||
-          response?.token ||
-          response?.data?.accessToken ||
-          response?.accessToken ||
-          null;
         const user = response?.data?.user || response?.user || null;
         const profile = response?.data?.profile || response?.profile || user || null;
         const roles = response?.data?.roles || response?.roles || [];
 
         if (this.authStore && typeof this.authStore.setSession === 'function') {
-          this.authStore.setSession({ token, user, profile, roles });
+          this.authStore.setSession({ user, profile, roles });
         }
 
         if (typeof this.onRegisterSuccess === 'function') {
-          this.onRegisterSuccess({ token, user, profile, response });
+          this.onRegisterSuccess({ user, profile, roles, response });
         }
 
         if (typeof this.onNavigate === 'function') {
