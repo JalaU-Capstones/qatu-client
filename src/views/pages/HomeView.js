@@ -14,9 +14,15 @@ export class HomeView {
    * @param {Function} [options.onAddToCart] Called when a featured product's
    *   "Add to cart" button is clicked. The app shell uses this to update the
    *   header cart badge. Defaults to a no-op.
+   * @param {Function} [options.onSearch] Called with the hero search term on submit.
+   *   The app shell uses this to open the catalog results. Defaults to a no-op.
    */
-  constructor({ onAddToCart = () => Promise.resolve({ status: 'added' }) } = {}) {
+  constructor({
+    onAddToCart = () => Promise.resolve({ status: 'added' }),
+    onSearch = () => {},
+  } = {}) {
     this.onAddToCart = onAddToCart;
+    this.onSearch = onSearch;
     this._hero = null;
     this._categories = null;
     this._featuredProducts = null;
@@ -29,6 +35,7 @@ export class HomeView {
    */
   mount(container) {
     this._hero = new HeroView();
+    this._hero.viewModel.onSearch = (term) => this.onSearch(term);
     this._hero.mount(container);
 
     this._categories = new CategoriesView();

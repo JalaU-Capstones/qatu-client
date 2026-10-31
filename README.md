@@ -29,6 +29,52 @@ Frontend client for the Qatu Marketplace, a digital marketplace for buyers and s
 3. Copy `.env.example` to `.env` and fill in the values
 4. Run `make dev` (or `pnpm dev`) to start the development server
 
+## Authentication (Cookie-Based Session)
+
+The frontend uses **HttpOnly cookies** for the session (ADR-012). There is **no JWT in localStorage or sessionStorage** — the token is invisible to JavaScript by design.
+
+### How it works
+
+1. `POST /v1/auth/login` and `POST /v1/auth/register` set three cookies:
+   - `access_token` (HttpOnly, Secure in prod, SameSite=Strict, 1h TTL)
+   - `refresh_token` (HttpOnly, Secure in prod, SameSite=Strict, 30d TTL)
+   - `csrf_token` (readable, SameSite=Strict, 1h TTL) — for CSRF double-submit
+2. Every request uses `credentials: 'include'` (`apiFetch` does this automatically).
+3. Mutating requests (`POST`/`PATCH`/`PUT`/`DELETE`) on non-`/auth/*` paths attach `X-CSRF-Token` from the `csrf_token` cookie.
+4. On `401 REFRESH_REQUIRED`, `apiFetch` calls `POST /v1/auth/refresh` once and retries the original request with fresh cookies. On failure, it clears the local state and emits `qatu:auth-expired`.
+5. On boot, `AuthBootstrapService` calls `GET /v1/auth/me` to revalidate the session from the cookie. The header paints from the `sessionStorage` cache for optimistic UI.
+6. `POST /v1/auth/logout` invalidates the session on the server and clears the cookies.
+
+### SameSite=Strict deployment requirement
+
+The cookies use `SameSite=Strict`. This requires the frontend and API to share the **same site** (eTLD+1):
+
+- ✅ `qatu.com` (FE) + `api.qatu.com` (BE)
+- ✅ `qatu.app` (FE) + `qatu.app/api` (BE, reverse proxy)
+- ✅ `localhost:5173` + `localhost:3000`
+- ❌ `qatu.vercel.app` + `qatu-api.onrender.com` (different sites → cookies dropped)
+
+If a cross-site deployment is required, change `sameSite` to `'none'` in the backend `cookieHelper.js` (HTTPS only). The CSRF defense via double-submit already covers that case.
+
+### E2E verification
+
+Run the full 6-scenario cookie-auth E2E against a live backend:
+
+```bash
+# Terminal 1: backend
+cd ../api && pnpm dev
+
+# Terminal 2: frontend
+pnpm dev
+
+# Terminal 3: E2E
+pnpm test:e2e:auth
+```
+
+Scenarios covered: fresh visit, login → avatar, reload → persists, logout → cleared, cookie deletion → anonymous, sessionStorage clear + reload → rehydrate via `/me`.
+
+See `.docs/ARCHITECTURE.md` §"Auth Flow (Cookie-Based)" and `.docs/TROUBLESHOOTING.md` §"Auth (Cookie-Based Session)" for details.
+
 ## Available Scripts
 
 Run `make help` to see all available scripts.

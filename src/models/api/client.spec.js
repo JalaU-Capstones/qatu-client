@@ -5,8 +5,16 @@ describe('apiFetch', () => {
   let fetchSpy;
 
   beforeEach(() => {
-    window.localStorage.clear();
+    // Clear cookies
+    document.cookie.split(';').forEach((c) => {
+      const name = c.split('=')[0].trim();
+      if (name) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      }
+    });
+
     authStore.clearSession();
+    spyOn(authStore, 'clearSession').and.callThrough();
     fetchSpy = spyOn(window, 'fetch');
   });
 
@@ -14,79 +22,150 @@ describe('apiFetch', () => {
     authStore.clearSession();
   });
 
-  it('prepends the base URL to the path', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
-    await apiFetch('/ping');
-    expect(fetchSpy).toHaveBeenCalledWith(jasmine.stringMatching(/\/ping$/), jasmine.any(Object));
+  describe('credentials and CSRF', () => {
+    it('always sends credentials: include', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
+      await apiFetch('/products');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        jasmine.stringMatching(/\/products$/),
+        jasmine.objectContaining({ credentials: 'include' })
+      );
+    });
+
+    it('attaches X-CSRF-Token on mutating non-auth paths', async () => {
+      document.cookie = 'csrf_token=abc123; path=/';
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
+      await apiFetch('/cart/items', { method: 'POST' });
+      const [, init] = fetchSpy.calls.first().args;
+      expect(init.headers['X-CSRF-Token']).toBe('abc123');
+    });
+
+    it('does NOT attach X-CSRF-Token on GET', async () => {
+      document.cookie = 'csrf_token=abc123; path=/';
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
+      await apiFetch('/cart/items');
+      const [, init] = fetchSpy.calls.first().args;
+      expect(init.headers['X-CSRF-Token']).toBeUndefined();
+    });
+
+    it('does NOT attach X-CSRF-Token on /auth/* paths', async () => {
+      document.cookie = 'csrf_token=abc123; path=/';
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
+      await apiFetch('/auth/login', { method: 'POST' });
+      const [, init] = fetchSpy.calls.first().args;
+      expect(init.headers['X-CSRF-Token']).toBeUndefined();
+    });
   });
 
-  it('does NOT add Authorization header when withAuth is false', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
-    authStore.setSession({ token: 'tok-test', user: { id: 'u1' } });
+  describe('401 handling on /auth/* paths', () => {
+    it('propagates the raw response for /auth/login 401 (bad credentials)', async () => {
+      const errBody = JSON.stringify({ error: { code: 'UNAUTHORIZED' } });
+      fetchSpy.and.returnValue(Promise.resolve(new Response(errBody, { status: 401 })));
 
-    await apiFetch('/public', { withAuth: false });
+      const res = await apiFetch('/auth/login', { method: 'POST' });
 
-    const callArgs = fetchSpy.calls.mostRecent().args;
-    const headers = callArgs[1].headers;
-    expect(headers['Authorization']).toBeUndefined();
+      expect(res.status).toBe(401);
+      expect(authStore.clearSession).not.toHaveBeenCalled();
+    });
   });
 
-  it('adds Authorization: Bearer header when withAuth is true and token exists', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
-    authStore.setSession({ token: 'tok-bearer', user: { id: 'u2' } });
+  describe('401 handling on non-auth paths (refresh-and-retry)', () => {
+    it('calls refresh and retries once on REFRESH_REQUIRED', async () => {
+      const errBody = JSON.stringify({ error: { code: 'REFRESH_REQUIRED' } });
+      fetchSpy.and.returnValues(
+        Promise.resolve(new Response(errBody, { status: 401 })), // original 401
+        Promise.resolve(new Response('{}', { status: 200 })), // refresh OK
+        Promise.resolve(new Response('{"ok":true}', { status: 200 })) // retry OK
+      );
 
-    await apiFetch('/protected', { withAuth: true });
+      const res = await apiFetch('/cart/items', { method: 'POST' });
 
-    const callArgs = fetchSpy.calls.mostRecent().args;
-    const headers = callArgs[1].headers;
-    expect(headers['Authorization']).toBe('Bearer tok-bearer');
+      expect(res.status).toBe(200);
+      expect(fetchSpy.calls.count()).toBe(3);
+      expect(fetchSpy.calls.argsFor(1)[0]).toContain('/auth/refresh');
+    });
+
+    it('rebuilds CSRF header with fresh cookie value on retry', async () => {
+      document.cookie = 'csrf_token=old-csrf; path=/';
+      const errBody = JSON.stringify({ error: { code: 'REFRESH_REQUIRED' } });
+      fetchSpy.and.returnValues(
+        Promise.resolve(new Response(errBody, { status: 401 })),
+        Promise.resolve().then(() => {
+          document.cookie = 'csrf_token=fresh-csrf; path=/';
+          return new Response('{}', { status: 200 });
+        }),
+        Promise.resolve(new Response('{"ok":true}', { status: 200 }))
+      );
+
+      const res = await apiFetch('/cart/items', { method: 'POST' });
+      expect(res.status).toBe(200);
+      const retryInit = fetchSpy.calls.argsFor(2)[1];
+      expect(retryInit.headers['X-CSRF-Token']).toBe('fresh-csrf');
+    });
+
+    it('clears session and emits event when refresh fails', async () => {
+      const errBody = JSON.stringify({ error: { code: 'REFRESH_REQUIRED' } });
+      fetchSpy.and.returnValues(
+        Promise.resolve(new Response(errBody, { status: 401 })),
+        Promise.resolve(new Response('{}', { status: 401 })) // refresh fails
+      );
+
+      const dispatchSpy = spyOn(window, 'dispatchEvent').and.callThrough();
+
+      let thrownErr = null;
+      try {
+        await apiFetch('/cart/items', { method: 'POST' });
+      } catch (err) {
+        thrownErr = err;
+      }
+
+      expect(thrownErr).not.toBeNull();
+      expect(thrownErr.code).toBe('SESSION_EXPIRED');
+      expect(authStore.clearSession).toHaveBeenCalled();
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        jasmine.objectContaining({ type: 'qatu:auth-expired' })
+      );
+    });
+
+    it('clears session on non-REFRESH_REQUIRED 401', async () => {
+      const errBody = JSON.stringify({ error: { code: 'UNAUTHORIZED' } });
+      fetchSpy.and.returnValue(Promise.resolve(new Response(errBody, { status: 401 })));
+
+      let thrownErr = null;
+      try {
+        await apiFetch('/cart/items', { method: 'POST' });
+      } catch (err) {
+        thrownErr = err;
+      }
+
+      expect(thrownErr).not.toBeNull();
+      expect(thrownErr.code).toBe('SESSION_EXPIRED');
+      expect(authStore.clearSession).toHaveBeenCalled();
+    });
   });
 
-  it('omits Authorization header when withAuth is true but no token exists', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
-    // authStore is already cleared in beforeEach
+  describe('non-401 errors propagate', () => {
+    it('returns 500 response without retry or clear', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('oops', { status: 500 })));
+      const res = await apiFetch('/cart/items', { method: 'POST' });
+      expect(res.status).toBe(500);
+      expect(authStore.clearSession).not.toHaveBeenCalled();
+    });
 
-    await apiFetch('/protected', { withAuth: true });
-
-    const callArgs = fetchSpy.calls.mostRecent().args;
-    const headers = callArgs[1].headers;
-    expect(headers['Authorization']).toBeUndefined();
+    it('returns 200 response as-is', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{"ok":true}', { status: 200 })));
+      const res = await apiFetch('/cart/items');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+    });
   });
 
-  it('on 401 with withAuth: clears session, dispatches qatu:auth-expired, throws SESSION_EXPIRED', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('Unauthorized', { status: 401 })));
-    authStore.setSession({ token: 'tok-expired', user: { id: 'u3' } });
-    expect(authStore.isAuthenticated()).toBe(true);
-
-    let authExpiredFired = false;
-    const handler = () => {
-      authExpiredFired = true;
-    };
-    window.addEventListener('qatu:auth-expired', handler);
-
-    let thrownErr = null;
-    try {
-      await apiFetch('/secured', { withAuth: true });
-    } catch (e) {
-      thrownErr = e;
-    }
-
-    window.removeEventListener('qatu:auth-expired', handler);
-
-    expect(authStore.isAuthenticated()).toBe(false);
-    expect(authExpiredFired).toBe(true);
-    expect(thrownErr).not.toBeNull();
-    expect(thrownErr.message).toBe('SESSION_EXPIRED');
-    expect(thrownErr.code).toBe('SESSION_EXPIRED');
-    expect(thrownErr.status).toBe(401);
-  });
-
-  it('on 200 with withAuth: does NOT clear session', async () => {
-    fetchSpy.and.returnValue(Promise.resolve(new Response('{"ok":true}', { status: 200 })));
-    authStore.setSession({ token: 'tok-valid', user: { id: 'u4' } });
-
-    await apiFetch('/secured', { withAuth: true });
-
-    expect(authStore.isAuthenticated()).toBe(true);
+  describe('withAuth deprecated', () => {
+    it('ignores the withAuth flag (no Authorization header added)', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('{}', { status: 200 })));
+      await apiFetch('/products', { withAuth: true });
+      const [, init] = fetchSpy.calls.first().args;
+      expect(init.headers['Authorization']).toBeUndefined();
+    });
   });
 });
