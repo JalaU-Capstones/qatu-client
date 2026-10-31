@@ -1,10 +1,124 @@
 import { FeaturedProductsViewModel } from './FeaturedProductsViewModel.js';
 
+/** Contract-shaped products (OpenAPI Product schema, list endpoint). */
+const FEATURED_PRODUCTS = [
+  {
+    id: 'aguayo-tradicional-tarabuco',
+    name: 'Aguayo tradicional de Tarabuco',
+    slug: 'aguayo-tradicional-tarabuco',
+    seller: { full_name: 'Tejidos Illimani' },
+    price: 40,
+    currency: 'USD',
+    stock: 10,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 24,
+    primary_image_path: null,
+  },
+  {
+    id: 'cafe-especialidad-cusco',
+    name: 'Café de especialidad de Cusco 500 g',
+    slug: 'cafe-especialidad-cusco',
+    seller: { full_name: 'Café Altura Cusco' },
+    price: 14,
+    currency: 'USD',
+    stock: 20,
+    state: 'published',
+    average_rating: 4.8,
+    ratings_count: 18,
+    primary_image_path: null,
+  },
+  {
+    id: 'jarron-barro-negro-oaxaca',
+    name: 'Jarrón de barro negro de Oaxaca',
+    slug: 'jarron-barro-negro-oaxaca',
+    seller: { full_name: 'Barro Negro Oaxaca' },
+    price: 38,
+    currency: 'USD',
+    stock: 5,
+    state: 'published',
+    average_rating: 5.0,
+    ratings_count: 12,
+    primary_image_path: null,
+  },
+  {
+    id: 'bolso-cuero-artesanal',
+    name: 'Bolso de cuero artesanal',
+    slug: 'bolso-cuero-artesanal',
+    seller: { full_name: 'Pampa Cuero' },
+    price: 85,
+    currency: 'USD',
+    stock: 3,
+    state: 'published',
+    average_rating: 4.7,
+    ratings_count: 31,
+    primary_image_path: null,
+  },
+  {
+    id: 'audifonos-inalambricos-anc-pro',
+    name: 'Audífonos inalámbricos ANC Pro',
+    slug: 'audifonos-inalambricos-anc-pro',
+    seller: { full_name: 'Andes Tech' },
+    price: 165,
+    currency: 'USD',
+    stock: 8,
+    state: 'published',
+    average_rating: 4.6,
+    ratings_count: 46,
+    primary_image_path: null,
+  },
+  {
+    id: 'chocolate-cacao-esmeraldas',
+    name: 'Chocolate 70% cacao de Esmeraldas',
+    slug: 'chocolate-cacao-esmeraldas',
+    seller: { full_name: 'Cacao Esmeraldas' },
+    price: 6,
+    currency: 'USD',
+    stock: 40,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 27,
+    primary_image_path: null,
+  },
+  {
+    id: 'mochila-trekking-45l',
+    name: 'Mochila de trekking 45 L',
+    slug: 'mochila-trekking-45l',
+    seller: { full_name: 'Sabores del Eje' },
+    price: 92,
+    currency: 'USD',
+    stock: 7,
+    state: 'published',
+    average_rating: 4.8,
+    ratings_count: 15,
+    primary_image_path: null,
+  },
+  {
+    id: 'huipil-bordado-guatemalteco',
+    name: 'Huipil bordado guatemalteco',
+    slug: 'huipil-bordado-guatemalteco',
+    seller: { full_name: 'Telar Maya' },
+    price: 65,
+    currency: 'USD',
+    stock: 15,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 9,
+    primary_image_path: null,
+  },
+];
+
+const createFeaturedApi = () => ({
+  getFeaturedProducts: jasmine
+    .createSpy('getFeaturedProducts')
+    .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
+});
+
 describe('FeaturedProductsViewModel', () => {
   let viewModel;
 
   beforeEach(async () => {
-    viewModel = new FeaturedProductsViewModel();
+    viewModel = new FeaturedProductsViewModel({ productsApi: createFeaturedApi() });
     await viewModel.load();
   });
 
@@ -13,7 +127,7 @@ describe('FeaturedProductsViewModel', () => {
     expect(viewModel.title).toBe('Destacados de la semana');
     expect(viewModel.subtitle).toBe('');
     expect(viewModel.link.label).toBe('Ver catálogo →');
-    expect(viewModel.addToCartLabel).toBe('Add to cart');
+    expect(viewModel.addToCartLabel).toBe('Añadir');
   });
 
   describe('loading', () => {
@@ -112,49 +226,75 @@ describe('FeaturedProductsViewModel', () => {
       expect(viewModel.getPriceLabel({ price: 6, currency: 'USD' })).toBe('US$ 6.00');
     });
 
-    it('should keep unknown currency codes and omit the symbol when there is none', () => {
-      expect(viewModel.getPriceLabel({ price: 10.5, currency: 'BOB' })).toBe('BOB 10.50');
-      expect(viewModel.getPriceLabel({ price: 10.5 })).toBe('10.50');
+    it('should format the currency using the storefront convention', () => {
+      expect(viewModel.getPriceLabel({ price: 10.5, currency: 'BOB' })).toBe('Bs 10.50');
+      expect(viewModel.getPriceLabel({ price: 10.5 })).toBe('US$ 10.50');
     });
 
     it('should format the rating, the screen reader rating and the seller line', () => {
       const product = viewModel.products[0];
 
       expect(viewModel.getRatingLabel(product)).toBe('4.9 (24)');
-      expect(viewModel.getRatingLabel({ rating: 5, ratingsCount: 12 })).toBe('5.0 (12)');
+      expect(viewModel.getRatingLabel({ average_rating: 5, ratings_count: 12 })).toBe('5.0 (12)');
       expect(viewModel.getRatingAccessibleLabel(product)).toBe('Calificación 4.9 de 5, 24 reseñas');
-      expect(viewModel.getOriginLabel(product)).toBe('Tejidos Illimani · Bolivia');
+      // The list endpoint does not populate a seller; only a present
+      // full_name/username is rendered.
+      expect(viewModel.getOriginLabel(product)).toBe('Tejidos Illimani');
       expect(viewModel.getOriginLabel({ seller: 'Solo tienda' })).toBe('Solo tienda');
+      expect(viewModel.getOriginLabel({ seller: { username: 'telarmaya' } })).toBe('telarmaya');
+      expect(viewModel.getOriginLabel({ seller: {} })).toBe('');
+      expect(viewModel.getOriginLabel({})).toBe('');
     });
   });
 
   describe('card helpers', () => {
-    it('getAddButtonLabel should return "Añadir"', () => {
-      expect(viewModel.getAddButtonLabel()).toBe('Añadir');
-    });
-
     describe('getStarsFilled', () => {
       it('should return 5 booleans', () => {
-        const result = viewModel.getStarsFilled({ rating: 3 });
+        const result = viewModel.getStarsFilled({ average_rating: 3 });
         expect(result.length).toBe(5);
       });
 
       it('should fill the first N stars for a rating of N', () => {
-        expect(viewModel.getStarsFilled({ rating: 4 })).toEqual([true, true, true, true, false]);
+        expect(viewModel.getStarsFilled({ average_rating: 4 })).toEqual([
+          true,
+          true,
+          true,
+          true,
+          false,
+        ]);
       });
 
-      it('should round 4.5 to 5 filled stars', () => {
-        expect(viewModel.getStarsFilled({ rating: 4.5 })).toEqual([true, true, true, true, true]);
+      it('should fill the fifth star from a halfway rating (4.5)', () => {
+        expect(viewModel.getStarsFilled({ average_rating: 4.5 })).toEqual([
+          true,
+          true,
+          true,
+          true,
+          true,
+        ]);
       });
 
       it('should return all false for a rating of 0', () => {
-        expect(viewModel.getStarsFilled({ rating: 0 })).toEqual([
+        expect(viewModel.getStarsFilled({ average_rating: 0 })).toEqual([
           false,
           false,
           false,
           false,
           false,
         ]);
+      });
+    });
+
+    describe('getImageUrl', () => {
+      it('should return the contract primary_image_path', () => {
+        expect(viewModel.getImageUrl({ primary_image_path: 'https://cdn/p1.jpg' })).toBe(
+          'https://cdn/p1.jpg'
+        );
+      });
+
+      it('should return null when the product has no image', () => {
+        expect(viewModel.getImageUrl({})).toBeNull();
+        expect(viewModel.getImageUrl({ primary_image_path: null })).toBeNull();
       });
     });
 

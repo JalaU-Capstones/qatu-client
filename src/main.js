@@ -24,11 +24,13 @@ import './views/pages/cart.css';
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
+import { cartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
 import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
+import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -113,18 +115,31 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
-  const renderProductDetail = (productId) => {
+  const renderProductDetail = (productSlug) => {
     clearCurrentView();
+    const productDetailViewModel = new ProductDetailViewModel({
+      cartService,
+    });
     currentPageView = new ProductDetailView({
-      productId,
+      viewModel: productDetailViewModel,
+      productSlug,
       onBuyNow: () => router.navigate('/cart'),
+      onAuthRequired: () => {
+        authRedirectStore.setReturnTo(window.location.pathname);
+        router.navigate('/login');
+      },
     });
     currentPageView.mount(mainEl);
   };
 
   const renderCart = () => {
     clearCurrentView();
-    currentPageView = new CartView();
+    currentPageView = new CartView({
+      onLogin: () => {
+        authRedirectStore.setReturnTo(window.location.pathname);
+        router.navigate('/login');
+      },
+    });
     currentPageView.mount(mainEl);
   };
 
@@ -163,29 +178,36 @@ if (app) {
 
   /**
    * Called by the product cards on Home/Catalog when the user clicks "Añadir".
-   * The current lab is frontend-only: the product snapshot is written straight
-   * into the local cart, so no authentication or backend call is required.
+   * Delegates to `CartService`: authenticated users are synced with the
+   * backend (POST /v1/cart/items) and guests get a prompt to log in — the
+   * intent is queued in `pendingCartActionStore` and replayed after login.
    *
    * @param {Object} product Product snapshot (id, name, price, currency, ...).
    * @param {number} [quantity=1]
-   * @returns {Promise<{ status: 'added'|'error', item?: Object, error?: Error }>}
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
    */
-  const onAddToCartHandler = (product, quantity = 1) => {
+  const onAddToCartHandler = async (product, quantity = 1) => {
     if (!product) {
-      return Promise.resolve({
+      return {
         status: 'error',
         error: new Error('Producto no disponible'),
-      });
+      };
     }
 
-    const item = cartStore.addItem(product, quantity);
-    return Promise.resolve({ status: 'added', item });
+    const result = await cartService.addToCart(product.id, quantity);
+
+    if (result.status === 'auth-required') {
+      authRedirectStore.setReturnTo(window.location.pathname);
+      router.navigate('/login');
+    }
+
+    return result;
   };
 
   const router = new Router();
   router.addRoute('/', () => renderHome());
   router.addRoute('/products', () => renderCatalog());
-  router.addRoute('/products/:id', (_path, params) => renderProductDetail(params.id));
+  router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
@@ -222,11 +244,34 @@ if (app) {
     router.navigate('/login');
   });
 
+  /**
+   * Keeps the local cart in sync with the backend for the current session:
+   *  - authenticated → replay any queued guest action, then hydrate the cart
+   *    from GET /v1/cart (badge + cart page depend on this).
+   *  - guest → the API cart does not exist; clear the local mirror so the
+   *    UI never shows products that are not in the server cart.
+   * @param {Object} store authStore snapshot
+   */
+  const syncCartWithSession = (store) => {
+    if (store.isAuthenticated()) {
+      void cartService
+        .processPending()
+        .catch((err) => console.error('[main] Failed to replay pending cart action:', err))
+        .then(() => cartService.loadCart())
+        .catch((err) => console.error('[main] Failed to load user cart:', err));
+    } else {
+      cartStore.clear();
+    }
+  };
+
   authStore.subscribe((store) => {
     header.viewModel.setUser(store.getUser());
-    // The local cart is intentionally not scoped per user: logging in or out
-    // must not discard the products the shopper already selected.
+    syncCartWithSession(store);
   });
+
+  // Boot: the session may already be hydrated from cache (loadFromStorage
+  // fired no listeners because the header is mounted before this point).
+  syncCartWithSession(authStore);
 
   cartStore.subscribe((store) => {
     header.viewModel.setCartCount(store.getCount());

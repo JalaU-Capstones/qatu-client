@@ -166,7 +166,7 @@ export class FeaturedProductsView {
         ratingLabel: this.viewModel.getRatingLabel(product),
         ratingAccessible: this.viewModel.getRatingAccessibleLabel(product),
         starsFilled: this.viewModel.getStarsFilled(product),
-        imageUrl: product.imageUrl || null,
+        imageUrl: this.viewModel.getImageUrl(product),
         isNew: this.viewModel.isNewProduct(product),
         stock: typeof product.stock === 'number' ? product.stock : null,
         state: product.state || 'published',
@@ -175,7 +175,7 @@ export class FeaturedProductsView {
         variant: 'featured',
         onAddToCart: (id) => this.viewModel.addToCart(id),
         onToggleFavorite: () => {},
-        detailHref: `/products/${product.id}`,
+        detailHref: `/products/${product.slug || product.id}`,
       }
     );
     return cardView.render();

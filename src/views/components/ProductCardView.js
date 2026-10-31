@@ -93,9 +93,12 @@ export class ProductCardView {
     const info = document.createElement('div');
     info.className = 'q-product-card-info';
 
-    const seller = document.createElement('p');
-    seller.className = 'q-product-card-seller';
-    seller.textContent = this.data.sellerLine;
+    if (this.data.sellerLine) {
+      const seller = document.createElement('p');
+      seller.className = 'q-product-card-seller';
+      seller.textContent = this.data.sellerLine;
+      info.appendChild(seller);
+    }
 
     const title = document.createElement('h3');
     title.className = 'q-product-card-title';
@@ -170,7 +173,6 @@ export class ProductCardView {
       this._handleResult(result);
     });
 
-    info.appendChild(seller);
     info.appendChild(title);
     info.appendChild(rating);
     info.appendChild(price);

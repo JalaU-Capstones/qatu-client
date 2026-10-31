@@ -10,10 +10,13 @@ export class CartView {
    * @param {Object} [options]
    * @param {CartViewModel} [options.viewModel]
    * @param {Function} [options.onCheckout] Overrides the default placeholder notice.
+   * @param {Function} [options.onLogin] Called when a guest must authenticate
+   *   to see the API cart — the shell redirects to `/login`.
    */
-  constructor({ viewModel = new CartViewModel(), onCheckout = null } = {}) {
+  constructor({ viewModel = new CartViewModel(), onCheckout = null, onLogin = null } = {}) {
     this.viewModel = viewModel;
     this.onCheckout = onCheckout;
+    this.onLogin = onLogin;
     this.element = null;
     this._unsubscribe = null;
   }
@@ -41,6 +44,10 @@ export class CartView {
       this._renderContent();
     });
 
+    // Hydrate the cart from the backend (GET /v1/cart). The view re-renders
+    // itself through the viewModel subscription when the response arrives.
+    void this.viewModel.load();
+
     return el;
   }
 
@@ -56,7 +63,9 @@ export class CartView {
 
     container.appendChild(this._renderHeader());
 
-    if (this.viewModel.isEmpty) {
+    if (this.viewModel.requiresAuth) {
+      container.appendChild(this._renderAuthPrompt());
+    } else if (this.viewModel.isEmpty) {
       container.appendChild(this._renderEmptyState());
     } else {
       container.appendChild(this._renderLayout());
@@ -79,13 +88,60 @@ export class CartView {
 
     const subtitle = document.createElement('p');
     subtitle.className = 'q-cart__subtitle';
-    subtitle.textContent = this.viewModel.isEmpty
-      ? 'Todavía no tienes productos en tu carrito.'
-      : `Revisa tus productos: ${this.viewModel.getItemCountLabel()}.`;
+    subtitle.textContent = this.viewModel.requiresAuth
+      ? 'Inicia sesión para ver los productos guardados en tu carrito.'
+      : this.viewModel.isEmpty
+        ? 'Todavía no tienes productos en tu carrito.'
+        : `Revisa tus productos: ${this.viewModel.getItemCountLabel()}.`;
 
     header.appendChild(title);
     header.appendChild(subtitle);
     return header;
+  }
+
+  /**
+   * Guest prompt: the API cart belongs to an authenticated user, so without
+   * a session there is no persisted cart to show.
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderAuthPrompt() {
+    const prompt = document.createElement('div');
+    prompt.className = 'q-cart__empty';
+
+    const icon = document.createElement('div');
+    icon.className = 'q-cart__empty-icon';
+    icon.textContent = 'X';
+
+    const title = document.createElement('h2');
+    title.className = 'q-cart__empty-title';
+    title.textContent = 'Inicia sesión para ver tu carrito';
+
+    const message = document.createElement('p');
+    message.className = 'q-cart__empty-message';
+    message.textContent =
+      'Tu carrito se guarda en tu cuenta. Entra para verlo en cualquier dispositivo.';
+
+    const login = document.createElement('button');
+    login.type = 'button';
+    login.className = 'q-cart__continue q-cart__continue--primary';
+    login.textContent = 'Iniciar sesión';
+    login.addEventListener('click', () => {
+      if (typeof this.onLogin === 'function') this.onLogin();
+    });
+
+    const link = document.createElement('a');
+    link.className = 'q-cart__continue';
+    link.href = '/products';
+    link.dataset.route = '';
+    link.textContent = 'Continuar comprando';
+
+    prompt.appendChild(icon);
+    prompt.appendChild(title);
+    prompt.appendChild(message);
+    prompt.appendChild(login);
+    prompt.appendChild(link);
+    return prompt;
   }
 
   /**

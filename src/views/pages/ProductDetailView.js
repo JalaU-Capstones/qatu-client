@@ -11,17 +11,21 @@ export class ProductDetailView {
   /**
    * @param {Object} [options]
    * @param {ProductDetailViewModel} [options.viewModel]
-   * @param {string|null} [options.productId]
+   * @param {string|null} [options.productSlug] Route segment (`/products/:slug`).
    * @param {Function} [options.onBuyNow] Called after a successful "Comprar ahora".
+   * @param {Function} [options.onAuthRequired] Called when a guest tries to add
+   *   the product to the cart — the shell redirects to `/login`.
    */
   constructor({
     viewModel = new ProductDetailViewModel(),
-    productId = null,
+    productSlug = null,
     onBuyNow = null,
+    onAuthRequired = null,
   } = {}) {
     this.viewModel = viewModel;
-    this.productId = productId;
+    this.productSlug = productSlug;
     this.onBuyNow = onBuyNow;
+    this.onAuthRequired = onAuthRequired;
     this.element = null;
     this._unsubscribe = null;
   }
@@ -49,8 +53,8 @@ export class ProductDetailView {
       this._renderContent();
     });
 
-    if (this.productId) {
-      this.viewModel.load(this.productId);
+    if (this.productSlug) {
+      this.viewModel.load(this.productSlug);
     }
 
     return el;
@@ -205,8 +209,12 @@ export class ProductDetailView {
 
     const mainImage = document.createElement('div');
     mainImage.className = 'q-product-detail__main-image';
+    const selectedFrame = this.viewModel.getGallery()[this.viewModel.selectedImage];
     mainImage.appendChild(
-      this._renderImagePlaceholder(this.viewModel.getSelectedImageLabel(), true)
+      this._renderImageFrame(
+        selectedFrame || { path: null, label: this.viewModel.getSelectedImageLabel() },
+        true
+      )
     );
 
     const thumbnails = document.createElement('div');
@@ -224,7 +232,7 @@ export class ProductDetailView {
         button.classList.add('is-selected');
       }
 
-      button.appendChild(this._renderImagePlaceholder(frame.label, false));
+      button.appendChild(this._renderImageFrame(frame, false));
       button.addEventListener('click', () => this.viewModel.setSelectedImage(index));
       thumbnails.appendChild(button);
     });
@@ -232,6 +240,39 @@ export class ProductDetailView {
     gallery.appendChild(mainImage);
     gallery.appendChild(thumbnails);
     return gallery;
+  }
+
+  /**
+   * Renders the product photo when the frame has a contract `image_path`,
+   * falling back to the design placeholder when it is missing or fails to load.
+   * @param {{ path: string|null, label: string }} frame
+   * @param {boolean} large
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderImageFrame(frame, large) {
+    if (frame?.path) {
+      const wrapper = document.createElement('div');
+      wrapper.className = large
+        ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
+        : 'q-product-detail__image-frame';
+
+      const photo = document.createElement('img');
+      photo.className = large
+        ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
+        : 'q-product-detail__image-photo';
+      photo.alt = frame.label;
+      photo.loading = 'lazy';
+      photo.addEventListener('error', () => {
+        wrapper.innerHTML = '';
+        wrapper.appendChild(this._renderImagePlaceholder(frame.label, large));
+      });
+      photo.src = frame.path;
+      wrapper.appendChild(photo);
+      return wrapper;
+    }
+
+    return this._renderImagePlaceholder(frame?.label || 'Imagen del producto', large);
   }
 
   /**
@@ -345,7 +386,13 @@ export class ProductDetailView {
         ? 'Añadiendo…'
         : 'Agregar al carrito';
     addButton.disabled = vm.isOutOfStock() || vm.isAdding;
-    addButton.addEventListener('click', () => vm.addToCart());
+    addButton.addEventListener('click', () =>
+      vm.addToCart().then((result) => {
+        if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+          this.onAuthRequired();
+        }
+      })
+    );
     actions.appendChild(addButton);
 
     const buyButton = document.createElement('button');
@@ -514,33 +561,37 @@ export class ProductDetailView {
    * @private
    */
   _renderSellerCard() {
-    const product = this.viewModel.product;
+    const vm = this.viewModel;
     const section = document.createElement('section');
     section.className = 'q-product-detail__seller-card';
-    section.setAttribute('aria-label', `Sobre ${product.seller}`);
+    section.setAttribute('aria-label', `Sobre ${vm.getSellerLine()}`);
 
     const avatar = document.createElement('span');
     avatar.className = 'q-product-detail__seller-avatar';
     avatar.setAttribute('aria-hidden', 'true');
-    avatar.textContent = this.viewModel.getSellerInitials();
+    avatar.textContent = vm.getSellerInitials();
 
     const info = document.createElement('div');
     info.className = 'q-product-detail__seller-info';
 
     const heading = document.createElement('h2');
     heading.className = 'q-product-detail__seller-name';
-    heading.textContent = product.seller;
+    heading.textContent = vm.getSellerLine();
 
-    const location = document.createElement('p');
-    location.className = 'q-product-detail__seller-location';
-    location.textContent = product.country;
+    info.appendChild(heading);
+
+    const location = vm.getSellerLocation();
+    if (location) {
+      const locationElement = document.createElement('p');
+      locationElement.className = 'q-product-detail__seller-location';
+      locationElement.textContent = location;
+      info.appendChild(locationElement);
+    }
 
     const stats = document.createElement('p');
     stats.className = 'q-product-detail__seller-stats';
-    stats.textContent = `Vendedor desde ${product.sellerSince} · ${product.sellerSales} ventas`;
+    stats.textContent = vm.getStockLabel() || 'Producto publicado en la tienda';
 
-    info.appendChild(heading);
-    info.appendChild(location);
     info.appendChild(stats);
 
     const link = document.createElement('a');
@@ -595,11 +646,12 @@ export class ProductDetailView {
       const card = new RecommendationCardView({
         id: product.id,
         name: product.name,
-        sellerLine: product.country ? `${product.seller} · ${product.country}` : product.seller,
-        ratingLabel: `${Number(product.rating).toFixed(1)} (${product.ratingsCount})`,
+        ratingLabel: product.average_rating
+          ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
+          : undefined,
         priceLabel: formatPrice(product.price, product.currency),
-        imageUrl: product.imageUrl || null,
-        detailHref: `/products/${product.id}`,
+        imageUrl: product.primary_image_path || null,
+        detailHref: `/products/${product.slug || product.id}`,
       });
       grid.appendChild(card.render());
     });

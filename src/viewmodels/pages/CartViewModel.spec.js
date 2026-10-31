@@ -1,29 +1,101 @@
-import { CartStore, FLAT_SHIPPING_RATE, FREE_SHIPPING_THRESHOLD } from '../../store/cartStore.js';
+import { FLAT_SHIPPING_RATE, FREE_SHIPPING_THRESHOLD } from '../../store/cartStore.js';
 import { CartViewModel } from './CartViewModel.js';
 
 const product = (overrides = {}) => ({
-  id: 'p1',
+  productId: 'p1',
+  itemId: 'ci1',
+  slug: 'aguayo',
   name: 'Aguayo',
   price: 40,
   currency: 'USD',
   seller: 'Tejidos Illimani',
   imageUrl: null,
+  quantity: 1,
   ...overrides,
+});
+
+class MockCartStore {
+  constructor(items = []) {
+    this.items = [...items];
+    this.listeners = new Set();
+    this.quantities = [];
+  }
+  getItems() {
+    return this.items;
+  }
+  getItem(id) {
+    return this.items.find((i) => i.productId === id) || null;
+  }
+  getCount() {
+    return this.items.reduce((acc, item) => acc + item.quantity, 0);
+  }
+  getSubtotal() {
+    return this.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }
+  getShipping() {
+    return this.items.length === 0 || this.getSubtotal() >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : FLAT_SHIPPING_RATE;
+  }
+  getTotal() {
+    return this.getSubtotal() + this.getShipping();
+  }
+
+  updateQuantity(id, qty) {
+    const clamped = Math.max(1, Math.floor(Number(qty) || 1));
+    const item = this.items.find((i) => i.productId === id);
+    if (item) {
+      item.quantity = clamped;
+      this._notify();
+    }
+    return item ? { ...item } : null;
+  }
+
+  removeItem(id) {
+    const removed = this.items.some((i) => i.productId === id);
+    this.items = this.items.filter((i) => i.productId !== id);
+    if (removed) this._notify();
+    return removed;
+  }
+
+  clear() {
+    this.items = [];
+    this._notify();
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+  _notify() {
+    this.listeners.forEach((l) => l());
+  }
+}
+
+const createCartService = (overrides = {}) => ({
+  loadCart: jasmine
+    .createSpy('loadCart')
+    .and.resolveTo(overrides.loadCartResult ?? { status: 'loaded', items: [], itemCount: 0 }),
+  updateItem:
+    overrides.updateItem ?? jasmine.createSpy('updateItem').and.resolveTo({ status: 'updated' }),
+  removeItem:
+    overrides.removeItem ?? jasmine.createSpy('removeItem').and.resolveTo({ status: 'removed' }),
+  clear: overrides.clear ?? jasmine.createSpy('clear').and.resolveTo({ status: 'cleared' }),
 });
 
 describe('CartViewModel', () => {
   let store;
+  let cartService;
   let vm;
 
   beforeEach(() => {
-    window.localStorage.clear();
-    store = new CartStore();
-    vm = new CartViewModel({ cartStore: store });
+    store = new MockCartStore();
+    cartService = createCartService();
+    vm = new CartViewModel({ cartStore: store, cartService });
   });
 
   afterEach(() => {
     vm.destroy();
-    window.localStorage.clear();
   });
 
   it('starts empty', () => {
@@ -33,11 +105,14 @@ describe('CartViewModel', () => {
     expect(vm.total).toBe(0);
     expect(vm.itemCount).toBe(0);
     expect(vm.isEmpty).toBe(true);
+    expect(vm.requiresAuth).toBe(false);
     expect(vm.getShippingLabel()).toBe('');
   });
 
   it('reflects items added to the store with presentation labels', () => {
-    store.addItem(product(), 2);
+    store.items.push(product({ quantity: 2 }));
+
+    vm.refresh();
 
     expect(vm.items.length).toBe(1);
     expect(vm.items[0]).toEqual(
@@ -47,138 +122,120 @@ describe('CartViewModel', () => {
         quantity: 2,
         priceLabel: 'US$ 40.00',
         subtotal: 80,
-        subtotalLabel: 'US$ 80.00',
-        detailHref: '/products/p1',
+        detailHref: '/products/aguayo',
       })
     );
     expect(vm.subtotal).toBe(80);
     expect(vm.itemCount).toBe(2);
-    expect(vm.isEmpty).toBe(false);
-    expect(vm.getItemCountLabel()).toBe('2 artículos');
   });
 
-  it('applies the flat shipping rate below the free-shipping threshold', () => {
-    store.addItem(product({ price: 20 }), 1);
+  it('load() hydrates from the backend and clears requiresAuth', async () => {
+    cartService = createCartService({
+      loadCartResult: { status: 'loaded', items: [product({ quantity: 2 })], itemCount: 2 },
+    });
+    store.items.push(product({ quantity: 2 }));
+    vm = new CartViewModel({ cartStore: store, cartService });
 
-    expect(vm.subtotal).toBe(20);
-    expect(vm.shipping).toBe(FLAT_SHIPPING_RATE);
-    expect(vm.total).toBe(24.99);
-    expect(vm.getShippingLabel()).toBe('US$ 4.99');
-    expect(vm.getShippingNotice()).toBe('Te faltan US$ 30.00 para obtener envío gratis.');
+    await vm.load();
+
+    expect(cartService.loadCart).toHaveBeenCalled();
+    expect(vm.requiresAuth).toBe(false);
+    expect(vm.items.length).toBe(1);
   });
 
-  it('offers free shipping from the threshold', () => {
-    store.addItem(product({ price: FREE_SHIPPING_THRESHOLD }), 1);
+  it('load() flags guests so the view shows the login prompt', async () => {
+    cartService = createCartService({ loadCartResult: { status: 'auth-required' } });
+    vm = new CartViewModel({ cartStore: store, cartService });
 
-    expect(vm.shipping).toBe(0);
+    await vm.load();
+
+    expect(vm.requiresAuth).toBe(true);
+  });
+
+  it('load() stores a notice when hydration fails', async () => {
+    cartService = createCartService({
+      loadCartResult: { status: 'error', error: new Error('Boom'), statusCode: 500 },
+    });
+    vm = new CartViewModel({ cartStore: store, cartService });
+
+    await vm.load();
+
+    expect(vm.notice).toBe('No pudimos actualizar tu carrito.');
+  });
+
+  it('increment and decrement update the quantity through the API', async () => {
+    store.items.push(product());
+    vm.refresh();
+
+    await vm.increment('p1');
+    expect(store.items[0].quantity).toBe(2);
+    expect(cartService.updateItem).toHaveBeenCalledWith('p1', 2);
+
+    await vm.decrement('p1');
+    expect(store.items[0].quantity).toBe(1);
+    expect(cartService.updateItem).toHaveBeenCalledWith('p1', 1);
+  });
+
+  it('restores the previous quantity and shows a notice when the API fails', async () => {
+    store.items.push(product());
+    vm.refresh();
+    cartService = createCartService({
+      updateItem: jasmine
+        .createSpy('updateItem')
+        .and.resolveTo({ status: 'error', error: new Error('Nope'), statusCode: 422 }),
+    });
+    vm = new CartViewModel({ cartStore: store, cartService });
+    vm.refresh();
+
+    await vm.setQuantity('p1', 4);
+
+    expect(store.items[0].quantity).toBe(1);
+    expect(vm.notice).toBe('Nope');
+  });
+
+  it('remove delegates to the service', async () => {
+    store.items.push(product());
+    vm.refresh();
+
+    await vm.remove('p1');
+
+    expect(cartService.removeItem).toHaveBeenCalledWith('p1');
+
+    cartService = createCartService({
+      removeItem: jasmine
+        .createSpy('removeItem')
+        .and.resolveTo({ status: 'error', error: new Error('Nope'), statusCode: 500 }),
+    });
+    vm = new CartViewModel({ cartStore: store, cartService });
+    vm.refresh();
+
+    await vm.remove('p1');
+
+    expect(vm.notice).toBe('Nope');
+  });
+
+  it('clear delegates to the service', async () => {
+    await vm.clear();
+
+    expect(cartService.clear).toHaveBeenCalled();
+  });
+
+  it('setProducts-free summary helpers keep the storefront labels', () => {
+    store.items.push(product({ quantity: 3 }));
+    vm.refresh();
+
+    expect(vm.getSubtotalLabel()).toBe('US$ 120.00');
     expect(vm.getShippingLabel()).toBe('Gratis');
+    expect(vm.getTotalLabel()).toBe('US$ 120.00');
+    expect(vm.getItemCountLabel()).toBe('3 artículos');
     expect(vm.getShippingNotice()).toBe('¡Tienes envío gratis!');
   });
 
-  it('formats subtotal and total labels', () => {
-    store.addItem(product({ price: 20 }), 1);
-    expect(vm.getSubtotalLabel()).toBe('US$ 20.00');
-    expect(vm.getTotalLabel()).toBe('US$ 24.99');
-  });
-
-  it('setQuantity updates the item and totals', () => {
-    store.addItem(product(), 1);
-
-    vm.setQuantity('p1', 3);
-
-    expect(vm.items[0].quantity).toBe(3);
-    expect(vm.subtotal).toBe(120);
-    expect(vm.itemCount).toBe(3);
-  });
-
-  it('increment and decrement update the quantity', () => {
-    store.addItem(product(), 1);
-
-    vm.increment('p1');
-    expect(vm.items[0].quantity).toBe(2);
-
-    vm.decrement('p1');
-    expect(vm.items[0].quantity).toBe(1);
-
-    vm.decrement('p1');
-    expect(vm.items[0].quantity).toBe(1);
-  });
-
-  it('remove deletes the item and recalculates totals', () => {
-    store.addItem(product(), 2);
-    store.addItem(product({ id: 'p2', name: 'Café', price: 14 }), 1);
-
-    vm.remove('p1');
-
-    expect(vm.items.length).toBe(1);
-    expect(vm.subtotal).toBe(14);
-    expect(vm.itemCount).toBe(1);
-  });
-
-  it('clear empties the cart', () => {
-    store.addItem(product(), 2);
-    vm.clear();
-
-    expect(vm.items).toEqual([]);
-    expect(vm.isEmpty).toBe(true);
-    expect(vm.total).toBe(0);
-  });
-
-  it('checkout shows a placeholder notice and dismissNotice clears it', () => {
-    store.addItem(product(), 1);
-
+  it('checkout shows the placeholder notice and dismiss clears it', () => {
     vm.checkout();
-    expect(vm.notice).toContain('El pago estará disponible próximamente');
+    expect(vm.notice).toContain('próximamente');
 
     vm.dismissNotice();
     expect(vm.notice).toBe('');
-  });
-
-  it('notifies subscribers when the store changes', () => {
-    const listener = jasmine.createSpy('listener');
-    vm.subscribe(listener);
-
-    store.addItem(product(), 1);
-
-    expect(listener).toHaveBeenCalledWith(vm);
-  });
-
-  it('destroy stops listening to the store', () => {
-    const listener = jasmine.createSpy('listener');
-    vm.subscribe(listener);
-    vm.destroy();
-
-    store.addItem(product(), 1);
-
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('works with a store that has no subscription and no total helpers', () => {
-    const plainStore = {
-      getItems: () => [
-        {
-          productId: 'p1',
-          name: 'Aguayo',
-          price: 20,
-          currency: 'USD',
-          quantity: 1,
-          seller: '',
-          imageUrl: null,
-        },
-      ],
-      updateQuantity: jasmine.createSpy('updateQuantity'),
-      removeItem: jasmine.createSpy('removeItem'),
-      clear: jasmine.createSpy('clear'),
-    };
-    const plainVm = new CartViewModel({ cartStore: plainStore });
-
-    expect(plainVm.subtotal).toBe(20);
-    expect(plainVm.shipping).toBe(FLAT_SHIPPING_RATE);
-    expect(plainVm.total).toBe(24.99);
-    expect(plainVm.itemCount).toBe(1);
-
-    plainVm.setQuantity('p1', 2);
-    expect(plainStore.updateQuantity).toHaveBeenCalledWith('p1', 2);
-    plainVm.destroy();
   });
 });

@@ -371,7 +371,7 @@ export class CatalogView {
           {
             variant: 'default',
             onAddToCart: () => this.onAddToCart(product, 1),
-            detailHref: `/products/${product.id}`,
+            detailHref: `/products/${product.slug || product.id}`,
           }
         );
         this._grid.appendChild(cardView.render());

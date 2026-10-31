@@ -22,9 +22,9 @@ const createProduct = (overrides = {}) => ({
 });
 
 const createSimilar = () => [
-  createProduct({ id: 'p2', name: 'Huipil', price: 65 }),
-  createProduct({ id: 'p3', name: 'Bolso', price: 85 }),
-  createProduct({ id: 'p4', name: 'Mochila', price: 92 }),
+  createProduct({ id: 'p2', name: 'Huipil', slug: 'huipil', price: 65 }),
+  createProduct({ id: 'p3', name: 'Bolso', slug: 'bolso', price: 85 }),
+  createProduct({ id: 'p4', name: 'Mochila', slug: 'mochila', price: 92 }),
 ];
 
 const createMockViewModel = (overrides = {}) => {
@@ -53,10 +53,15 @@ const createMockViewModel = (overrides = {}) => {
     getPriceLabel: () => 'US$ 40.00',
     getRatingLabel: () => '4.8 (24 reseñas)',
     getStarsFilled: () => [true, true, true, true, true],
-    getSellerLine: () => 'Tejidos Illimani · Bolivia',
+    getSellerLine: () => 'Tejidos Illimani',
     getSellerInitials: () => 'TI',
+    getSellerLocation: () => 'Textiles',
     getStockLabel: () => '10 disponibles',
-    getGallery: () => [{ label: 'Vista frontal' }, { label: 'Detalle' }, { label: 'Reverso' }],
+    getGallery: () => [
+      { path: 'https://cdn.qatu.test/p1-1.jpg', label: 'Vista frontal' },
+      { path: 'https://cdn.qatu.test/p1-2.jpg', label: 'Detalle' },
+      { path: 'https://cdn.qatu.test/p1-3.jpg', label: 'Reverso' },
+    ],
     getSelectedImageLabel: () => 'Vista frontal',
     getAttributes: () => [{ label: 'Material', value: 'Lana de oveja' }],
     getReviews: () => [{ author: 'María', rating: 5, date: '12 sep 2026', comment: 'Excelente.' }],
@@ -207,14 +212,43 @@ describe('ProductDetailView', () => {
     expect(container.querySelector('.q-product-detail__review')).not.toBeNull();
   });
 
-  it('recommendation cards link to each product detail', () => {
+  it('recommendation cards link to each product detail by slug', () => {
     view.mount(container);
 
     const links = container.querySelectorAll('.q-recommendation-card__link');
     expect(links.length).toBe(3);
-    expect(links[0].getAttribute('href')).toBe('/products/p2');
-    expect(links[1].getAttribute('href')).toBe('/products/p3');
-    expect(links[2].getAttribute('href')).toBe('/products/p4');
+    expect(links[0].getAttribute('href')).toBe('/products/huipil');
+    expect(links[1].getAttribute('href')).toBe('/products/bolso');
+    expect(links[2].getAttribute('href')).toBe('/products/mochila');
+  });
+
+  it('renders the real gallery photos when the frames have an image_path', () => {
+    view.mount(container);
+
+    expect(container.querySelectorAll('.q-product-detail__image-frame').length).toBe(4); // 1 main + 3 thumbs
+    const mainPhoto = container.querySelector('.q-product-detail__image-photo--large');
+    expect(mainPhoto).not.toBeNull();
+    expect(mainPhoto.getAttribute('src')).toBe('https://cdn.qatu.test/p1-1.jpg');
+    expect(mainPhoto.getAttribute('alt')).toBe('Vista frontal');
+  });
+
+  it('adding to the cart as a guest triggers the onAuthRequired callback', async () => {
+    const onAuthRequired = jasmine.createSpy('onAuthRequired');
+    viewModel.addToCart = jasmine.createSpy('addToCart').and.resolveTo({ status: 'auth-required' });
+    view = new ProductDetailView({ viewModel, onAuthRequired });
+    view.mount(container);
+
+    container.querySelector('.q-product-detail__add').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onAuthRequired).toHaveBeenCalled();
+  });
+
+  it('mount() loads the requested product slug', () => {
+    view = new ProductDetailView({ viewModel, productSlug: 'aguayo-tradicional' });
+    view.mount(container);
+
+    expect(viewModel.load).toHaveBeenCalledWith('aguayo-tradicional');
   });
 
   it('disables the purchase controls when the product is out of stock', () => {
@@ -238,13 +272,6 @@ describe('ProductDetailView', () => {
     expect(container.querySelector('.q-product-detail__feedback').textContent).toBe(
       'Añadiste 1 unidad al carrito.'
     );
-  });
-
-  it('mount() loads the requested product id', () => {
-    view = new ProductDetailView({ viewModel, productId: 'p1' });
-    view.mount(container);
-
-    expect(viewModel.load).toHaveBeenCalledWith('p1');
   });
 
   it('destroy() removes the section and unsubscribes', () => {

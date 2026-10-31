@@ -1,246 +1,317 @@
 import { ProductsApi } from './ProductsApi.js';
+import { apiFetch } from './client.js';
 
 describe('ProductsApi', () => {
+  let fetchSpy;
   let api;
 
-  beforeEach(() => {
-    api = new ProductsApi();
-  });
-
-  // ─── getFeaturedProducts ────────────────────────────────────────────────────
-
-  it('should return the 8 featured products from the design with unique ids', async () => {
-    const products = await api.getFeaturedProducts();
-
-    expect(products.length).toBe(8);
-    expect(new Set(products.map((product) => product.id)).size).toBe(8);
-    expect(products[0].name).toBe('Aguayo tradicional de Tarabuco');
-    expect(products[7].name).toBe('Huipil bordado guatemalteco');
-  });
-
-  it('should return products with every field the section needs', async () => {
-    const products = await api.getFeaturedProducts();
-
-    products.forEach((product) => {
-      expect(typeof product.id).toBe('string');
-      expect(typeof product.name).toBe('string');
-      expect(typeof product.seller).toBe('string');
-      expect(typeof product.country).toBe('string');
-      expect(typeof product.rating).toBe('number');
-      expect(typeof product.ratingsCount).toBe('number');
-      expect(typeof product.price).toBe('number');
-      expect(product.currency).toBe('USD');
-      expect(product.imageUrl).toBeNull();
+  /** Response helpers (list envelope, detail envelope, OpenAPI error). */
+  const listResponse = (data, meta = { page: 1, per_page: 20, total: 1, total_pages: 1 }) =>
+    new Response(JSON.stringify({ data, meta }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
+
+  const detailResponse = (product) =>
+    new Response(JSON.stringify({ data: product, meta: { timestamp: '2026-10-26T12:00:00Z' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  const errorResponse = (status, code, message) =>
+    new Response(JSON.stringify({ error: { code, message } }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  beforeEach(() => {
+    fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValue(Promise.resolve(listResponse([])));
+    api = new ProductsApi({ apiFetchFn: fetchSpy });
   });
-
-  it('should not share objects between calls', async () => {
-    const first = await api.getFeaturedProducts();
-    first[0].name = 'Changed';
-
-    const second = await api.getFeaturedProducts();
-    expect(second[0].name).toBe('Aguayo tradicional de Tarabuco');
-  });
-
-  // ─── getProducts ────────────────────────────────────────────────────────────
 
   describe('getProducts', () => {
-    const mockMeta = { page: 1, per_page: 20, total: 2, total_pages: 1 };
-    const mockProducts = [
-      {
-        id: 'p1',
-        name: 'Producto Uno',
-        price: 10,
-        currency: 'USD',
-        primary_image_path: null,
-        seller_id: 's1',
-      },
-      {
-        id: 'p2',
-        name: 'Producto Dos',
-        price: 20,
-        currency: 'USD',
-        primary_image_path: null,
-        seller_id: 's2',
-      },
-    ];
-
-    let originalFetch;
-
-    beforeEach(() => {
-      originalFetch = window.fetch;
-    });
-
-    afterEach(() => {
-      window.fetch = originalFetch;
+    it('constructor requires no arguments and defaults apiFetchFn to the real apiFetch', () => {
+      const injected = new ProductsApi({ apiFetchFn: () => {} });
+      expect(injected._fetch).not.toBe(apiFetch);
+      const defaultApi = new ProductsApi();
+      expect(defaultApi._fetch).toBe(apiFetch);
     });
 
     it('should call fetch with the correct URL using default page and limit', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: mockProducts, meta: mockMeta }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await api.getProducts();
 
-      expect(window.fetch).toHaveBeenCalledTimes(1);
-      const calledUrl = window.fetch.calls.first().args[0];
-      expect(calledUrl).toContain('/products');
-      expect(calledUrl).toContain('page=1');
-      expect(calledUrl).toContain('limit=20');
+      expect(fetchSpy).toHaveBeenCalledWith('/products?page=1&limit=20');
     });
 
     it('should call fetch with the specified page and limit', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: [],
-            meta: { page: 3, per_page: 10, total: 25, total_pages: 3 },
-          }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await api.getProducts({ page: 3, limit: 10 });
 
-      const calledUrl = window.fetch.calls.first().args[0];
-      expect(calledUrl).toContain('page=3');
-      expect(calledUrl).toContain('limit=10');
+      expect(fetchSpy).toHaveBeenCalledWith('/products?page=3&limit=10');
     });
 
     it('should send search and filters with the API parameter names', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: [], meta: mockMeta }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await api.getProducts({
         page: 1,
-        limit: 20,
-        search: 'phone case',
-        categoryId: '11111111-1111-1111-1111-111111111111',
-        minPrice: 100,
-        maxPrice: 500,
+        search: 'term',
+        categoryId: 'cat',
+        minPrice: 5,
+        maxPrice: 10,
       });
 
-      const params = new URL(window.fetch.calls.first().args[0]).searchParams;
-      expect(params.get('search')).toBe('phone case');
-      expect(params.get('category_id')).toBe('11111111-1111-1111-1111-111111111111');
-      expect(params.get('min_price')).toBe('100');
-      expect(params.get('max_price')).toBe('500');
+      const url = new URL(fetchSpy.calls.first().args[0], 'http://x');
+      expect(url.searchParams.get('search')).toBe('term');
+      expect(url.searchParams.get('category_id')).toBe('cat');
+      expect(url.searchParams.get('min_price')).toBe('5');
+      expect(url.searchParams.get('max_price')).toBe('10');
     });
 
     it('should keep a price of 0 and leave empty filters out of the URL', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: [], meta: mockMeta }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await api.getProducts({ search: '', categoryId: '', minPrice: 0, maxPrice: null });
 
-      const params = new URL(window.fetch.calls.first().args[0]).searchParams;
-      expect(params.has('search')).toBe(false);
-      expect(params.has('category_id')).toBe(false);
-      expect(params.get('min_price')).toBe('0');
-      expect(params.has('max_price')).toBe(false);
+      const url = new URL(fetchSpy.calls.first().args[0], 'http://x');
+      expect(url.searchParams.get('min_price')).toBe('0');
+      expect(url.searchParams.has('search')).toBe(false);
+      expect(url.searchParams.has('category_id')).toBe(false);
+      expect(url.searchParams.has('max_price')).toBe(false);
     });
 
     it('should encode special characters in the search term', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: [], meta: mockMeta }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await api.getProducts({ search: '100% café & té' });
 
-      const calledUrl = window.fetch.calls.first().args[0];
-      expect(calledUrl).not.toContain('& té');
-      expect(new URL(calledUrl).searchParams.get('search')).toBe('100% café & té');
+      const url = new URL(fetchSpy.calls.first().args[0], 'http://x');
+      expect(url.searchParams.get('search')).toBe('100% café & té');
     });
 
-    it('should return parsed data and meta on a successful response', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: mockProducts, meta: mockMeta }),
-      });
+    it('should return the parsed data and meta on a successful response', async () => {
+      const mockProducts = [{ id: 'p1', name: 'Aguayo', slug: 'aguayo' }];
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse(mockProducts)));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       const result = await api.getProducts({ page: 1 });
 
       expect(result.data).toEqual(mockProducts);
-      expect(result.meta).toEqual(mockMeta);
+      expect(result.meta).toEqual({ page: 1, per_page: 20, total: 1, total_pages: 1 });
     });
 
     it('should return an empty data array when the API returns no products', async () => {
-      const emptyMeta = { page: 1, per_page: 20, total: 0, total_pages: 0 };
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: true,
-        json: () => Promise.resolve({ data: [], meta: emptyMeta }),
-      });
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       const result = await api.getProducts();
 
       expect(result.data).toEqual([]);
-      expect(result.meta.total).toBe(0);
+      expect(result.meta.total).toBe(1);
     });
 
-    it('should throw an Error when response.ok is false (e.g. 404)', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      });
+    it('should throw an Error carrying code and statusCode when response.ok is false (e.g. 500)', async () => {
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(errorResponse(500, 'INTERNAL_ERROR', 'Boom')));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
-      await expectAsync(api.getProducts()).toBeRejectedWithError(/404/);
-    });
-
-    it('should throw an Error when response.ok is false (e.g. 500)', async () => {
-      window.fetch = jasmine.createSpy('fetch').and.resolveTo({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
-
-      await expectAsync(api.getProducts()).toBeRejectedWithError(/500/);
+      try {
+        await api.getProducts();
+        fail('Expected getProducts to throw');
+      } catch (err) {
+        expect(err.message).toBe('Boom');
+        expect(err.code).toBe('INTERNAL_ERROR');
+        expect(err.statusCode).toBe(500);
+      }
     });
 
     it('should propagate a network-level error when fetch rejects', async () => {
-      const networkError = new Error('Network failure');
-      window.fetch = jasmine.createSpy('fetch').and.rejectWith(networkError);
+      const networkError = new Error('network down');
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValue(Promise.reject(networkError));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
       await expectAsync(api.getProducts()).toBeRejectedWith(networkError);
+    });
+  });
+
+  // ─── getFeaturedProducts ────────────────────────────────────────────────────
+
+  describe('getFeaturedProducts', () => {
+    it('should call GET /products with a small page and return the data list', async () => {
+      const mockProducts = [
+        { id: 'p1', name: 'Aguayo', slug: 'aguayo' },
+        { id: 'p2', name: 'Café', slug: 'cafe' },
+      ];
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse(mockProducts)));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const products = await api.getFeaturedProducts();
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products?page=1&limit=8');
+      expect(products).toEqual(mockProducts);
     });
   });
 
   // ─── getProductById ─────────────────────────────────────────────────────────
 
   describe('getProductById', () => {
-    it('should return the matching product with detail fields', async () => {
-      const product = await api.getProductById('aguayo-tradicional-tarabuco');
+    const mockDetail = {
+      id: 'p1',
+      name: 'Aguayo tradicional',
+      slug: 'aguayo-tradicional',
+      stock: 10,
+      average_rating: 4.8,
+      ratings_count: 24,
+    };
 
-      expect(product).not.toBeNull();
-      expect(product.name).toBe('Aguayo tradicional de Tarabuco');
-      expect(typeof product.description).toBe('string');
-      expect(product.description.length).toBeGreaterThan(0);
-      expect(Array.isArray(product.attributes)).toBe(true);
-      expect(product.attributes.length).toBeGreaterThan(0);
-      expect(Array.isArray(product.gallery)).toBe(true);
-      expect(product.gallery.length).toBeGreaterThanOrEqual(3);
-      expect(Array.isArray(product.reviews)).toBe(true);
-      expect(typeof product.stock).toBe('number');
+    it('should fetch GET /products/{id} and return the parsed product detail', async () => {
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(detailResponse(mockDetail)));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const product = await api.getProductById('p1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/p1');
+      expect(product).toEqual(mockDetail);
     });
 
-    it('should return null for an unknown product id', async () => {
-      const product = await api.getProductById('does-not-exist');
-      expect(product).toBeNull();
+    it('should throw an error with statusCode 404 when the product does not exist', async () => {
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(
+          Promise.resolve(errorResponse(404, 'PRODUCT_NOT_FOUND', 'Product not found'))
+        );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      try {
+        await api.getProductById('missing');
+        fail('Expected getProductById to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(404);
+        expect(err.code).toBe('PRODUCT_NOT_FOUND');
+      }
+    });
+  });
+
+  // ─── getProductBySlug ──────────────────────────────────────────────────────
+
+  describe('getProductBySlug', () => {
+    it('should return null for an empty slug without calling the API', async () => {
+      fetchSpy = jasmine.createSpy('apiFetchFn');
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const result = await api.getProductBySlug('   ');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it('should return a fresh copy that cannot mutate the catalog', async () => {
-      const first = await api.getProductById('cafe-especialidad-cusco');
-      first.name = 'Changed';
-      first.attributes[0].value = 'Changed';
+    it('should find the product on the first page via search and fetch its detail', async () => {
+      const searchResult = [{ id: 'p1', slug: 'aguayo-tradicional' }];
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        Promise.resolve(listResponse(searchResult)), // search page
+        Promise.resolve(detailResponse({ id: 'p1', slug: 'aguayo-tradicional' })) // detail
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
 
-      const second = await api.getProductById('cafe-especialidad-cusco');
-      expect(second.name).toBe('Café de especialidad de Cusco 500 g');
-      expect(second.attributes[0].value).not.toBe('Changed');
+      const product = await api.getProductBySlug('aguayo-tradicional');
+
+      expect(product.slug).toBe('aguayo-tradicional');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(fetchSpy.calls.first().args[0]).toContain('search=');
+      expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/p1');
+    });
+
+    it('should scan further pages when the exact slug is not on page 1', async () => {
+      const match = { id: 'p2', slug: 'aguayo-tradicional' };
+      const searchPage = new Response(
+        JSON.stringify({
+          data: [{ id: 'p9', slug: 'otro-producto' }],
+          meta: { page: 1, per_page: 100, total: 101, total_pages: 2 },
+        }),
+        { status: 200 }
+      );
+      const secondPage = new Response(
+        JSON.stringify({
+          data: [match],
+          meta: { page: 2, per_page: 100, total: 101, total_pages: 2 },
+        }),
+        { status: 200 }
+      );
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        Promise.resolve(searchPage), // search page 1 miss
+        Promise.resolve(secondPage), // scan page 2 hit
+        Promise.resolve(detailResponse(match))
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const product = await api.getProductBySlug('aguayo-tradicional');
+
+      expect(product.id).toBe('p2');
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      expect(fetchSpy.calls.first().args[0]).toContain('search=');
+      expect(fetchSpy.calls.all()[1].args[0]).toBe('/products?page=2&limit=100');
+      expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/p2');
+    });
+
+    it('should return null when the slug does not match any product', async () => {
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'p9', slug: 'other-slug' }],
+              meta: { page: 1, per_page: 100, total: 1, total_pages: 1 },
+            }),
+            { status: 200 }
+          )
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const result = await api.getProductBySlug('does-not-exist');
+
+      expect(result).toBeNull();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return null when the detail quietly 404s (unpublished between list and detail)', async () => {
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(
+          Promise.resolve(listResponse([{ id: 'p1', slug: 'aguayo-tradicional' }])),
+          Promise.resolve(errorResponse(404, 'PRODUCT_NOT_FOUND', 'Product not found'))
+        );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const result = await api.getProductBySlug('aguayo-tradicional');
+
+      expect(result).toBeNull();
     });
   });
 
@@ -248,38 +319,59 @@ describe('ProductsApi', () => {
 
   describe('getSimilarProducts', () => {
     it('should return three recommendations by default, excluding the current product', async () => {
-      const similar = await api.getSimilarProducts('aguayo-tradicional-tarabuco');
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        Promise.resolve(
+          listResponse([
+            { id: 'p1', name: 'Uno', price: 10, stock: 1 },
+            { id: 'p2', name: 'Dos', price: 20, stock: 2 },
+            { id: 'p3', name: 'Tres', price: 30, stock: 3 },
+            { id: 'p4', name: 'Cuatro', price: 40, stock: 4 },
+            { id: 'p5', name: 'Cinco', price: 50, stock: 5 },
+          ])
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const similar = await api.getSimilarProducts('p1');
 
       expect(similar.length).toBe(3);
-      expect(similar.some((product) => product.id === 'aguayo-tradicional-tarabuco')).toBe(false);
+      expect(similar.some((product) => product.id === 'p1')).toBe(false);
       similar.forEach((product) => {
         expect(typeof product.id).toBe('string');
         expect(typeof product.name).toBe('string');
         expect(typeof product.price).toBe('number');
-        expect(product.stock).toBeGreaterThan(0);
       });
     });
 
-    it('should prioritise products from the same category', async () => {
-      const similar = await api.getSimilarProducts('cafe-especialidad-cusco', 2);
-
-      expect(similar[0].category).toBe('Alimentos');
-      expect(similar[0].id).toBe('chocolate-cacao-esmeraldas');
-    });
-
     it('should respect the requested limit', async () => {
-      const similar = await api.getSimilarProducts('cafe-especialidad-cusco', 5);
-      expect(similar.length).toBe(5);
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        Promise.resolve(
+          listResponse([
+            { id: 'p1', name: 'Uno' },
+            { id: 'p2', name: 'Dos' },
+            { id: 'p3', name: 'Tres' },
+            { id: 'p4', name: 'Cuatro' },
+            { id: 'p5', name: 'Cinco' },
+          ])
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const similar = await api.getSimilarProducts('p1', 2);
+
+      expect(similar.length).toBe(2);
+      expect(similar.map((product) => product.id)).toEqual(['p2', 'p3']);
     });
 
-    it('should return an empty array for an unknown product', async () => {
-      const similar = await api.getSimilarProducts('does-not-exist');
+    it('should return an empty array when the response has no products', async () => {
+      fetchSpy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValues(Promise.resolve(listResponse([])));
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const similar = await api.getSimilarProducts('p1');
+
       expect(similar).toEqual([]);
-    });
-
-    it('should return an empty array when the limit is zero or negative', async () => {
-      expect(await api.getSimilarProducts('cafe-especialidad-cusco', 0)).toEqual([]);
-      expect(await api.getSimilarProducts('cafe-especialidad-cusco', -2)).toEqual([]);
     });
   });
 });

@@ -36,6 +36,8 @@ describe('CartStore', () => {
 
     expect(item).toEqual({
       productId: 'p1',
+      itemId: null,
+      slug: null,
       name: 'Aguayo',
       price: 40,
       currency: 'USD',
@@ -157,6 +159,8 @@ describe('CartStore', () => {
       items: [
         {
           productId: 'p1',
+          itemId: null,
+          slug: null,
           name: 'Aguayo',
           price: 40,
           currency: 'USD',
@@ -236,6 +240,8 @@ describe('CartStore', () => {
     expect(store.getItems()).toEqual([
       {
         productId: 'p1',
+        itemId: null,
+        slug: null,
         name: 'Producto',
         price: 0,
         currency: 'USD',
@@ -245,9 +251,37 @@ describe('CartStore', () => {
       },
     ]);
 
+    // The API cart-item shape ({ id, product_id, product: {...} }) fills
+    // itemId and the snapshot fields from the populated product.
+    store.setFromAddResponse({
+      id: 'ci1',
+      user_id: 'u1',
+      product_id: 'p2',
+      quantity: 2,
+      product: {
+        id: 'p2',
+        name: 'Café',
+        slug: 'cafe',
+        price: 14,
+        currency: 'USD',
+        primary_image_path: 'https://cdn/p2.jpg',
+      },
+    });
+    expect(store.getItem('p2')).toEqual({
+      productId: 'p2',
+      itemId: 'ci1',
+      slug: 'cafe',
+      name: 'Café',
+      price: 14,
+      currency: 'USD',
+      imageUrl: 'https://cdn/p2.jpg',
+      seller: '',
+      quantity: 2,
+    });
+
     store.setFromAddResponse({ product_id: 'p1', quantity: 5 });
-    expect(store.getCount()).toBe(5);
-    expect(store.getDistinctCount()).toBe(1);
+    expect(store.getCount()).toBe(7);
+    expect(store.getDistinctCount()).toBe(2);
   });
 
   it('setFromAddResponse is a no-op for invalid input', () => {

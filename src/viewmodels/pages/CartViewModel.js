@@ -1,3 +1,4 @@
+import { cartService as defaultCartService } from '../../services/CartService.js';
 import {
   cartStore as defaultCartStore,
   FLAT_SHIPPING_RATE,
@@ -8,16 +9,22 @@ import { formatPrice } from '../../utils/formatCurrency.js';
 /**
  * ViewModel for the shopping cart page (`/cart`).
  *
- * Mirrors the local cart store into presentation-ready items and totals, and
- * exposes the quantity/remove/clear actions used by the view.
+ * The backend cart (`GET /v1/cart`) is the source of truth; `CartService`
+ * hydrates the local `CartStore` on load and keeps it in sync after every
+ * mutation, while this ViewModel mirrors the store into presentation-ready
+ * items and totals and exposes the quantity/remove/clear actions used by
+ * the view. Guests see `requiresAuth` and are prompted to log in — the API
+ * cart only exists for authenticated users.
  */
 export class CartViewModel {
   /**
    * @param {Object} [options]
    * @param {Object} [options.cartStore] Store with the CartStore public API.
+   * @param {import('../../services/CartService.js').CartService} [options.cartService]
    */
-  constructor({ cartStore = defaultCartStore } = {}) {
+  constructor({ cartStore = defaultCartStore, cartService = defaultCartService } = {}) {
     this.cartStore = cartStore;
+    this.cartService = cartService;
 
     /** @type {Array<Object>} */
     this.items = [];
@@ -28,12 +35,38 @@ export class CartViewModel {
     this.distinctCount = 0;
     this.isEmpty = true;
     this.notice = '';
+    /** True when the visitor is not authenticated and must log in. */
+    this.requiresAuth = false;
 
     this._listeners = new Set();
-    this._unsubscribe =
+    this._storeUnsubscribe =
       typeof cartStore.subscribe === 'function' ? cartStore.subscribe(() => this.refresh()) : null;
 
     this.refresh({ notify: false });
+  }
+
+  /**
+   * Hydrates the cart from the backend (`CartService.loadCart`).
+   * Resolves the `requiresAuth` flag for guests.
+   * @returns {Promise<void>}
+   */
+  async load() {
+    if (typeof this.cartService?.loadCart !== 'function') return;
+
+    const result = await this.cartService.loadCart();
+
+    if (result.status === 'auth-required') {
+      this.requiresAuth = true;
+    } else {
+      this.requiresAuth = false;
+    }
+
+    if (result.status === 'error') {
+      this.notice = 'No pudimos actualizar tu carrito.';
+    }
+
+    this.refresh({ notify: false });
+    this._notify();
   }
 
   /**
@@ -47,7 +80,7 @@ export class CartViewModel {
       const subtotal = Math.round(Number(item.price) * item.quantity * 100) / 100;
       return {
         ...item,
-        detailHref: `/products/${item.productId}`,
+        detailHref: `/products/${item.slug || item.productId}`,
         priceLabel: formatPrice(item.price, item.currency),
         subtotal,
         subtotalLabel: formatPrice(subtotal, item.currency),
@@ -71,35 +104,64 @@ export class CartViewModel {
   }
 
   /**
+   * Sets an item quantity via the API (PATCH /cart/items/{cartItemId}).
+   * The local store is updated optimistically and reconciled with the API
+   * response inside the service; on failure the previous value is restored.
    * @param {string} productId
    * @param {number} quantity
    */
-  setQuantity(productId, quantity) {
+  async setQuantity(productId, quantity) {
+    const previous = this.items.find((entry) => entry.productId === productId);
     this.cartStore.updateQuantity(productId, quantity);
+
+    const result = await this.cartService.updateItem(productId, quantity);
+    if (result.status === 'error') {
+      if (previous) this.cartStore.updateQuantity(productId, previous.quantity);
+      this.notice = result.error?.message || 'No pudimos actualizar tu carrito.';
+      this._notify();
+      return;
+    }
     this._afterMutation();
   }
 
   /** @param {string} productId */
-  increment(productId) {
+  async increment(productId) {
     const item = this.items.find((entry) => entry.productId === productId);
-    if (item) this.setQuantity(productId, item.quantity + 1);
+    if (item) await this.setQuantity(productId, item.quantity + 1);
   }
 
   /** @param {string} productId */
-  decrement(productId) {
+  async decrement(productId) {
     const item = this.items.find((entry) => entry.productId === productId);
-    if (item) this.setQuantity(productId, item.quantity - 1);
+    if (item) await this.setQuantity(productId, item.quantity - 1);
   }
 
-  /** @param {string} productId */
-  remove(productId) {
-    this.cartStore.removeItem(productId);
-    this._afterMutation();
+  /**
+   * Removes one item via the API (DELETE /cart/items/{cartItemId}).
+   * The store is updated only after the API confirms.
+   * @param {string} productId
+   */
+  async remove(productId) {
+    const result = await this.cartService.removeItem(productId);
+    if (result.status === 'error') {
+      this.notice = result.error?.message || 'No pudimos quitar el producto del carrito.';
+      this._notify();
+      return;
+    }
+    this._notify();
   }
 
-  clear() {
-    this.cartStore.clear();
-    this._afterMutation();
+  /**
+   * Clears the whole cart via the API (DELETE /cart).
+   */
+  async clear() {
+    const result = await this.cartService.clear();
+    if (result.status === 'error') {
+      this.notice = result.error?.message || 'No pudimos vaciar tu carrito.';
+      this._notify();
+      return;
+    }
+    this._notify();
   }
 
   /**
@@ -158,9 +220,9 @@ export class CartViewModel {
   }
 
   destroy() {
-    if (typeof this._unsubscribe === 'function') {
-      this._unsubscribe();
-      this._unsubscribe = null;
+    if (typeof this._storeUnsubscribe === 'function') {
+      this._storeUnsubscribe();
+      this._storeUnsubscribe = null;
     }
     this._listeners.clear();
   }
@@ -185,7 +247,7 @@ export class CartViewModel {
    * @private
    */
   _afterMutation() {
-    if (typeof this._unsubscribe !== 'function') {
+    if (typeof this._storeUnsubscribe !== 'function') {
       this.refresh();
     }
   }

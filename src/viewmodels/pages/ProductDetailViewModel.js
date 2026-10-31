@@ -1,31 +1,34 @@
 import { ProductsApi } from '../../models/api/ProductsApi.js';
-import { cartStore as defaultCartStore } from '../../store/cartStore.js';
+import { cartService as defaultCartService } from '../../services/CartService.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 
 const TABS = [
-  { id: 'description', label: 'Descripción' },
   { id: 'features', label: 'Características' },
+  { id: 'description', label: 'Descripción' },
   { id: 'reviews', label: 'Reseñas' },
 ];
 
 /**
- * ViewModel for the product detail page (`/products/:id`).
+ * ViewModel for the product detail page (`/products/:slug`).
  *
- * Loads the product and its recommendations from the local catalog, owns the
- * quantity/tab/gallery state and writes the selected quantity into the local
- * cart. It never touches the DOM.
+ * Loads the product by slug (resolved through the documented API) and its
+ * recommendations, owns the quantity/tab/gallery state and delegates the
+ * add-to-cart interaction to `CartService`. Presentation field names follow
+ * the `GET /v1/products/{id}` contract (`average_rating`, `ratings_count`,
+ * `seller.full_name`, `images[].image_path`, `attributes` object, ...).
+ * This class never touches the DOM.
  */
 export class ProductDetailViewModel {
   /**
    * @param {Object} [options]
-   * @param {ProductsApi} [options.productsApi]
-   * @param {Object} [options.cartStore] Store with an `addItem(product, quantity)` method.
+   * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
+   * @param {import('../../services/CartService.js').CartService} [options.cartService]
    */
-  constructor({ productsApi = new ProductsApi(), cartStore = defaultCartStore } = {}) {
+  constructor({ productsApi = new ProductsApi(), cartService = defaultCartService } = {}) {
     this.productsApi = productsApi;
-    this.cartStore = cartStore;
+    this.cartService = cartService;
 
-    this.productId = null;
+    this.productSlug = null;
     /** @type {Object|null} */
     this.product = null;
     /** @type {Array<Object>} */
@@ -35,7 +38,7 @@ export class ProductDetailViewModel {
     this.errorMessage = '';
 
     this.quantity = 1;
-    this.activeTab = 'description';
+    this.activeTab = 'features';
     this.selectedImage = 0;
     this.isAdding = false;
     this.feedback = '';
@@ -45,31 +48,30 @@ export class ProductDetailViewModel {
   }
 
   /**
-   * Loads the product and up to three related products.
-   * @param {string} productId
+   * Loads the product by slug and up to three related products.
+   * @param {string} productSlug
    * @returns {Promise<void>}
    */
-  async load(productId) {
-    this.productId = productId;
+  async load(productSlug) {
+    this.productSlug = productSlug;
     this.status = 'loading';
     this.errorMessage = '';
     this.product = null;
     this.similarProducts = [];
     this.quantity = 1;
-    this.activeTab = 'description';
+    this.activeTab = 'features';
     this.selectedImage = 0;
-    this.feedback = '';
     this._notify();
 
     try {
-      const product = await this.productsApi.getProductById(productId);
+      const product = await this.productsApi.getProductBySlug(productSlug);
       if (!product) {
         this.status = 'not-found';
         this._notify();
         return;
       }
 
-      const similar = await this.productsApi.getSimilarProducts(productId, 3);
+      const similar = await this.productsApi.getSimilarProducts(product.id, 3);
       this.product = product;
       this.similarProducts = Array.isArray(similar) ? similar : [];
       this.quantity = 1;
@@ -79,7 +81,6 @@ export class ProductDetailViewModel {
       this.errorMessage =
         error instanceof Error ? error.message : 'No pudimos cargar la información del producto.';
     }
-
     this._notify();
   }
 
@@ -114,15 +115,15 @@ export class ProductDetailViewModel {
   setSelectedImage(index) {
     const gallery = this.getGallery();
     if (gallery.length === 0) return;
-    const next = Math.min(gallery.length - 1, Math.max(0, Math.floor(Number(index) || 0)));
-    if (next === this.selectedImage) return;
-    this.selectedImage = next;
+    this.selectedImage = Math.min(Math.max(0, Math.floor(Number(index) || 0)), gallery.length - 1);
     this._notify();
   }
 
   /**
-   * Adds the current product/quantity to the local cart.
-   * @returns {Promise<{ status: 'added'|'error', item?: Object, error?: Error }>}
+   * Adds the current product/quantity to the cart through `CartService`.
+   * Returns the service union; `auth-required` lets the caller decide how to
+   * prompt the guest (the shell redirects to `/login`).
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
    */
   async addToCart() {
     if (!this.product || this.isOutOfStock() || this.isAdding) {
@@ -134,11 +135,19 @@ export class ProductDetailViewModel {
     this._notify();
 
     try {
-      const item = await this.cartStore.addItem(this.product, this.quantity);
-      this.feedback = `Añadiste ${this.quantity} ${
-        this.quantity === 1 ? 'unidad' : 'unidades'
-      } al carrito.`;
-      return { status: 'added', item };
+      const result = await this.cartService.addToCart(this.product.id, this.quantity);
+
+      if (result.status === 'added') {
+        this.feedback = `Añadiste ${this.quantity} ${
+          this.quantity === 1 ? 'unidad' : 'unidades'
+        } al carrito.`;
+      } else if (result.status === 'auth-required') {
+        this.feedback = 'Inicia sesión para añadir productos al carrito.';
+      } else {
+        this.feedback = 'No pudimos añadir el producto al carrito.';
+      }
+
+      return result;
     } catch (error) {
       this.feedback = 'No pudimos añadir el producto al carrito.';
       return { status: 'error', error };
@@ -167,13 +176,13 @@ export class ProductDetailViewModel {
   /** @returns {string} */
   getRatingLabel() {
     if (!this.product) return '';
-    const rating = Number(this.product.rating).toFixed(1);
-    return `${rating} (${this.product.ratingsCount} reseñas)`;
+    const rating = Number(this.product.average_rating || 0).toFixed(1);
+    return `${rating} (${this.product.ratings_count || 0} reseñas)`;
   }
 
   /** @returns {boolean[]} */
   getStarsFilled() {
-    return this.getStarsForRating(Number(this.product?.rating) || 0);
+    return this.getStarsForRating(Number(this.product?.average_rating) || 0);
   }
 
   /**
@@ -186,15 +195,13 @@ export class ProductDetailViewModel {
 
   /** @returns {string} */
   getSellerLine() {
-    if (!this.product) return '';
-    return this.product.country
-      ? `${this.product.seller} · ${this.product.country}`
-      : this.product.seller;
+    const seller = this.product?.seller;
+    return seller?.full_name || seller?.username || 'Vendedor';
   }
 
   /** @returns {string} */
   getSellerInitials() {
-    const seller = this.product?.seller || '';
+    const seller = this.getSellerLine();
     return seller
       .split(/\s+/)
       .filter(Boolean)
@@ -204,17 +211,39 @@ export class ProductDetailViewModel {
   }
 
   /** @returns {string} */
+  getSellerLocation() {
+    return this.product?.category?.name || '';
+  }
+
+  /** @returns {string} */
   getStockLabel() {
     if (!this.product) return '';
     const stock = Number(this.product.stock) || 0;
     if (stock <= 0) return 'Agotado';
-    if (stock <= 5) return `Últimas ${stock} unidades`;
     return `${stock} disponibles`;
   }
 
-  /** @returns {Array<{ label: string }>} */
+  /**
+   * Gallery normalized for the view from the contract `images[]`
+   * (`image_path`, `position`). Falls back to `primary_image_path` when the
+   * product has no gallery rows.
+   * @returns {Array<{ path: string|null, label: string }>}
+   */
   getGallery() {
-    return Array.isArray(this.product?.gallery) ? this.product.gallery : [];
+    const product = this.product;
+    if (!product) return [];
+
+    const images = Array.isArray(product.images) ? product.images : [];
+    if (images.length > 0) {
+      return images.map((image, index) => ({
+        path: typeof image?.image_path === 'string' ? image.image_path : null,
+        label: image?.label || `Vista ${index + 1}`,
+      }));
+    }
+
+    return product.primary_image_path
+      ? [{ path: product.primary_image_path, label: 'Imagen del producto' }]
+      : [];
   }
 
   /** @returns {string} */
@@ -222,9 +251,19 @@ export class ProductDetailViewModel {
     return this.getGallery()[this.selectedImage]?.label || 'Imagen principal';
   }
 
-  /** @returns {Array<{ label: string, value: string }>} */
+  /**
+   * Flattens the contract `attributes` object into `[{ label, value }]` rows
+   * for the features tab.
+   * @returns {Array<{ label: string, value: string }>}
+   */
   getAttributes() {
-    return Array.isArray(this.product?.attributes) ? this.product.attributes : [];
+    const attributes = this.product?.attributes;
+    if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return [];
+    return Object.entries(attributes).map(([label, value]) => ({
+      label,
+      value:
+        value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''),
+    }));
   }
 
   /** @returns {Array<Object>} */

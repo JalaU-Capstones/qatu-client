@@ -1,7 +1,7 @@
 /**
  * Client-side Router using HTML5 History API.
  *
- * Supports static routes (`/products`) and dynamic segments (`/products/:id`).
+ * Supports static routes (`/products`) and dynamic segments (`/products/:slug`).
  * Handlers receive `(path, params)`, so existing one-argument handlers keep
  * working unchanged.
  */
@@ -128,7 +128,7 @@ export class Router {
   }
 
   /**
-   * Turns `/products/:id` into a RegExp with named keys.
+   * Turns `/products/:slug` into a RegExp with named keys.
    * @param {string} path
    * @returns {{ keys: string[], regex: RegExp }}
    * @private

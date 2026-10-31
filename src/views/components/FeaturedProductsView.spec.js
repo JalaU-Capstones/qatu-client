@@ -1,6 +1,120 @@
 import { FeaturedProductsViewModel } from '../../viewmodels/components/FeaturedProductsViewModel.js';
 import { FeaturedProductsView } from './FeaturedProductsView.js';
 
+/** Contract-shaped products (OpenAPI Product schema, list endpoint). */
+const FEATURED_PRODUCTS = [
+  {
+    id: 'aguayo-tradicional-tarabuco',
+    name: 'Aguayo tradicional de Tarabuco',
+    slug: 'aguayo-tradicional-tarabuco',
+    seller: { full_name: 'Tejidos Illimani' },
+    price: 40,
+    currency: 'USD',
+    stock: 10,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 24,
+    primary_image_path: null,
+  },
+  {
+    id: 'cafe-especialidad-cusco',
+    name: 'Café de especialidad de Cusco 500 g',
+    slug: 'cafe-especialidad-cusco',
+    seller: { full_name: 'Café Altura Cusco' },
+    price: 14,
+    currency: 'USD',
+    stock: 20,
+    state: 'published',
+    average_rating: 4.8,
+    ratings_count: 18,
+    primary_image_path: null,
+  },
+  {
+    id: 'jarron-barro-negro-oaxaca',
+    name: 'Jarrón de barro negro de Oaxaca',
+    slug: 'jarron-barro-negro-oaxaca',
+    seller: { full_name: 'Barro Negro Oaxaca' },
+    price: 38,
+    currency: 'USD',
+    stock: 5,
+    state: 'published',
+    average_rating: 5.0,
+    ratings_count: 12,
+    primary_image_path: null,
+  },
+  {
+    id: 'bolso-cuero-artesanal',
+    name: 'Bolso de cuero artesanal',
+    slug: 'bolso-cuero-artesanal',
+    seller: { full_name: 'Pampa Cuero' },
+    price: 85,
+    currency: 'USD',
+    stock: 3,
+    state: 'published',
+    average_rating: 4.7,
+    ratings_count: 31,
+    primary_image_path: null,
+  },
+  {
+    id: 'audifonos-inalambricos-anc-pro',
+    name: 'Audífonos inalámbricos ANC Pro',
+    slug: 'audifonos-inalambricos-anc-pro',
+    seller: { full_name: 'Andes Tech' },
+    price: 165,
+    currency: 'USD',
+    stock: 8,
+    state: 'published',
+    average_rating: 4.6,
+    ratings_count: 46,
+    primary_image_path: null,
+  },
+  {
+    id: 'chocolate-cacao-esmeraldas',
+    name: 'Chocolate 70% cacao de Esmeraldas',
+    slug: 'chocolate-cacao-esmeraldas',
+    seller: { full_name: 'Cacao Esmeraldas' },
+    price: 6,
+    currency: 'USD',
+    stock: 40,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 27,
+    primary_image_path: null,
+  },
+  {
+    id: 'mochila-trekking-45l',
+    name: 'Mochila de trekking 45 L',
+    slug: 'mochila-trekking-45l',
+    seller: { full_name: 'Sabores del Eje' },
+    price: 92,
+    currency: 'USD',
+    stock: 7,
+    state: 'published',
+    average_rating: 4.8,
+    ratings_count: 15,
+    primary_image_path: null,
+  },
+  {
+    id: 'huipil-bordado-guatemalteco',
+    name: 'Huipil bordado guatemalteco',
+    slug: 'huipil-bordado-guatemalteco',
+    seller: { full_name: 'Telar Maya' },
+    price: 65,
+    currency: 'USD',
+    stock: 15,
+    state: 'published',
+    average_rating: 4.9,
+    ratings_count: 9,
+    primary_image_path: null,
+  },
+];
+
+const createFeaturedApi = () => ({
+  getFeaturedProducts: jasmine
+    .createSpy('getFeaturedProducts')
+    .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
+});
+
 describe('FeaturedProductsView', () => {
   let view;
   let viewModel;
@@ -9,7 +123,7 @@ describe('FeaturedProductsView', () => {
   beforeEach(async () => {
     container = document.createElement('div');
     document.body.appendChild(container);
-    viewModel = new FeaturedProductsViewModel();
+    viewModel = new FeaturedProductsViewModel({ productsApi: createFeaturedApi() });
     await viewModel.load();
     view = new FeaturedProductsView(viewModel);
   });
@@ -68,9 +182,7 @@ describe('FeaturedProductsView', () => {
     const el = view.render();
     const card = el.querySelector('.q-product-card');
 
-    expect(card.querySelector('.q-product-card-seller').textContent).toBe(
-      'Tejidos Illimani · Bolivia'
-    );
+    expect(card.querySelector('.q-product-card-seller').textContent).toBe('Tejidos Illimani');
     expect(card.querySelector('.q-product-card-price').textContent).toBe('US$ 40.00');
 
     const rating = card.querySelector('.q-product-card-rating');
@@ -95,18 +207,19 @@ describe('FeaturedProductsView', () => {
     expect(mark.getAttribute('height')).toBe('24.7071');
   });
 
-  it('should render the product photo instead of the placeholder when imageUrl is set', () => {
+  it('should render the product photo instead of the placeholder when primary_image_path is set', () => {
     viewModel.setProducts([
       {
         id: 'p1',
         name: 'Con foto',
-        seller: 'Tienda',
-        country: 'Perú',
-        rating: 4,
-        ratingsCount: 2,
+        seller: { full_name: 'Tienda' },
         price: 10,
         currency: 'USD',
-        imageUrl: 'https://example.com/foto.jpg',
+        stock: 1,
+        state: 'published',
+        average_rating: 4,
+        ratings_count: 2,
+        primary_image_path: 'https://example.com/foto.jpg',
       },
     ]);
     const el = view.render();
@@ -150,7 +263,7 @@ describe('FeaturedProductsView', () => {
   });
 
   it('should render the products once load() finishes after the view is mounted', async () => {
-    const emptyViewModel = new FeaturedProductsViewModel();
+    const emptyViewModel = new FeaturedProductsViewModel({ productsApi: createFeaturedApi() });
     const lazyView = new FeaturedProductsView(emptyViewModel);
     lazyView.mount(container);
     expect(container.querySelectorAll('.q-product-card').length).toBe(0);
@@ -211,11 +324,13 @@ describe('FeaturedProductsView', () => {
       {
         id: 'p1',
         name: 'P1',
-        seller: 'S',
+        seller: { full_name: 'S' },
         price: 1,
         currency: 'USD',
-        rating: 4,
-        ratingsCount: 1,
+        stock: 1,
+        state: 'published',
+        average_rating: 4,
+        ratings_count: 1,
         isNew: false,
       },
     ]);
@@ -234,10 +349,10 @@ describe('FeaturedProductsView', () => {
     });
   });
 
-  it('should render the action button with getAddButtonLabel text', () => {
+  it('should render the action button with the configured label', () => {
     const el = view.render();
     const btn = el.querySelector('button.q-product-card-action');
-    expect(btn.textContent).toBe(viewModel.getAddButtonLabel());
+    expect(btn.textContent).toBe(viewModel.addToCartLabel);
   });
 
   it('should call viewModel.addToCart when the action button is clicked', () => {

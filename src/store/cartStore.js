@@ -5,19 +5,17 @@ export const FREE_SHIPPING_THRESHOLD = 50;
 export const FLAT_SHIPPING_RATE = 4.99;
 
 /**
- * Local shopping cart.
+ * Cart store — a local mirror of the server cart.
  *
- * The cart is intentionally frontend-only for the current lab: it stores
- * product snapshots (name, price, image, seller) plus the quantity, so the
- * cart page can render without contacting the API. Persistence lives in
- * localStorage and works for anonymous visitors as well as logged-in users.
- *
- * The `setFromAddResponse` / `setFromGet` helpers are kept for the existing
- * CartService contract, even though the current shell no longer uses it.
+ * The server cart (GET /v1/cart) is the source of truth for authenticated
+ * users; `CartService` copies API responses into this store (which persists
+ * the snapshot and notifies the subscribers) so the header badge and the
+ * cart page can render synchronously. The API cart-item id is kept as
+ * `itemId` on every entry so mutations can target PATCH/DELETE correctly.
  */
 export class CartStore {
   constructor() {
-    /** @type {Map<string, { productId: string, name: string, price: number, currency: string, imageUrl: string|null, seller: string, quantity: number }>} */
+    /** @type {Map<string, { productId: string, itemId: string|null, slug: string|null, name: string, price: number, currency: string, imageUrl: string|null, seller: string, quantity: number }>} */
     this._items = new Map();
     this._userId = null;
     this._listeners = new Set();
@@ -27,8 +25,7 @@ export class CartStore {
 
   /**
    * Keeps the active user id for consumers that still read it. The local cart
-   * itself is not scoped per user: an anonymous cart survives login/logout so
-   * the shopper never loses the products they selected.
+   * mirrors what the API returns for the signed-in user (see `setFromGet`).
    * @param {string|null} userId
    */
   setUser(userId) {
@@ -208,6 +205,14 @@ export class CartStore {
   }
 
   /**
+   * Normalizes a cart entry into the internal item shape. Accepts both:
+   *  - Product snapshots (home/detail "add to cart" flows): `{ id|productId, name, price, ... }`
+   *  - API cart items (`GET /cart` / `POST /cart/items` responses, CartItem
+   *    schema): `{ id, user_id, product_id, quantity, product }`. The `id`
+   *    there is the CART ITEM id (kept as `itemId` — PATCH/DELETE need it),
+   *    `product_id` stays the cart key, and name/price/etc. come from the
+   *    populated `product`.
+   *
    * @param {Object} raw
    * @param {Object|null} [existing]
    * @returns {Object|null}
@@ -218,15 +223,23 @@ export class CartStore {
     const rawId = raw.productId || raw.product_id || raw.id;
     if (!rawId) return null;
 
-    const rawPrice = Number(raw.price);
-    const hasPrice = Number.isFinite(rawPrice);
+    const isApiCartItem = Boolean(raw.product_id) && Boolean(raw.id) && raw.id !== raw.product_id;
+    const price = Number(raw.price ?? raw.product?.price);
+    const hasPrice = Number.isFinite(price);
 
     return {
       productId: String(rawId),
-      name: raw.name || existing?.name || 'Producto',
-      price: hasPrice ? rawPrice : (existing?.price ?? 0),
-      currency: raw.currency || existing?.currency || 'USD',
-      imageUrl: raw.imageUrl ?? raw.primary_image_path ?? existing?.imageUrl ?? null,
+      itemId: raw.cartItemId ?? (isApiCartItem ? String(raw.id) : (existing?.itemId ?? null)),
+      slug: raw.slug ?? raw.product?.slug ?? existing?.slug ?? null,
+      name: raw.name || raw.product?.name || existing?.name || 'Producto',
+      price: hasPrice ? price : (existing?.price ?? 0),
+      currency: raw.currency || raw.product?.currency || existing?.currency || 'USD',
+      imageUrl:
+        raw.imageUrl ??
+        raw.primary_image_path ??
+        raw.product?.primary_image_path ??
+        existing?.imageUrl ??
+        null,
       seller: raw.seller || existing?.seller || '',
       quantity: Math.max(1, Math.floor(Number(raw.quantity) || 1)),
     };
