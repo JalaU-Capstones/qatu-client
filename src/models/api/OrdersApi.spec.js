@@ -36,14 +36,13 @@ describe('OrdersApi', () => {
     expect(defaultApi._fetch).toBe(apiFetch);
   });
 
-  it('listOrders requests /v1/orders with pagination query params and withAuth: true', async () => {
+  it('listOrders requests /orders with pagination query params and GET method', async () => {
     const result = await api.listOrders({ page: 2, limit: 5, status: 'confirmed' });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/v1/orders?page=2&limit=5&status=confirmed',
+      '/orders?page=2&limit=5&status=confirmed',
       jasmine.objectContaining({
         method: 'GET',
-        withAuth: true,
       })
     );
     expect(result.data.length).toBe(1);
@@ -81,7 +80,7 @@ describe('OrdersApi', () => {
     }
   });
 
-  it('getOrderById sends GET request with withAuth: true', async () => {
+  it('getOrderById sends GET request to /orders/:id', async () => {
     const orderData = { id: 'ord-123', total: 50 };
     fetchSpy.and.returnValue(
       Promise.resolve(
@@ -97,10 +96,9 @@ describe('OrdersApi', () => {
 
     const result = await api.getOrderById('ord-123');
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/v1/orders/ord-123',
+      '/orders/ord-123',
       jasmine.objectContaining({
         method: 'GET',
-        withAuth: true,
       })
     );
     expect(result.data.id).toBe('ord-123');

@@ -40,7 +40,7 @@ describe('OrderListComponent', () => {
 
     const statusEl = el.querySelector('[data-testid="order-status"]');
     expect(statusEl).not.toBeNull();
-    expect(statusEl.textContent).toBe('pending');
+    expect(statusEl.textContent).toBe('Pendiente');
 
     const totalEl = el.querySelector('[data-testid="order-total"]');
     expect(totalEl).not.toBeNull();

@@ -1,3 +1,5 @@
+import { getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+
 /**
  * Component to display full details of a specific order.
  * Follows Qatu design tokens, accessible markup, and strict MVVM architecture.
@@ -79,10 +81,10 @@ export class OrderDetailComponent {
     tracker.setAttribute('data-testid', 'order-tracker');
 
     const steps = [
-      { key: 'pending', label: 'pending' },
-      { key: 'confirmed', label: 'confirmed' },
-      { key: 'shipped', label: 'shipped' },
-      { key: 'delivered', label: 'delivered' },
+      { key: 'pending', label: getOrderStatusLabel('pending') },
+      { key: 'confirmed', label: getOrderStatusLabel('confirmed') },
+      { key: 'shipped', label: getOrderStatusLabel('shipped') },
+      { key: 'delivered', label: getOrderStatusLabel('delivered') },
     ];
 
     if (currentStatus === 'cancelled') {
@@ -90,7 +92,7 @@ export class OrderDetailComponent {
       cancelledAlert.className = 'q-order-tracker__cancelled';
       cancelledAlert.setAttribute('data-testid', 'order-cancelled-notice');
       cancelledAlert.innerHTML = `
-        <span class="q-order-tracker__cancelled-badge">cancelled</span>
+        <span class="q-order-tracker__cancelled-badge">${getOrderStatusLabel('cancelled')}</span>
       `;
       tracker.appendChild(cancelledAlert);
       return tracker;
@@ -189,7 +191,7 @@ export class OrderDetailComponent {
     const statusBadge = document.createElement('span');
     statusBadge.className = `q-order-status q-order-status--${order.status || 'pending'}`;
     statusBadge.setAttribute('data-testid', 'order-detail-status');
-    statusBadge.textContent = order.status || 'pending';
+    statusBadge.textContent = getOrderStatusLabel(order.status || 'pending');
 
     headerRight.appendChild(statusBadge);
 

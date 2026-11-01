@@ -1,3 +1,5 @@
+import { getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+
 /**
  * Component to display a list of orders or the "No orders yet" empty state.
  */
@@ -144,7 +146,7 @@ export class OrderListComponent {
       const statusBadge = document.createElement('span');
       statusBadge.className = `q-order-status q-order-status--${order.status || 'pending'}`;
       statusBadge.setAttribute('data-testid', 'order-status');
-      statusBadge.textContent = order.status || 'pending';
+      statusBadge.textContent = getOrderStatusLabel(order.status || 'pending');
 
       const totalSpan = document.createElement('span');
       totalSpan.className = 'q-order-total';

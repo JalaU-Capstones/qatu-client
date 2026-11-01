@@ -41,7 +41,7 @@ describe('OrderDetailComponent', () => {
 
     const statusEl = el.querySelector('[data-testid="order-detail-status"]');
     expect(statusEl).not.toBeNull();
-    expect(statusEl.textContent).toBe('confirmed');
+    expect(statusEl.textContent).toBe('Confirmada');
 
     const items = el.querySelectorAll('[data-testid="order-detail-item"]');
     expect(items.length).toBe(2);
@@ -67,11 +67,11 @@ describe('OrderDetailComponent', () => {
 
     const currentStep = el.querySelector('.q-order-tracker__step--current');
     expect(currentStep).not.toBeNull();
-    expect(currentStep.textContent).toContain('confirmed');
+    expect(currentStep.textContent).toContain('Confirmada');
 
     const completedStep = el.querySelector('.q-order-tracker__step--completed');
     expect(completedStep).not.toBeNull();
-    expect(completedStep.textContent).toContain('pending');
+    expect(completedStep.textContent).toContain('Pendiente');
   });
 
   it('renders cancelled notice when order is cancelled', () => {
@@ -81,7 +81,7 @@ describe('OrderDetailComponent', () => {
 
     const notice = el.querySelector('[data-testid="order-cancelled-notice"]');
     expect(notice).not.toBeNull();
-    expect(notice.textContent).toContain('cancelled');
+    expect(notice.textContent).toContain('Cancelada');
   });
 
   it('invokes onBack callback when back button is clicked', () => {

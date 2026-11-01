@@ -1,3 +1,4 @@
+import { ORDER_STATUSES, getOrderStatusLabel } from '../../models/entities/orderStatus.js';
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';
 import { OrderDetailComponent } from '../components/OrderDetailComponent.js';
@@ -104,11 +105,10 @@ export class OrdersPageView {
 
     const statuses = [
       { value: '', label: 'Todos' },
-      { value: 'pending', label: 'pending' },
-      { value: 'confirmed', label: 'confirmed' },
-      { value: 'shipped', label: 'shipped' },
-      { value: 'delivered', label: 'delivered' },
-      { value: 'cancelled', label: 'cancelled' },
+      ...ORDER_STATUSES.map((status) => ({
+        value: status,
+        label: getOrderStatusLabel(status),
+      })),
     ];
 
     statuses.forEach((s) => {

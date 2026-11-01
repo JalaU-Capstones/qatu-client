@@ -67,7 +67,7 @@ describe('OrdersPageView', () => {
 
     const statusEl = container.querySelector('[data-testid="order-status"]');
     expect(statusEl).not.toBeNull();
-    expect(statusEl.textContent).toBe('delivered');
+    expect(statusEl.textContent).toBe('Entregada');
 
     const totalEl = container.querySelector('[data-testid="order-total"]');
     expect(totalEl).not.toBeNull();
