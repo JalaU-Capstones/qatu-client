@@ -42,7 +42,7 @@ export class HomeView {
     this._categories.mount(container);
 
     this._featuredProducts = new FeaturedProductsView();
-    this._featuredProducts.viewModel.onAddToCart = (product) => this.onAddToCart(product?.id);
+    this._featuredProducts.viewModel.onAddToCart = (product) => this.onAddToCart(product, 1);
     this._featuredProducts.mount(container);
     this._featuredProducts.viewModel.load();
 

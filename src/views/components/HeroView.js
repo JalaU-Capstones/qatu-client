@@ -95,7 +95,7 @@ export class HeroView {
 
     const searchButton = document.createElement('button');
     searchButton.type = 'submit';
-    searchButton.className = 'q-hero__search-button';
+    searchButton.className = 'q-btn q-btn--primary q-hero__search-button';
     searchButton.textContent = this.viewModel.searchButtonLabel;
 
     searchForm.addEventListener('submit', (e) => {

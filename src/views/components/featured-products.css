@@ -14,6 +14,7 @@
 
   width: 100%;
   padding: calc(var(--q-geist-space-16x, 64) * 1px) 0;
+  background-color: transparent;
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   box-sizing: border-box;
 }

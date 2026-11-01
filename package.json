@@ -7,6 +7,16 @@
     "node": ">=26.0.0",
     "pnpm": ">=11.0.0"
   },
+  "overrides": {
+    "qs": "6.16.1",
+    "minimatch": ">=11.0.1",
+    "glob": ">=14.0.2"
+  },
+  "auditConfig": {
+    "ignoreCves": [
+      "GHSA-gcqx-w48m-w2h4"
+    ]
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -44,7 +54,7 @@
     "jasmine-browser-runner": "^5.0.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
-    "puppeteer": "^25.13.0",
+    "puppeteer": "^25.16.0",
     "style-dictionary": "^5.6.1",
     "vite": "^8.3.4"
   },

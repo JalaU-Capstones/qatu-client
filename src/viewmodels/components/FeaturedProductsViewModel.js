@@ -1,24 +1,12 @@
 import { ProductsApi } from '../../models/api/ProductsApi.js';
-
-const CURRENCY_LABELS = {
-  USD: 'US$',
-};
-
-const FEATURED_PRODUCTS_SEED = [
-  { id: 'aguayo-tradicional-tarabuco', stock: 15, state: 'published' },
-  { id: 'cafe-especialidad-cusco', stock: 8, state: 'published' },
-  { id: 'jarron-barro-negro-oaxaca', stock: 0, state: 'published' },
-  { id: 'bolso-cuero-artesanal', stock: 12, state: 'published' },
-  { id: 'audifonos-inalambricos-anc-pro', stock: 5, state: 'published' },
-  { id: 'chocolate-cacao-esmeraldas', stock: 20, state: 'published' },
-  { id: 'mochila-trekking-45l', stock: 0, state: 'published' },
-  { id: 'huipil-bordado-guatemalteco', stock: 6, state: 'published' },
-];
+import { formatPrice } from '../../utils/formatCurrency.js';
 
 /**
  * ViewModel for the Featured products section of the home page.
  * Holds the section copy, the loading state, the product list and the "Add to cart" interaction.
- * Product data comes from the `ProductsApi` model; this class never touches the DOM.
+ * Product data comes from the `ProductsApi` model (GET /v1/products) — this
+ * class never touches the DOM and holds no hardcoded catalog data. The field
+ * names consumed here follow the OpenAPI `Product` schema.
  */
 export class FeaturedProductsViewModel {
   /**
@@ -39,22 +27,12 @@ export class FeaturedProductsViewModel {
     this.title = options.title || 'Destacados de la semana';
     this.subtitle = options.subtitle || '';
     this.link = options.link || { label: 'Ver catálogo →', href: '/products' };
-    this.addToCartLabel = options.addToCartLabel || 'Add to cart';
+    this.addToCartLabel = options.addToCartLabel || 'Añadir';
     this.imagePlaceholderLabel = options.imagePlaceholderLabel || 'Imagen del producto';
     this.loadErrorMessage =
       options.loadErrorMessage || 'No pudimos cargar los productos destacados.';
     this.productsApi = options.productsApi || new ProductsApi();
-    this.products = Array.isArray(options.products)
-      ? options.products.map((p) => {
-          const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
-          if (!seed) return p;
-          return {
-            ...p,
-            stock: typeof p.stock === 'number' ? p.stock : seed.stock,
-            state: p.state || seed.state,
-          };
-        })
-      : [];
+    this.products = Array.isArray(options.products) ? options.products : [];
     /** @type {'idle' | 'loading' | 'ready' | 'error'} */
     this.status = options.products ? 'ready' : 'idle';
     this.errorMessage = '';
@@ -73,16 +51,7 @@ export class FeaturedProductsViewModel {
 
     try {
       const rawProducts = await this.productsApi.getFeaturedProducts();
-      const products = Array.isArray(rawProducts) ? rawProducts : [];
-      this.products = products.map((p) => {
-        const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
-        if (!seed) return p;
-        return {
-          ...p,
-          stock: typeof p.stock === 'number' ? p.stock : seed.stock,
-          state: p.state || seed.state,
-        };
-      });
+      this.products = Array.isArray(rawProducts) ? rawProducts : [];
       this.status = 'ready';
     } catch {
       this.products = [];
@@ -98,17 +67,7 @@ export class FeaturedProductsViewModel {
    * @param {Array<Object>} products
    */
   setProducts(products) {
-    this.products = Array.isArray(products)
-      ? products.map((p) => {
-          const seed = FEATURED_PRODUCTS_SEED.find((s) => s.id === p.id);
-          if (!seed) return p;
-          return {
-            ...p,
-            stock: typeof p.stock === 'number' ? p.stock : seed.stock,
-            state: p.state || seed.state,
-          };
-        })
-      : [];
+    this.products = Array.isArray(products) ? products : [];
     this.status = 'ready';
     this.errorMessage = '';
     this._notify();
@@ -120,55 +79,60 @@ export class FeaturedProductsViewModel {
    * @returns {string}
    */
   getPriceLabel(product) {
-    const symbol = CURRENCY_LABELS[product.currency] || product.currency || '';
-    const amount = Number(product.price).toFixed(2);
-    return symbol ? `${symbol} ${amount}` : amount;
+    return formatPrice(product.price, product.currency);
   }
 
   /**
    * Formats the visible rating, e.g. "4.9 (24)".
-   * @param {{ rating: number, ratingsCount: number }} product
+   * @param {{ average_rating?: number, ratings_count?: number }} product
    * @returns {string}
    */
   getRatingLabel(product) {
-    return `${Number(product.rating).toFixed(1)} (${product.ratingsCount})`;
+    const rating = Number(product.average_rating || 0).toFixed(1);
+    return `${rating} (${product.ratings_count || 0})`;
   }
 
   /**
    * Builds the rating sentence read by screen readers, e.g. "Calificación 4.9 de 5, 24 reseñas".
-   * @param {{ rating: number, ratingsCount: number }} product
+   * @param {{ average_rating?: number, ratings_count?: number }} product
    * @returns {string}
    */
   getRatingAccessibleLabel(product) {
-    return `Calificación ${Number(product.rating).toFixed(1)} de 5, ${product.ratingsCount} reseñas`;
+    const rating = Number(product.average_rating || 0).toFixed(1);
+    return `Calificación ${rating} de 5, ${product.ratings_count || 0} reseñas`;
   }
 
   /**
-   * Formats the seller line, e.g. "Tejidos Illimani · Bolivia".
-   * @param {{ seller: string, country?: string }} product
+   * Formats the seller line, e.g. "Tejidos Illimani · Bolivia". The list
+   * endpoint does not populate the seller, so this falls back to an empty
+   * string (the card only renders the line when non-empty).
+   * @param {{ seller?: { full_name?: string, username?: string }|string }} product
    * @returns {string}
    */
   getOriginLabel(product) {
-    return product.country ? `${product.seller} · ${product.country}` : product.seller;
+    if (!product?.seller) return '';
+    if (typeof product.seller === 'string') return product.seller;
+    return product.seller.full_name || product.seller.username || '';
+  }
+
+  /**
+   * Resolves the product image url from the contract field names.
+   * @param {{ primary_image_path?: string, imageUrl?: string }} product
+   * @returns {string|null}
+   */
+  getImageUrl(product) {
+    return product?.imageUrl ?? product?.primary_image_path ?? null;
   }
 
   /**
    * Returns an array of 5 booleans indicating which stars are filled
    * for the given product's rating (e.g. 4.2 → [true, true, true, true, false]).
-   * @param {{ rating: number }} product
+   * @param {{ average_rating?: number }} product
    * @returns {boolean[]}
    */
   getStarsFilled(product) {
-    const rating = Number(product.rating) || 0;
+    const rating = Number(product.average_rating) || 0;
     return Array.from({ length: 5 }, (_, i) => rating >= i + 0.5);
-  }
-
-  /**
-   * Returns the label for the "Add to cart" action button.
-   * @returns {string}
-   */
-  getAddButtonLabel() {
-    return 'Añadir';
   }
 
   /**

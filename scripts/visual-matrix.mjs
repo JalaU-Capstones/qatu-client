@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 4 routes × 2 themes × 3 viewports = 24 combinations.
+ * Visual matrix E2E — 6 routes × 2 themes × 3 viewports = 36 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -26,6 +26,8 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
+  { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
+  { name: 'cart', path: '/cart' },
 ];
 
 const THEMES = ['light', 'dark'];
@@ -47,9 +49,23 @@ for (const route of ROUTES) {
       const combo = { route: route.name, theme, viewport: vp.name, status: 'PASS', errors: [] };
       const page = await browser.newPage();
       const pageErrors = [];
+      const rateLimitedEndpoints = [];
+      page.on('response', (res) => {
+        if (res.status() === 429) {
+          rateLimitedEndpoints.push(res.url());
+        }
+      });
       page.on('pageerror', (e) => pageErrors.push('PAGEERROR: ' + e.message));
       page.on('console', (m) => {
-        if (m.type() === 'error') pageErrors.push('CONSOLE-ERR: ' + m.text());
+        if (m.type() === 'error') {
+          const text = m.text();
+          // Ignore the expected 401 from the boot /auth/me call.
+          // Anonymous visitors always trigger this.
+          if (text.includes('401') && text.includes('Unauthorized')) {
+            return;
+          }
+          pageErrors.push('CONSOLE-ERR: ' + text);
+        }
       });
 
       await page.setViewport({ width: vp.width, height: vp.height });
@@ -111,6 +127,28 @@ for (const route of ROUTES) {
                 grid: check('.q-catalog__grid'),
                 footer: check('.q-footer'),
               };
+            case 'product-detail':
+              return {
+                header: check('.q-header'),
+                detailSection: check('.q-product-detail'),
+                breadcrumb: check('.q-breadcrumb'),
+                title: check('.q-product-detail__title'),
+                gallery: check('.q-product-detail__main-image'),
+                quantity: check('.q-quantity-selector'),
+                addToCart: check('.q-product-detail__add'),
+                tabs: check('.q-product-detail__tablist'),
+                recommendations: check('.q-recommendation-card'),
+                footer: check('.q-footer'),
+              };
+            case 'cart':
+              return {
+                header: check('.q-header'),
+                cartSection: check('.q-cart'),
+                title: check('.q-cart__title'),
+                emptyState: check('.q-cart__empty'),
+                continueShopping: check('.q-cart__continue'),
+                footer: check('.q-footer'),
+              };
             default:
               return {};
           }
@@ -149,7 +187,21 @@ for (const route of ROUTES) {
       } finally {
         // Any pageerror / console.error collected during the run
         if (pageErrors.length > 0) {
-          combo.errors.push(...pageErrors);
+          const filtered = pageErrors.filter((err) => {
+            // Ignore 429 console errors from boot /auth/me call (authLimiter has 20 req/15min)
+            if (
+              err.includes('429') &&
+              err.includes('Too Many Requests') &&
+              rateLimitedEndpoints.length > 0 &&
+              rateLimitedEndpoints.every((url) => url.includes('/auth/me'))
+            ) {
+              return false;
+            }
+            return true;
+          });
+          if (filtered.length > 0) {
+            combo.errors.push(...filtered);
+          }
         }
         await page.close();
       }
@@ -157,9 +209,13 @@ for (const route of ROUTES) {
       if (combo.errors.length > 0) combo.status = 'FAIL';
       results.push(combo);
       console.log(
-        `[${combo.status}] ${route.name.padEnd(8)} ${theme.padEnd(5)} ${vp.name.padEnd(8)}` +
+        `[${combo.status}] ${route.name.padEnd(14)} ${theme.padEnd(5)} ${vp.name.padEnd(8)}` +
           (combo.errors.length ? ' → ' + combo.errors.join(' | ') : '')
       );
+
+      // Wait 2 seconds between iterations to respect the backend rate limit (100 req/min).
+      // Without this, the fast consecutive requests trigger 429s and break data fetching.
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 }

@@ -124,36 +124,6 @@ a.q-header-brand {
   padding: 0 4px;
 }
 
-.q-header-login-btn,
-button.q-header-login-btn,
-a.q-header-login-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 18px;
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--q-fg-primary, #171717) !important;
-  background-color: transparent;
-  border: 1px solid var(--q-fg-primary, #171717);
-  border-radius: 6px;
-  text-decoration: none !important;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease;
-}
-
-.q-header-login-btn:hover,
-button.q-header-login-btn:hover,
-a.q-header-login-btn:hover {
-  background-color: var(--q-fg-primary, #171717);
-  color: var(--q-bg-page) !important;
-}
-
 /* Circular User Profile Avatar */
 .q-header-avatar,
 .q-header-user-avatar {
@@ -208,11 +178,6 @@ a.q-header-login-btn:hover {
   .q-header-nav {
     justify-content: flex-end;
     margin-right: 12px;
-  }
-
-  a.q-header-login-btn {
-    padding: 6px 12px;
-    font-size: 0.8125rem;
   }
 }
 

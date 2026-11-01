@@ -159,4 +159,42 @@ describe('CartApi', () => {
       expect(err).toBe(sessionExpiredErr);
     }
   });
+
+  describe('getCart', () => {
+    it('sends ?include=product when include=[product] is passed', async () => {
+      const spy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValue(
+          Promise.resolve(
+            new Response(
+              JSON.stringify({ data: [], meta: { timestamp: '2026-11-01T12:00:00Z' } }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+          )
+        );
+      const localApi = new CartApi({ apiFetchFn: spy });
+      await localApi.getCart({ include: ['product'] });
+      expect(spy).toHaveBeenCalledWith('/cart?include=product');
+    });
+
+    it('omits the query string when include is empty or contains unsupported values', async () => {
+      const spy = jasmine
+        .createSpy('apiFetchFn')
+        .and.returnValue(
+          Promise.resolve(
+            new Response(
+              JSON.stringify({ data: [], meta: { timestamp: '2026-11-01T12:00:00Z' } }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+          )
+        );
+      const localApi = new CartApi({ apiFetchFn: spy });
+
+      await localApi.getCart();
+      expect(spy.calls.argsFor(0)[0]).toBe('/cart');
+
+      await localApi.getCart({ include: ['not-supported'] });
+      expect(spy.calls.argsFor(1)[0]).toBe('/cart');
+    });
+  });
 });

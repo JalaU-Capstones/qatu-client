@@ -281,7 +281,7 @@ describe('CatalogView', () => {
     );
     btn.click();
 
-    expect(onAddToCart).toHaveBeenCalledWith('p-cart-1');
+    expect(onAddToCart).toHaveBeenCalledWith(mockViewModel.products[0], 1);
     view.destroy();
   });
 

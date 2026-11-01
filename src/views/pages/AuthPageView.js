@@ -43,6 +43,14 @@ export class AuthPageView {
     this.viewModel.setMode(mode);
   }
 
+  /**
+   * Renders the underlying AuthView (creates .q-auth-card.q-glass-panel).
+   * @returns {HTMLElement}
+   */
+  render() {
+    return this.view.render();
+  }
+
   /** @param {HTMLElement} container */
   mount(container) {
     this.view.mount(container);

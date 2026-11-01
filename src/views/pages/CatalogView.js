@@ -172,7 +172,7 @@ export class CatalogView {
 
     const button = document.createElement('button');
     button.type = 'submit';
-    button.className = 'q-catalog__search-button';
+    button.className = 'q-btn q-btn--primary q-catalog__search-button';
     button.textContent = 'Buscar';
 
     form.addEventListener('submit', (event) => {
@@ -232,12 +232,12 @@ export class CatalogView {
 
     const applyButton = document.createElement('button');
     applyButton.type = 'submit';
-    applyButton.className = 'q-catalog__filters-apply';
+    applyButton.className = 'q-btn q-btn--primary q-btn--block q-catalog__filters-apply';
     applyButton.textContent = 'Aplicar filtros';
 
     const clearButton = document.createElement('button');
     clearButton.type = 'button';
-    clearButton.className = 'q-catalog__filters-clear';
+    clearButton.className = 'q-btn q-btn--ghost q-btn--sm q-btn--block q-catalog__filters-clear';
     clearButton.textContent = 'Limpiar filtros';
     clearButton.addEventListener('click', () => this.viewModel.clearFilters());
     this._refs.clearButton = clearButton;
@@ -370,7 +370,8 @@ export class CatalogView {
           },
           {
             variant: 'default',
-            onAddToCart: (id) => this.onAddToCart(id),
+            onAddToCart: () => this.onAddToCart(product, 1),
+            detailHref: `/products/${product.slug || product.id}`,
           }
         );
         this._grid.appendChild(cardView.render());
@@ -500,7 +501,7 @@ export class CatalogView {
 
     const clearButton = document.createElement('button');
     clearButton.type = 'button';
-    clearButton.className = 'q-catalog__no-results-clear';
+    clearButton.className = 'q-btn q-btn--primary q-catalog__no-results-clear';
     clearButton.textContent = 'Ver todos los productos';
     clearButton.addEventListener('click', () => this.viewModel.clearFilters());
 
@@ -526,7 +527,8 @@ export class CatalogView {
 
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.className = 'q-catalog__pagination-btn q-catalog__pagination-btn--prev';
+    prevBtn.className =
+      'q-btn q-btn--neutral q-btn--sm q-catalog__pagination-btn q-catalog__pagination-btn--prev';
     prevBtn.textContent = 'Anterior';
     prevBtn.disabled = vm.meta.page <= 1;
     prevBtn.addEventListener('click', () => {
@@ -539,7 +541,8 @@ export class CatalogView {
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.className = 'q-catalog__pagination-btn q-catalog__pagination-btn--next';
+    nextBtn.className =
+      'q-btn q-btn--neutral q-btn--sm q-catalog__pagination-btn q-catalog__pagination-btn--next';
     nextBtn.textContent = 'Siguiente';
     nextBtn.disabled = vm.meta.page >= vm.meta.total_pages || vm.meta.total_pages === 0;
     nextBtn.addEventListener('click', () => {

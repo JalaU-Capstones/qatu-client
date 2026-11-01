@@ -16,23 +16,29 @@ import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/components/product-card.css';
+import './views/components/quantity-selector.css';
+import './views/components/recommendation-card.css';
+import './views/pages/product-detail.css';
+import './views/pages/cart.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
-import { CartApi } from './models/api/CartApi.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
-import { CartService } from './services/CartService.js';
+import { cartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
 import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
+import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
+import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { HomeView } from './views/pages/HomeView.js';
+import { ProductDetailView } from './views/pages/ProductDetailView.js';
 
 const app = document.getElementById('app');
 
@@ -41,18 +47,11 @@ if (app) {
   themeStore.init();
 
   const authApi = new AuthApi();
-  const cartApi = new CartApi();
-  const cartService = new CartService({
-    cartApi,
-    cartStore,
-    authStore,
-    pendingCartActionStore,
-  });
 
-  // Boot step 1: synchronous cache paint. Returning users see their avatar
-  // immediately; first-time visitors see anonymous. No network yet.
+  // Hydrate session from localStorage before mounting anything that reads user state.
+  // The local cart hydrates itself in the CartStore constructor, so it survives
+  // page reloads for anonymous visitors too.
   authStore.loadFromStorage();
-  cartStore.setUser(authStore.getUser()?.id ?? null);
 
   // Persistent shell — mount BEFORE async boot so the page is interactive
   // while /me resolves. The header renders from `authStore.getUser()` (which
@@ -117,6 +116,34 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderProductDetail = (productSlug) => {
+    clearCurrentView();
+    const productDetailViewModel = new ProductDetailViewModel({
+      cartService,
+    });
+    currentPageView = new ProductDetailView({
+      viewModel: productDetailViewModel,
+      productSlug,
+      onBuyNow: () => router.navigate('/cart'),
+      onAuthRequired: () => {
+        authRedirectStore.setReturnTo(window.location.pathname);
+        router.navigate('/login');
+      },
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderCart = () => {
+    clearCurrentView();
+    currentPageView = new CartView({
+      onLogin: () => {
+        authRedirectStore.setReturnTo(window.location.pathname);
+        router.navigate('/login');
+      },
+    });
+    currentPageView.mount(mainEl);
+  };
+
   const renderAuth = (mode) => {
     // Preserve sliding animation: if we are already on an auth page,
     // switch mode in place instead of remounting.
@@ -136,15 +163,6 @@ if (app) {
       onNavigate: (path) => {
         const returnTo = authRedirectStore.getReturnTo();
         authRedirectStore.clearReturnTo();
-
-        // Fire-and-forget: process any pending cart add queued before login.
-        // Not awaited — we want the user to land on their return route immediately.
-        // The cartStore notification will update the header badge ~200ms later.
-        cartService.processPending().catch((err) => {
-          // eslint-disable-next-line no-console
-          console.warn('[main] processPending failed:', err?.message || err);
-        });
-
         router.navigate(returnTo || path || '/');
       },
       onModeChange: (newMode) => {
@@ -160,30 +178,28 @@ if (app) {
   };
 
   /**
-   * Called by ProductCardView when the user clicks "Añadir".
-   * Returns the CartService result union (added | auth-required | error).
-   * Handles the two redirect triggers:
-   *   - auth-required: user not logged in at click time → queue + redirect
-   *   - SESSION_EXPIRED mid-request: token expired during the API call → queue
-   *     the pending defensively (the qatu:auth-expired listener already redirected)
+   * Called by the product cards on Home/Catalog when the user clicks "Añadir".
+   * Delegates to `CartService`: authenticated users are synced with the
+   * backend (POST /v1/cart/items) and guests get a prompt to log in — the
+   * intent is queued in `pendingCartActionStore` and replayed after login.
+   *
+   * @param {Object} product Product snapshot (id, name, price, currency, ...).
+   * @param {number} [quantity=1]
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
    */
-  const onAddToCartHandler = async (productId) => {
-    const result = await cartService.addToCart(productId, 1);
-
-    if (result.status === 'auth-required') {
-      // CartService already queued pendingCartActionStore internally
-      // (skipPendingWrite: false default). Capture return path + redirect.
-      authRedirectStore.setReturnTo(window.location.pathname);
-      router.navigate('/login');
-      return result;
+  const onAddToCartHandler = async (product, quantity = 1) => {
+    if (!product) {
+      return {
+        status: 'error',
+        error: new Error('Producto no disponible'),
+      };
     }
 
-    if (result.status === 'error' && result.error?.code === 'SESSION_EXPIRED') {
-      // Rare: user was authenticated at click time but the JWT expired
-      // between the auth check and the API response. The qatu:auth-expired
-      // listener already fired synchronously (during apiFetch) and did the
-      // redirect + setReturnTo. We only need to preserve the intent.
-      pendingCartActionStore.set({ productId, quantity: 1 });
+    const result = await cartService.addToCart(product.id, quantity);
+
+    if (result.status === 'auth-required') {
+      authRedirectStore.setReturnTo(window.location.pathname);
+      router.navigate('/login');
     }
 
     return result;
@@ -192,6 +208,8 @@ if (app) {
   const router = new Router();
   router.addRoute('/', () => renderHome());
   router.addRoute('/products', () => renderCatalog());
+  router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
+  router.addRoute('/cart', () => renderCart());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
@@ -200,6 +218,7 @@ if (app) {
     router.navigate('/login');
   };
   header.viewModel.onLogoClick = () => router.navigate('/');
+  header.viewModel.onCartClick = () => router.navigate('/cart');
 
   // Logout: best-effort server invalidation, THEN local clear, THEN navigate.
   // The API call is wrapped in try/catch so a backend hiccup does not leave
@@ -215,6 +234,8 @@ if (app) {
       );
     }
     authStore.clearSession();
+    cartStore.clear();
+    pendingCartActionStore.clear();
     router.navigate('/login');
   };
 
@@ -226,12 +247,37 @@ if (app) {
     router.navigate('/login');
   });
 
+  /**
+   * Keeps the local cart in sync with the backend for the current session:
+   *  - authenticated → replay any queued guest action, then hydrate the cart
+   *    from GET /v1/cart (badge + cart page depend on this).
+   *  - guest → the API cart does not exist; clear the local mirror so the
+   *    UI never shows products that are not in the server cart.
+   * @param {Object} store authStore snapshot
+   */
+  const syncCartWithSession = (store) => {
+    if (store.isAuthenticated()) {
+      void cartService
+        .processPending()
+        .catch((err) => console.error('[main] Failed to replay pending cart action:', err))
+        .then(() => cartService.loadCart())
+        .catch((err) => console.error('[main] Failed to load user cart:', err));
+    } else {
+      // Guest: no server cart exists. Clear the in-memory mirror so the badge
+      // shows 0. Do NOT clear pendingCartActionStore — it is the guest's queued
+      // intent and must survive until login (or explicit logout).
+      cartStore.clear();
+    }
+  };
+
   authStore.subscribe((store) => {
     header.viewModel.setUser(store.getUser());
-    cartStore.setUser(store.getUser()?.id ?? null);
-    // cartStore.setUser(null) clears the items + localStorage (per-user scope).
-    // On login, it hydrates from localStorage for that user.
+    syncCartWithSession(store);
   });
+
+  // Boot: the session may already be hydrated from cache (loadFromStorage
+  // fired no listeners because the header is mounted before this point).
+  syncCartWithSession(authStore);
 
   cartStore.subscribe((store) => {
     header.viewModel.setCartCount(store.getCount());

@@ -153,7 +153,7 @@ describe('Router', () => {
 
     router.resolve('/products?q=phone&category=electronics');
 
-    expect(handler).toHaveBeenCalledWith('/products');
+    expect(handler).toHaveBeenCalledWith('/products', {});
   });
 
   it('should keep the query string in history when navigating', () => {
@@ -164,6 +164,65 @@ describe('Router', () => {
     router.navigate('/products?q=phone');
 
     expect(window.history.pushState).toHaveBeenCalledWith({}, '', '/products?q=phone');
-    expect(handler).toHaveBeenCalledWith('/products');
+    expect(handler).toHaveBeenCalledWith('/products', {});
+  });
+
+  it('should resolve dynamic routes and pass decoded params to the handler', () => {
+    const handler = jasmine.createSpy('productHandler');
+    router.addRoute('/products/:id', handler);
+
+    router.resolve('/products/aguayo-tradicional-tarabuco');
+
+    expect(handler).toHaveBeenCalledWith('/products/aguayo-tradicional-tarabuco', {
+      id: 'aguayo-tradicional-tarabuco',
+    });
+  });
+
+  it('should decode URI components in dynamic params', () => {
+    const handler = jasmine.createSpy('productHandler');
+    router.addRoute('/products/:id', handler);
+
+    router.resolve('/products/caf%C3%A9-cusco');
+
+    expect(handler).toHaveBeenCalledWith('/products/caf%C3%A9-cusco', {
+      id: 'café-cusco',
+    });
+  });
+
+  it('should prefer an exact route over a dynamic route', () => {
+    const exact = jasmine.createSpy('exact');
+    const dynamic = jasmine.createSpy('dynamic');
+    router.addRoute('/products/:id', dynamic);
+    router.addRoute('/products', exact);
+
+    router.resolve('/products');
+
+    expect(exact).toHaveBeenCalledWith('/products', {});
+    expect(dynamic).not.toHaveBeenCalled();
+  });
+
+  it('should not match a dynamic route with extra path segments', () => {
+    const dynamic = jasmine.createSpy('dynamic');
+    const home = jasmine.createSpy('home');
+    router.addRoute('/products/:id', dynamic);
+    router.addRoute('/', home);
+
+    router.resolve('/products/one/extra');
+
+    expect(dynamic).not.toHaveBeenCalled();
+    expect(home).toHaveBeenCalled();
+  });
+
+  it('should navigate to a dynamic path and pass params', () => {
+    spyOn(window.history, 'pushState');
+    const handler = jasmine.createSpy('productHandler');
+    router.addRoute('/products/:id', handler);
+
+    router.navigate('/products/mochila-trekking-45l');
+
+    expect(window.history.pushState).toHaveBeenCalledWith({}, '', '/products/mochila-trekking-45l');
+    expect(handler).toHaveBeenCalledWith('/products/mochila-trekking-45l', {
+      id: 'mochila-trekking-45l',
+    });
   });
 });

@@ -59,7 +59,7 @@ describe('HomeView', () => {
     const product = { id: 'prod-99', name: 'Alpaca Sweater' };
     view._featuredProducts.viewModel.onAddToCart(product);
 
-    expect(onAddToCart).toHaveBeenCalledWith('prod-99');
+    expect(onAddToCart).toHaveBeenCalledWith(product, 1);
     view.destroy();
   });
 
