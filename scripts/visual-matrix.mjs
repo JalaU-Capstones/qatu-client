@@ -26,7 +26,7 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
-  { name: 'product-detail', path: '/products/aguayo-tradicional-tarabuco' },
+  { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart' },
 ];
 
