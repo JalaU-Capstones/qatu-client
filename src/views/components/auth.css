@@ -10,7 +10,6 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: calc(100vh - var(--q-header-height, 64) * 1px);
   width: 100%;
-  background-color: var(--q-bg-page);
 }
 
 /* ─── Marketing column ─────────────────────────────────────── */
@@ -22,7 +21,6 @@
   justify-content: center;
   padding: 64px 48px;
   overflow: hidden;
-  background-color: var(--q-bg-surface);
 }
 
 .q-auth-marketing__content {
@@ -108,15 +106,12 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  background-color: var(--q-bg-page);
 }
 
 .q-auth-card {
   width: 100%;
   max-width: 440px;
   padding: 40px 32px;
-  background-color: var(--q-bg-elevated);
-  border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-xl, 12) * 1px);
   box-sizing: border-box;
 }

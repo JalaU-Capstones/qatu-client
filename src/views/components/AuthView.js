@@ -40,7 +40,7 @@ export class AuthView {
     formPanel.className = 'q-auth-form-panel';
 
     const card = document.createElement('div');
-    card.className = 'q-auth-card q-shadow-lg';
+    card.className = 'q-auth-card q-glass-panel';
     card.setAttribute('data-mode', this.viewModel.mode);
 
     card.appendChild(this._createLoginPanel());

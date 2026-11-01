@@ -6,7 +6,7 @@
 .q-hero {
   position: relative;
   padding: calc(var(--q-geist-space-16x, 64) * 1px) 0;
-  background-color: var(--q-bg-page, #ffffff);
+  background-color: transparent;
   overflow: hidden;
 }
 

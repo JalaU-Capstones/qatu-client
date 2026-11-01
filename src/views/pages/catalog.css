@@ -8,6 +8,7 @@
   width: 100%;
   padding-top: calc(var(--q-geist-space-10x, 40) * 1px);
   padding-bottom: calc(var(--q-geist-space-16x, 64) * 1px);
+  background-color: transparent;
   box-sizing: border-box;
 }
 
