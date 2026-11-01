@@ -222,4 +222,76 @@ describe('CartService', () => {
       expect(result).toEqual({ status: 'added', item: expectedItem });
     });
   });
+
+  describe('loadCart / addToCart with ?include=product', () => {
+    it('loadCart requests { include: [product] } so cart items render with full details', async () => {
+      const items = [
+        {
+          id: 'ci1',
+          product_id: 'p1',
+          quantity: 2,
+          product: { id: 'p1', name: 'Café', price: 14, slug: 'cafe-cusco' },
+        },
+      ];
+      const getCartSpy = jasmine
+        .createSpy('getCart')
+        .and.returnValue(
+          Promise.resolve({ data: items, meta: { timestamp: '2026-11-01T12:00:00Z' } })
+        );
+      const localCartStore = {
+        setFromGet: jasmine.createSpy('setFromGet'),
+        getItems: jasmine.createSpy('getItems').and.returnValue([]),
+        getCount: () => 0,
+      };
+      const localService = new CartService({
+        cartApi: { addItem: jasmine.createSpy('addItem'), getCart: getCartSpy },
+        cartStore: localCartStore,
+        authStore: { isAuthenticated: () => true },
+        pendingCartActionStore: pendingStore,
+      });
+
+      await localService.loadCart();
+
+      expect(getCartSpy).toHaveBeenCalledWith({ include: ['product'] });
+    });
+
+    it('addToCart triggers a follow-up loadCart to enrich the store with product details', async () => {
+      const addItemSpy = jasmine
+        .createSpy('addItem')
+        .and.returnValue(Promise.resolve({ data: { id: 'ci1', product_id: 'p1', quantity: 1 } }));
+      const getCartSpy = jasmine.createSpy('getCart').and.returnValue(
+        Promise.resolve({
+          data: [
+            {
+              id: 'ci1',
+              product_id: 'p1',
+              quantity: 1,
+              product: { id: 'p1', name: 'Café', price: 14 },
+            },
+          ],
+          meta: { timestamp: '2026-11-01T12:00:00Z' },
+        })
+      );
+      const localCartStore = {
+        setFromAddResponse: jasmine.createSpy('setFromAddResponse'),
+        setFromGet: jasmine.createSpy('setFromGet'),
+        getItems: jasmine.createSpy('getItems').and.returnValue([]),
+        getCount: () => 0,
+      };
+      const localService = new CartService({
+        cartApi: { addItem: addItemSpy, getCart: getCartSpy },
+        cartStore: localCartStore,
+        authStore: { isAuthenticated: () => true },
+        pendingCartActionStore: pendingStore,
+      });
+
+      await localService.addToCart('p1', 1);
+
+      // Fire-and-forget: flush microtask queue
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(getCartSpy).toHaveBeenCalledWith({ include: ['product'] });
+    });
+  });
 });

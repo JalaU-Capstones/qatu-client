@@ -78,9 +78,11 @@ export class CartViewModel {
     const rawItems = this.cartStore.getItems();
     this.items = rawItems.map((item) => {
       const subtotal = Math.round(Number(item.price) * item.quantity * 100) / 100;
+      const slugOrId = item.slug || item.productId;
+      const detailHref = slugOrId ? `/products/${slugOrId}` : '/products';
       return {
         ...item,
-        detailHref: `/products/${item.slug || item.productId}`,
+        detailHref,
         priceLabel: formatPrice(item.price, item.currency),
         subtotal,
         subtotalLabel: formatPrice(subtotal, item.currency),

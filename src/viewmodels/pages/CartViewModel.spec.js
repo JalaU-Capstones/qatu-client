@@ -238,4 +238,31 @@ describe('CartViewModel', () => {
     vm.dismissNotice();
     expect(vm.notice).toBe('');
   });
+
+  it('renders real product details when the store was hydrated with ?include=product', () => {
+    store.items.push({
+      productId: 'p1',
+      itemId: 'ci1',
+      slug: 'cafe-cusco',
+      name: 'Café Cusco 500g',
+      price: 14,
+      currency: 'USD',
+      imageUrl: 'https://cdn/p1.jpg',
+      seller: 'Café Altura',
+      quantity: 2,
+    });
+
+    vm.refresh();
+
+    expect(vm.items[0]).toEqual(
+      jasmine.objectContaining({
+        name: 'Café Cusco 500g',
+        priceLabel: 'US$ 14.00',
+        subtotal: 28,
+        subtotalLabel: 'US$ 28.00',
+        detailHref: '/products/cafe-cusco',
+      })
+    );
+    expect(vm.getSubtotalLabel()).toBe('US$ 28.00');
+  });
 });

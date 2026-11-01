@@ -79,6 +79,17 @@ export class CartService {
       const item = response?.data;
       if (item) {
         this.cartStore.setFromAddResponse(item);
+
+        // POST /cart/items returns a lightweight cart item (no nested
+        // `product`). Trigger a fire-and-forget reload so the next render
+        // of the cart page (or a shared device that navigates to /cart)
+        // sees name/price/image/slug. The badge updates immediately from
+        // setFromAddResponse above; loadCart() only enriches the store.
+        // Failures are non-fatal — the user still sees the correct count.
+        void this.loadCart().catch((err) => {
+          // eslint-disable-next-line no-console
+          console.warn('[CartService] post-add refresh failed:', err?.message || err);
+        });
       }
       return { status: 'added', item };
     } catch (error) {
@@ -140,7 +151,11 @@ export class CartService {
     }
 
     try {
-      const response = await this.cartApi.getCart();
+      // Request the product expansion so the cart page can render name,
+      // price, image, and slug without N+1 fetches. The backend supports
+      // ?include=product (added in API commit 4fbf68b); without it, every
+      // cart item arrives lightweight and renders as "Producto — US$ 0.00".
+      const response = await this.cartApi.getCart({ include: ['product'] });
       const items = Array.isArray(response?.data) ? response.data : [];
       this.cartStore.setFromGet(items);
       return { status: 'loaded', items, itemCount: this.cartStore.getCount() };

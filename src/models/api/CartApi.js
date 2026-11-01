@@ -51,11 +51,23 @@ export class CartApi {
   /**
    * Fetches the authenticated user's cart contents. Contract: GET /v1/cart.
    *
+   * @param {Object} [options]
+   * @param {string[]} [options.include] Related resources to expand. Only
+   *   `'product'` is supported by the backend today. When omitted, the
+   *   response contains only the cart item fields (lightweight).
    * @returns {Promise<{ data: Array<Object>, meta: Object }>}
    * @throws {Error} with `.code`, `.statusCode`, `.details` when the backend returns a non-2xx.
    */
-  async getCart() {
-    const response = await this._fetch('/cart');
+  async getCart({ include = [] } = {}) {
+    const query = new URLSearchParams();
+    const validIncludes = Array.isArray(include)
+      ? include.filter((value) => value === 'product')
+      : [];
+    if (validIncludes.length > 0) {
+      query.set('include', validIncludes.join(','));
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await this._fetch(`/cart${suffix}`);
     return this._parseDataResponse(response, 'get cart');
   }
 
