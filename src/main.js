@@ -259,8 +259,10 @@ if (app) {
     if (store.isAuthenticated()) {
       void cartService
         .processPending()
+        // eslint-disable-next-line no-console
         .catch((err) => console.error('[main] Failed to replay pending cart action:', err))
         .then(() => cartService.loadCart())
+        // eslint-disable-next-line no-console
         .catch((err) => console.error('[main] Failed to load user cart:', err));
     } else {
       // Guest: no server cart exists. Clear the in-memory mirror so the badge

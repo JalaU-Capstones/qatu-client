@@ -32,7 +32,6 @@ helloworld:
     - develop
     - merge_requests
 
-
 lint:
   stage: lint
   script:
