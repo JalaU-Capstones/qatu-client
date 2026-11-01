@@ -161,3 +161,17 @@
     padding-right: 16px;
   }
 }
+
+/* ── Global Radial Background ───────────────────────────────────
+ * Fixed to the viewport so the gradient never cuts off on long pages.
+ * Uses semantic ambient tokens which switch automatically in dark mode.
+ * ──────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--q-bg-page);
+  background-image:
+    radial-gradient(circle at 0% 0%, var(--q-ambient-pink) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, var(--q-ambient-cyan) 0%, transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
