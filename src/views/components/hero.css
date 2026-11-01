@@ -91,34 +91,6 @@
   border-color: var(--q-color-primary, #0070f3);
 }
 
-.q-hero__search-button {
-  padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-6x, 24) * 1px);
-  border: none;
-  border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background: var(--q-accent);
-  color: var(--q-bg-page);
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: calc(var(--q-text-base, 16) * 1px);
-  font-weight: var(--q-font-weight-semibold, 600);
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background-color var(--q-default-transition-duration, 150ms)
-      var(--q-default-transition-timing-function, ease),
-    color var(--q-default-transition-duration, 150ms)
-      var(--q-default-transition-timing-function, ease);
-}
-
-.q-hero__search-button:hover {
-  background: var(--q-accent-hover);
-  color: var(--q-bg-page);
-}
-
-.q-hero__search-button:focus-visible {
-  outline: 2px solid var(--q-accent);
-  outline-offset: 2px;
-}
-
 /* Quick links */
 .q-hero__quick-links {
   margin-top: calc(var(--q-geist-space-3x, 12) * 1px);

@@ -201,6 +201,10 @@ body {
   white-space: nowrap;
 }
 
+.q-btn svg {
+  flex-shrink: 0;
+}
+
 .q-btn:focus-visible {
   outline: 2px solid var(--q-color-focus);
   outline-offset: 2px;
