@@ -1,17 +1,25 @@
-const STORAGE_KEY = 'qatu.cart';
-const SCHEMA_VERSION = 2;
-
 export const FREE_SHIPPING_THRESHOLD = 50;
 export const FLAT_SHIPPING_RATE = 4.99;
 
 /**
- * Cart store — a local mirror of the server cart.
+ * Cart store — IN-MEMORY projection of the server cart.
  *
- * The server cart (GET /v1/cart) is the source of truth for authenticated
- * users; `CartService` copies API responses into this store (which persists
- * the snapshot and notifies the subscribers) so the header badge and the
- * cart page can render synchronously. The API cart-item id is kept as
- * `itemId` on every entry so mutations can target PATCH/DELETE correctly.
+ * The server cart (GET /v1/cart) is the single source of truth for
+ * authenticated users. CartService copies API responses into this store
+ * so the header badge and the cart page can render synchronously, but
+ * nothing here is persisted to storage — a page refresh always
+ * re-hydrates from the API (see main.js#syncCartWithSession).
+ *
+ * Why in-memory only (vs. caching in storage):
+ *  - The review requires cart state to come from the API, not storage.
+ *  - Cart contents can change server-side (seller updates stock, another
+ *    device mutates the cart, etc.); a stale storage cache would
+ *    briefly render the wrong badge.
+ *  - The API is only fetched on boot/login and when the cart page mounts,
+ *    so the cost is negligible.
+ *
+ * The single exception is `pendingCartActionStore`, which persists a
+ * queued add-to-cart intent across the /login redirect.
  */
 export class CartStore {
   constructor() {
@@ -19,8 +27,6 @@ export class CartStore {
     this._items = new Map();
     this._userId = null;
     this._listeners = new Set();
-    this._storage = this._getStorage();
-    this._loadFromStorage();
   }
 
   /**
@@ -32,7 +38,6 @@ export class CartStore {
     const nextUserId = userId || null;
     if (this._userId === nextUserId) return;
     this._userId = nextUserId;
-    this._persist();
     this._notify();
   }
 
@@ -53,7 +58,6 @@ export class CartStore {
     item.quantity = existing ? existing.quantity + amount : amount;
 
     this._items.set(item.productId, item);
-    this._persist();
     this._notify();
     return this._copyItem(item);
   }
@@ -73,7 +77,6 @@ export class CartStore {
     const nextQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
     const updated = { ...existing, quantity: nextQuantity };
     this._items.set(productId, updated);
-    this._persist();
     this._notify();
     return this._copyItem(updated);
   }
@@ -86,7 +89,6 @@ export class CartStore {
   removeItem(productId) {
     const removed = this._items.delete(productId);
     if (removed) {
-      this._persist();
       this._notify();
     }
     return removed;
@@ -94,7 +96,6 @@ export class CartStore {
 
   clear() {
     this._items.clear();
-    this._clearPersisted();
     this._notify();
   }
 
@@ -108,7 +109,6 @@ export class CartStore {
     const normalized = this._normalizeItem(item, existing);
     if (!normalized) return;
     this._items.set(normalized.productId, normalized);
-    this._persist();
     this._notify();
   }
 
@@ -126,7 +126,6 @@ export class CartStore {
         }
       }
     }
-    this._persist();
     this._notify();
   }
 
@@ -262,66 +261,6 @@ export class CartStore {
    */
   _copyItem(item) {
     return { ...item };
-  }
-
-  /**
-   * @returns {Storage|null}
-   * @private
-   */
-  _getStorage() {
-    try {
-      return typeof window !== 'undefined' ? window.localStorage : null;
-    } catch {
-      return null;
-    }
-  }
-
-  _loadFromStorage() {
-    if (!this._storage) return;
-    try {
-      const raw = this._storage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return;
-      if (parsed.v !== SCHEMA_VERSION && parsed.v !== 1) return;
-      if (!Array.isArray(parsed.items)) return;
-
-      this._items.clear();
-      for (const rawItem of parsed.items) {
-        const item = this._normalizeItem(rawItem);
-        if (item) {
-          this._items.set(item.productId, item);
-        }
-      }
-
-      // Migrate the old v1 shape (productId + quantity only) to v2 snapshots.
-      if (parsed.v === 1) this._persist();
-    } catch {
-      // Corrupt storage — ignore, start empty
-    }
-  }
-
-  _persist() {
-    if (!this._storage) return;
-    try {
-      const payload = {
-        v: SCHEMA_VERSION,
-        userId: this._userId,
-        items: this.getItems(),
-      };
-      this._storage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    } catch {
-      // Quota / private mode — fail silent
-    }
-  }
-
-  _clearPersisted() {
-    if (!this._storage) return;
-    try {
-      this._storage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
   }
 }
 

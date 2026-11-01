@@ -28,6 +28,7 @@ import { cartService } from './services/CartService.js';
 import { authRedirectStore } from './store/authRedirectStore.js';
 import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
+import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
@@ -233,6 +234,8 @@ if (app) {
       );
     }
     authStore.clearSession();
+    cartStore.clear();
+    pendingCartActionStore.clear();
     router.navigate('/login');
   };
 
@@ -260,6 +263,9 @@ if (app) {
         .then(() => cartService.loadCart())
         .catch((err) => console.error('[main] Failed to load user cart:', err));
     } else {
+      // Guest: no server cart exists. Clear the in-memory mirror so the badge
+      // shows 0. Do NOT clear pendingCartActionStore — it is the guest's queued
+      // intent and must survive until login (or explicit logout).
       cartStore.clear();
     }
   };

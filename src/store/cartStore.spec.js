@@ -14,12 +14,7 @@ describe('CartStore', () => {
   let store;
 
   beforeEach(() => {
-    window.localStorage.clear();
     store = new CartStore();
-  });
-
-  afterEach(() => {
-    window.localStorage.clear();
   });
 
   it('starts empty', () => {
@@ -31,7 +26,7 @@ describe('CartStore', () => {
     expect(store.getTotal()).toBe(0);
   });
 
-  it('addItem stores a product snapshot and persists schema v2', () => {
+  it('addItem stores a product snapshot', () => {
     const item = store.addItem(product(), 2);
 
     expect(item).toEqual({
@@ -47,10 +42,6 @@ describe('CartStore', () => {
     });
     expect(store.getCount()).toBe(2);
     expect(store.getDistinctCount()).toBe(1);
-
-    const parsed = JSON.parse(window.localStorage.getItem('qatu.cart'));
-    expect(parsed.v).toBe(2);
-    expect(parsed.items).toEqual([item]);
   });
 
   it('addItem sums quantities when the product already exists', () => {
@@ -119,14 +110,12 @@ describe('CartStore', () => {
     expect(store.removeItem('p1')).toBe(false);
   });
 
-  it('clear removes all items and the persisted payload', () => {
+  it('clear removes all items', () => {
     store.addItem(product(), 2);
-    expect(window.localStorage.getItem('qatu.cart')).not.toBeNull();
 
     store.clear();
     expect(store.getCount()).toBe(0);
     expect(store.getItems()).toEqual([]);
-    expect(window.localStorage.getItem('qatu.cart')).toBeNull();
   });
 
   it('getShipping applies the flat rate below US$ 50 and is free from US$ 50', () => {
@@ -150,68 +139,6 @@ describe('CartStore', () => {
       count: 2,
       distinctCount: 1,
     });
-  });
-
-  it('hydrates from a schema v2 payload in localStorage', () => {
-    const payload = {
-      v: 2,
-      userId: null,
-      items: [
-        {
-          productId: 'p1',
-          itemId: null,
-          slug: null,
-          name: 'Aguayo',
-          price: 40,
-          currency: 'USD',
-          seller: 'Tejidos Illimani',
-          imageUrl: null,
-          quantity: 2,
-        },
-      ],
-    };
-    window.localStorage.setItem('qatu.cart', JSON.stringify(payload));
-
-    const hydrated = new CartStore();
-    expect(hydrated.getCount()).toBe(2);
-    expect(hydrated.getItems()).toEqual(payload.items);
-  });
-
-  it('migrates the legacy schema v1 payload to v2 snapshots', () => {
-    window.localStorage.setItem(
-      'qatu.cart',
-      JSON.stringify({
-        v: 1,
-        userId: 'u1',
-        items: [{ productId: 'p1', quantity: 2 }],
-      })
-    );
-
-    const migrated = new CartStore();
-    expect(migrated.getCount()).toBe(2);
-    expect(migrated.getItems()[0].name).toBe('Producto');
-    expect(migrated.getItems()[0].price).toBe(0);
-
-    const parsed = JSON.parse(window.localStorage.getItem('qatu.cart'));
-    expect(parsed.v).toBe(2);
-  });
-
-  it('ignores corrupt JSON payloads', () => {
-    window.localStorage.setItem('qatu.cart', 'not-valid-json{{{');
-    const hydrated = new CartStore();
-    expect(hydrated.getCount()).toBe(0);
-  });
-
-  it('ignores payloads with an unknown schema version', () => {
-    window.localStorage.setItem(
-      'qatu.cart',
-      JSON.stringify({
-        v: 999,
-        items: [{ productId: 'p1', quantity: 2 }],
-      })
-    );
-    const hydrated = new CartStore();
-    expect(hydrated.getCount()).toBe(0);
   });
 
   it('getItems returns copies so callers cannot mutate internal state', () => {
@@ -340,5 +267,17 @@ describe('CartStore', () => {
   it('singleton export cartStore is an instance of CartStore', () => {
     expect(cartStore).toBeDefined();
     expect(cartStore instanceof CartStore).toBe(true);
+  });
+
+  it('does not touch localStorage (cart state lives in memory only)', () => {
+    window.localStorage.clear();
+
+    store.setUser('u1');
+    store.addItem(product(), 2);
+    store.updateQuantity('p1', 3);
+    store.removeItem('p1');
+    store.clear();
+
+    expect(window.localStorage.length).toBe(0);
   });
 });
