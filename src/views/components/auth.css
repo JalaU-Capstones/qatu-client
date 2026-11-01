@@ -10,6 +10,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   min-height: calc(100vh - var(--q-header-height, 64) * 1px);
   width: 100%;
+  background-color: transparent;
 }
 
 /* ─── Marketing column ─────────────────────────────────────── */
@@ -21,6 +22,7 @@
   justify-content: center;
   padding: 64px 48px;
   overflow: hidden;
+  background-color: transparent;
 }
 
 .q-auth-marketing__content {
@@ -106,6 +108,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
+  background-color: transparent;
 }
 
 .q-auth-card {
