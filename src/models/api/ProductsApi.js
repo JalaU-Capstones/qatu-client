@@ -143,6 +143,9 @@ export class ProductsApi {
    * @returns {Promise<Array<Object>>}
    */
   async getSimilarProducts(productId, limit = 3) {
+    // CONTRACT GAP: There is no `GET /products/{id}/similar` endpoint in the
+    // contract. We approximate "similar" with the latest published catalog.
+    // When the backend adds a real recommendations endpoint, swap this method.
     const response = await this.getProducts({ page: 1, limit: limit + 1 });
     return (response.data || []).filter((product) => product.id !== productId).slice(0, limit);
   }

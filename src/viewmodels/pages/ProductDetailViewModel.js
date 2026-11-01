@@ -195,6 +195,10 @@ export class ProductDetailViewModel {
 
   /** @returns {string} */
   getSellerLine() {
+    // CONTRACT GAP: Product.yaml has `seller_id` (uuid) but NO nested `seller`
+    // object. Until the backend adds `?include=seller` or a separate profile
+    // fetch, we fall back to a generic label. The seller card still renders;
+    // it just shows "Vendedor" instead of the real name.
     const seller = this.product?.seller;
     return seller?.full_name || seller?.username || 'Vendedor';
   }
@@ -212,6 +216,9 @@ export class ProductDetailViewModel {
 
   /** @returns {string} */
   getSellerLocation() {
+    // CONTRACT GAP: Product.yaml has `category_id` (uuid) but NO nested
+    // `category` object. Returns empty string until the backend expands it.
+    // The view skips the location element when this is '' (Q-D verified).
     return this.product?.category?.name || '';
   }
 
@@ -233,6 +240,10 @@ export class ProductDetailViewModel {
     const product = this.product;
     if (!product) return [];
 
+    // CONTRACT GAP: Product.yaml has NO `images` array. The detail endpoint
+    // returns only `primary_image_path`. When the backend adds
+    // `GET /products/{id}/images`, replace this block with a fetch + cache.
+    // For now, we fall back to a single-image gallery from `primary_image_path`.
     const images = Array.isArray(product.images) ? product.images : [];
     if (images.length > 0) {
       return images.map((image, index) => ({
@@ -268,6 +279,9 @@ export class ProductDetailViewModel {
 
   /** @returns {Array<Object>} */
   getReviews() {
+    // CONTRACT GAP: Product.yaml has NO `reviews` array. Ratings come from
+    // `GET /products/{id}/ratings` (not yet implemented). Until then, the
+    // "Reseñas" tab always shows the empty state — safe fallback, no crash.
     return Array.isArray(this.product?.reviews) ? this.product.reviews : [];
   }
 

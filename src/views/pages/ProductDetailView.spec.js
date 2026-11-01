@@ -282,4 +282,37 @@ describe('ProductDetailView', () => {
 
     expect(container.querySelector('.q-product-detail')).toBeNull();
   });
+
+  it('renders a single-image gallery when product.images is absent', () => {
+    viewModel.getGallery = () => [
+      { path: 'https://cdn.qatu.test/only.jpg', label: 'Imagen del producto' },
+    ];
+    viewModel.selectedImage = 0;
+    view.mount(container);
+
+    expect(container.querySelectorAll('.q-product-detail__thumbnail').length).toBe(1);
+    expect(
+      container.querySelector('.q-product-detail__image-photo--large').getAttribute('src')
+    ).toBe('https://cdn.qatu.test/only.jpg');
+  });
+
+  it('renders the reviews empty state when product has no reviews', () => {
+    viewModel.getReviews = () => [];
+    viewModel.activeTab = 'reviews';
+    view.mount(container);
+
+    expect(container.querySelector('.q-product-detail__reviews-empty').textContent).toBe(
+      'Todavía no hay reseñas para este producto.'
+    );
+    expect(container.querySelector('.q-product-detail__review')).toBeNull();
+  });
+
+  it('renders the seller card with the Vendedor fallback when seller is not expanded', () => {
+    viewModel.getSellerLine = () => 'Vendedor';
+    viewModel.getSellerLocation = () => '';
+    view.mount(container);
+
+    expect(container.querySelector('.q-product-detail__seller-name').textContent).toBe('Vendedor');
+    expect(container.querySelector('.q-product-detail__seller-location')).toBeNull();
+  });
 });
