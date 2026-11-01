@@ -49,9 +49,23 @@ for (const route of ROUTES) {
       const combo = { route: route.name, theme, viewport: vp.name, status: 'PASS', errors: [] };
       const page = await browser.newPage();
       const pageErrors = [];
+      const rateLimitedEndpoints = [];
+      page.on('response', (res) => {
+        if (res.status() === 429) {
+          rateLimitedEndpoints.push(res.url());
+        }
+      });
       page.on('pageerror', (e) => pageErrors.push('PAGEERROR: ' + e.message));
       page.on('console', (m) => {
-        if (m.type() === 'error') pageErrors.push('CONSOLE-ERR: ' + m.text());
+        if (m.type() === 'error') {
+          const text = m.text();
+          // Ignore the expected 401 from the boot /auth/me call.
+          // Anonymous visitors always trigger this.
+          if (text.includes('401') && text.includes('Unauthorized')) {
+            return;
+          }
+          pageErrors.push('CONSOLE-ERR: ' + text);
+        }
       });
 
       await page.setViewport({ width: vp.width, height: vp.height });
@@ -173,7 +187,21 @@ for (const route of ROUTES) {
       } finally {
         // Any pageerror / console.error collected during the run
         if (pageErrors.length > 0) {
-          combo.errors.push(...pageErrors);
+          const filtered = pageErrors.filter((err) => {
+            // Ignore 429 console errors from boot /auth/me call (authLimiter has 20 req/15min)
+            if (
+              err.includes('429') &&
+              err.includes('Too Many Requests') &&
+              rateLimitedEndpoints.length > 0 &&
+              rateLimitedEndpoints.every((url) => url.includes('/auth/me'))
+            ) {
+              return false;
+            }
+            return true;
+          });
+          if (filtered.length > 0) {
+            combo.errors.push(...filtered);
+          }
         }
         await page.close();
       }
@@ -184,6 +212,10 @@ for (const route of ROUTES) {
         `[${combo.status}] ${route.name.padEnd(14)} ${theme.padEnd(5)} ${vp.name.padEnd(8)}` +
           (combo.errors.length ? ' → ' + combo.errors.join(' | ') : '')
       );
+
+      // Wait 2 seconds between iterations to respect the backend rate limit (100 req/min).
+      // Without this, the fast consecutive requests trigger 429s and break data fetching.
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 }
