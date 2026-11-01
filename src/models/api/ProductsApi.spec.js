@@ -250,23 +250,16 @@ describe('ProductsApi', () => {
 
     it('should scan further pages when the exact slug is not on page 1', async () => {
       const match = { id: 'p2', slug: 'aguayo-tradicional' };
-      const searchPage = new Response(
-        JSON.stringify({
-          data: [{ id: 'p9', slug: 'otro-producto' }],
-          meta: { page: 1, per_page: 100, total: 101, total_pages: 2 },
-        }),
-        { status: 200 }
-      );
-      const secondPage = new Response(
-        JSON.stringify({
-          data: [match],
-          meta: { page: 2, per_page: 100, total: 101, total_pages: 2 },
-        }),
-        { status: 200 }
-      );
+      const missItems = [{ id: 'p9', slug: 'otro-producto' }];
+      const meta = { page: 1, per_page: 100, total: 101, total_pages: 2 };
+
       fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
-        Promise.resolve(searchPage), // search page 1 miss
-        Promise.resolve(secondPage), // scan page 2 hit
+        Promise.resolve(listResponse(missItems, meta)), // attempt 1: raw search miss
+        Promise.resolve(listResponse(missItems, meta)), // attempt 2: spaced search miss
+        Promise.resolve(listResponse(missItems, meta)), // attempt 3: full catalog page 1 miss
+        Promise.resolve(
+          listResponse([match], { page: 2, per_page: 100, total: 101, total_pages: 2 })
+        ), // attempt 3: full catalog page 2 hit
         Promise.resolve(detailResponse(match))
       );
       api = new ProductsApi({ apiFetchFn: fetchSpy });
@@ -274,14 +267,16 @@ describe('ProductsApi', () => {
       const product = await api.getProductBySlug('aguayo-tradicional');
 
       expect(product.id).toBe('p2');
-      expect(fetchSpy).toHaveBeenCalledTimes(3);
-      expect(fetchSpy.calls.first().args[0]).toContain('search=');
-      expect(fetchSpy.calls.all()[1].args[0]).toBe('/products?page=2&limit=100');
+      expect(fetchSpy).toHaveBeenCalledTimes(5);
+      expect(fetchSpy.calls.first().args[0]).toContain('search=aguayo-tradicional');
+      expect(fetchSpy.calls.all()[1].args[0]).toContain('search=aguayo+tradicional');
+      expect(fetchSpy.calls.all()[2].args[0]).toBe('/products?page=1&limit=100');
+      expect(fetchSpy.calls.all()[3].args[0]).toBe('/products?page=2&limit=100');
       expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/p2');
     });
 
     it('should return null when the slug does not match any product', async () => {
-      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValue(
         Promise.resolve(
           new Response(
             JSON.stringify({
@@ -297,7 +292,153 @@ describe('ProductsApi', () => {
       const result = await api.getProductBySlug('does-not-exist');
 
       expect(result).toBeNull();
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('retries with spaces when the raw slug search returns zero results (root-cause regression)', async () => {
+      // Reproduces the exact bug: /products/stainless-steel-kitchen-knife-set
+      // failed because the backend does not index hyphenated slugs.
+      const slug = 'stainless-steel-kitchen-knife-set';
+      const productId = '9e2b7c3a-5f4d-4c1e-8b2a-1f2e3d4c5b6a';
+
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        // Attempt 1: raw slug → empty
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [],
+              meta: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Attempt 2: spaces → match
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: productId,
+                  name: 'Stainless Steel Kitchen Knife Set',
+                  slug: 'stainless-steel-kitchen-knife-set',
+                },
+              ],
+              meta: { page: 1, per_page: 100, total: 1, total_pages: 1 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Detail fetch
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: { id: productId, slug: 'stainless-steel-kitchen-knife-set' },
+              meta: { timestamp: '2026-11-01T12:00:00Z' },
+            }),
+            { status: 200 }
+          )
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const product = await api.getProductBySlug(slug);
+
+      expect(product).toEqual(
+        jasmine.objectContaining({ id: productId, slug: 'stainless-steel-kitchen-knife-set' })
+      );
+      // Three calls: raw search, spaced search, detail
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+      expect(fetchSpy.calls.argsFor(0)[0]).toContain('search=stainless-steel-kitchen-knife-set');
+      expect(fetchSpy.calls.argsFor(1)[0]).toContain('search=stainless+steel+kitchen+knife+set');
+      expect(fetchSpy.calls.argsFor(2)[0]).toBe(`/products/${productId}`);
+    });
+
+    it('paginates the FULL catalog (no search filter) when both searches miss', async () => {
+      const slug = 'some-unique-slug';
+      const productId = 'p-on-page-2';
+
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.returnValues(
+        // Attempt 1: empty
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [],
+              meta: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Attempt 2: empty
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [],
+              meta: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Attempt 3 page 1: miss
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'p-other', slug: 'other' }],
+              meta: { page: 1, per_page: 100, total: 101, total_pages: 2 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Attempt 3 page 2: hit
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: productId, slug }],
+              meta: { page: 2, per_page: 100, total: 101, total_pages: 2 },
+            }),
+            { status: 200 }
+          )
+        ),
+        // Detail fetch
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: { id: productId, slug },
+              meta: { timestamp: '2026-11-01T12:00:00Z' },
+            }),
+            { status: 200 }
+          )
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const product = await api.getProductBySlug(slug);
+
+      expect(product).toEqual(jasmine.objectContaining({ id: productId, slug }));
+      // Page 2 of the fallback MUST NOT carry a `search` param.
+      const page2Call = fetchSpy.calls.argsFor(3)[0];
+      expect(page2Call).toBe('/products?page=2&limit=100');
+      expect(page2Call).not.toContain('search=');
+    });
+
+    it('returns null only after exhausting all three attempts', async () => {
+      fetchSpy = jasmine.createSpy('apiFetchFn').and.callFake(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [],
+              meta: { page: 1, per_page: 100, total: 0, total_pages: 0 },
+            }),
+            { status: 200 }
+          )
+        )
+      );
+      api = new ProductsApi({ apiFetchFn: fetchSpy });
+
+      const product = await api.getProductBySlug('does-not-exist');
+
+      expect(product).toBeNull();
+      // Raw search, spaced search (spaces differ from raw), full-catalog page 1.
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
     });
 
     it('should return null when the detail quietly 404s (unpublished between list and detail)', async () => {

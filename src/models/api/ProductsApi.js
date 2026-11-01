@@ -110,7 +110,26 @@ export class ProductsApi {
 
   /**
    * Resolves a slug into a product ID using only the documented
-   * GET /v1/products contract.
+   * GET /v1/products contract (no dedicated slug endpoint exists).
+   *
+   * Strategy (3 attempts, cheapest first):
+   *   1. Search with the raw slug. Matches when the backend eventually
+   *      indexes the slug column or the product's name literally contains
+   *      the hyphenated string (rare, but cheap to try).
+   *   2. Search with hyphens replaced by spaces. Product slugs mirror the
+   *      product name ("stainless-steel-kitchen-knife-set" →
+   *      "stainless steel kitchen knife set"), so the backend's full-text
+   *      search on `name`/`description` matches reliably.
+   *   3. Paginate the FULL published catalog (no search filter) and match
+   *      `product.slug === slug` exactly. This is the safety net: it works
+   *      regardless of how the backend tokenizes text, at the cost of N
+   *      list calls (N = total_pages of the unfiltered catalog, capped at
+   *      MAX_FALLBACK_PAGES to bound the worst case).
+   *
+   * The bug this fixes: the previous implementation used the filtered
+   * `total_pages` for the fallback loop, so a search that returned zero
+   * results (e.g. slug with hyphens) never paginated — every product whose
+   * name differed from its slug rendered "Producto no encontrado".
    *
    * @param {string} slug
    * @returns {Promise<string|null>} The product ID, or null when not found.
@@ -118,15 +137,41 @@ export class ProductsApi {
    */
   async _resolveProductIdFromSlug(slug) {
     const PAGE_SIZE = 100;
+    // Bounds the worst case: with ~100 products/page, 10 pages = 1000 products.
+    // Capstone catalogs are far smaller; if this cap is hit we log and return
+    // null rather than hammering the API.
+    const MAX_FALLBACK_PAGES = 10;
 
-    const firstPage = await this.getProducts({ search: slug, limit: PAGE_SIZE });
-    const firstMatch = (firstPage.data || []).find((product) => product.slug === slug);
-    if (firstMatch) return firstMatch.id;
+    const findExactSlug = (items) =>
+      (items || []).find((product) => product && product.slug === slug);
 
-    const totalPages = Math.max(1, Number(firstPage.meta?.total_pages) || 1);
+    // Attempt 1 — raw slug (with hyphens).
+    const raw = await this.getProducts({ search: slug, limit: PAGE_SIZE });
+    const rawMatch = findExactSlug(raw.data);
+    if (rawMatch) return rawMatch.id;
+
+    // Attempt 2 — hyphens replaced by spaces (mirrors the product name).
+    const spaced = slug.replace(/-/g, ' ').trim();
+    if (spaced && spaced !== slug) {
+      const withSpaces = await this.getProducts({ search: spaced, limit: PAGE_SIZE });
+      const spacedMatch = findExactSlug(withSpaces.data);
+      if (spacedMatch) return spacedMatch.id;
+    }
+
+    // Attempt 3 — paginate the FULL catalog. `total_pages` here reflects the
+    // unfiltered set, so the loop actually runs to completion.
+    const firstPage = await this.getProducts({ page: 1, limit: PAGE_SIZE });
+    const firstPageMatch = findExactSlug(firstPage.data);
+    if (firstPageMatch) return firstPageMatch.id;
+
+    const totalPages = Math.min(
+      MAX_FALLBACK_PAGES,
+      Math.max(1, Number(firstPage.meta?.total_pages) || 1)
+    );
+
     for (let page = 2; page <= totalPages; page += 1) {
       const nextPage = await this.getProducts({ page, limit: PAGE_SIZE });
-      const match = (nextPage.data || []).find((product) => product.slug === slug);
+      const match = findExactSlug(nextPage.data);
       if (match) return match.id;
     }
 
