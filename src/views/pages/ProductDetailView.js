@@ -379,7 +379,7 @@ export class ProductDetailView {
 
     const addButton = document.createElement('button');
     addButton.type = 'button';
-    addButton.className = 'q-product-detail__add';
+    addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
     addButton.textContent = vm.isOutOfStock()
       ? 'Agotado'
       : vm.isAdding
@@ -397,7 +397,7 @@ export class ProductDetailView {
 
     const buyButton = document.createElement('button');
     buyButton.type = 'button';
-    buyButton.className = 'q-product-detail__buy-now';
+    buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
     buyButton.textContent = 'Comprar ahora';
     buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
     buyButton.addEventListener('click', async () => {

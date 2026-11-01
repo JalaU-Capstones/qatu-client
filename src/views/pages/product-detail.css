@@ -156,6 +156,13 @@
   flex-direction: column;
   gap: calc(var(--q-geist-space-3x, 12) * 1px);
   min-width: 0;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+[data-theme='dark'] .q-product-detail__info {
+  background-color: rgba(30, 30, 35, 0.4);
 }
 
 .q-product-detail__seller-line {
@@ -257,63 +264,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: calc(var(--q-geist-space-3x, 12) * 1px);
-}
-
-.q-product-detail__add,
-.q-product-detail__buy-now {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 calc(var(--q-geist-space-4x, 16) * 1px);
-  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: calc(var(--q-text-sm, 14) * 1px);
-  font-weight: var(--q-font-weight-semibold, 600);
-  cursor: pointer;
-  border-radius: calc(var(--q-radius-md, 6) * 1px);
-  box-sizing: border-box;
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease;
-}
-
-.q-product-detail__add {
-  color: #fff;
-  background-color: var(--q-accent);
-  border: 1px solid var(--q-accent);
-}
-
-.q-product-detail__add:hover:not(:disabled) {
-  background-color: var(--q-accent-hover);
-  border-color: var(--q-accent-hover);
-}
-
-.q-product-detail__buy-now {
-  color: var(--q-accent);
-  background-color: var(--q-bg-page);
-  border: 1px solid var(--q-accent);
-}
-
-.q-product-detail__buy-now:hover:not(:disabled) {
-  color: var(--q-bg-page);
-  background-color: var(--q-accent-hover);
-  border-color: var(--q-accent-hover);
-}
-
-.q-product-detail__add:focus-visible,
-.q-product-detail__buy-now:focus-visible {
-  outline: 2px solid var(--q-accent);
-  outline-offset: 2px;
-}
-
-.q-product-detail__add:disabled,
-.q-product-detail__buy-now:disabled {
-  color: var(--q-fg-muted);
-  cursor: not-allowed;
-  background-color: var(--q-bg-surface);
-  border-color: var(--q-border-default);
-  opacity: 0.8;
 }
 
 .q-product-detail__shipping {

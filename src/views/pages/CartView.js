@@ -124,14 +124,14 @@ export class CartView {
 
     const login = document.createElement('button');
     login.type = 'button';
-    login.className = 'q-cart__continue q-cart__continue--primary';
+    login.className = 'q-btn q-btn--primary q-btn--block';
     login.textContent = 'Iniciar sesión';
     login.addEventListener('click', () => {
       if (typeof this.onLogin === 'function') this.onLogin();
     });
 
     const link = document.createElement('a');
-    link.className = 'q-cart__continue';
+    link.className = 'q-btn q-btn--neutral q-btn--block q-cart__continue';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Continuar comprando';
@@ -166,7 +166,7 @@ export class CartView {
       'Explora el catálogo y añade tus productos favoritos. Los guardaremos aquí para ti.';
 
     const link = document.createElement('a');
-    link.className = 'q-cart__continue q-cart__continue--primary';
+    link.className = 'q-btn q-btn--primary q-btn--block q-cart__continue';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Continuar comprando';
@@ -386,7 +386,7 @@ export class CartView {
 
     const checkout = document.createElement('button');
     checkout.type = 'button';
-    checkout.className = 'q-cart__checkout';
+    checkout.className = 'q-btn q-btn--primary q-btn--block q-cart__checkout';
     checkout.textContent = 'Continuar al pago';
     checkout.addEventListener('click', () => {
       if (typeof this.onCheckout === 'function') {
@@ -398,12 +398,12 @@ export class CartView {
 
     const clear = document.createElement('button');
     clear.type = 'button';
-    clear.className = 'q-cart__clear';
+    clear.className = 'q-btn q-btn--ghost q-btn--sm q-cart__clear';
     clear.textContent = 'Vaciar carrito';
     clear.addEventListener('click', () => this.viewModel.clear());
 
     const continueLink = document.createElement('a');
-    continueLink.className = 'q-cart__continue';
+    continueLink.className = 'q-btn q-btn--outline q-btn--block q-cart__continue';
     continueLink.href = '/products';
     continueLink.dataset.route = '';
     continueLink.textContent = 'Continuar comprando';
