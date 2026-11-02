@@ -33,6 +33,7 @@ export class HeaderViewModel {
     this.onCartClick = options.onCartClick || null;
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
+    this.onOrdersClick = options.onOrdersClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.isDropdownOpen = false;
@@ -115,6 +116,17 @@ export class HeaderViewModel {
     if (typeof this.onProfileClick === 'function') {
       this.onProfileClick(this.user);
     }
+  }
+
+  /**
+   * Triggers orders history click.
+   */
+  triggerOrders() {
+    this.isDropdownOpen = false;
+    if (typeof this.onOrdersClick === 'function') {
+      this.onOrdersClick();
+    }
+    this._notify();
   }
 
   /**

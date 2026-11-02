@@ -241,6 +241,17 @@ export class HeaderView {
     dropdownHeader.appendChild(nameSpan);
     dropdownHeader.appendChild(emailSpan);
 
+    const ordersBtn = document.createElement('a');
+    ordersBtn.className = 'q-header-dropdown-item q-header-orders-btn';
+    ordersBtn.href = '/orders';
+    ordersBtn.dataset.route = '';
+    ordersBtn.textContent = 'Mis Órdenes';
+    ordersBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerOrders();
+    });
+
     const logoutBtn = document.createElement('button');
     logoutBtn.type = 'button';
     logoutBtn.className = 'q-header-dropdown-item q-header-logout-btn';
@@ -252,6 +263,7 @@ export class HeaderView {
     });
 
     dropdown.appendChild(dropdownHeader);
+    dropdown.appendChild(ordersBtn);
     dropdown.appendChild(logoutBtn);
 
     wrapper.appendChild(avatar);
