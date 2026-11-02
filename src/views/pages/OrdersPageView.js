@@ -1,4 +1,5 @@
 import { ORDER_STATUSES, getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';
 import { OrderDetailComponent } from '../components/OrderDetailComponent.js';
@@ -162,7 +163,7 @@ export class OrdersPageView {
       <div class="q-orders-empty q-orders-auth-required" data-testid="orders-unauthenticated">
         <h3 class="q-orders-empty-title">Inicia sesión</h3>
         <p class="q-orders-empty-subtitle">Debes iniciar sesión como comprador para ver tu historial de órdenes.</p>
-        <a href="/login" class="q-button q-button--primary" data-route>Iniciar sesión</a>
+        <a href="/login" class="q-btn q-btn--primary q-btn--block" data-route>Iniciar sesión</a>
       </div>
     `;
 
@@ -170,6 +171,7 @@ export class OrdersPageView {
     if (loginLink && this.onNavigate) {
       loginLink.addEventListener('click', (e) => {
         e.preventDefault();
+        authRedirectStore.setReturnTo('/orders');
         this.onNavigate('/login');
       });
     }
@@ -239,7 +241,7 @@ export class OrdersPageView {
     if (totalPages > 1) {
       const prevBtn = document.createElement('button');
       prevBtn.type = 'button';
-      prevBtn.className = 'q-pagination-btn q-pagination-prev';
+      prevBtn.className = 'q-btn q-btn--neutral q-btn--sm q-pagination-btn q-pagination-prev';
       prevBtn.textContent = 'Anterior';
       prevBtn.disabled = page <= 1;
       prevBtn.addEventListener('click', () => this.viewModel.prevPage());
@@ -250,7 +252,7 @@ export class OrdersPageView {
 
       const nextBtn = document.createElement('button');
       nextBtn.type = 'button';
-      nextBtn.className = 'q-pagination-btn q-pagination-next';
+      nextBtn.className = 'q-btn q-btn--neutral q-btn--sm q-pagination-btn q-pagination-next';
       nextBtn.textContent = 'Siguiente';
       nextBtn.disabled = page >= totalPages;
       nextBtn.addEventListener('click', () => this.viewModel.nextPage());

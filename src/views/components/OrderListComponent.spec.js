@@ -1,13 +1,13 @@
 import { OrderListComponent } from './OrderListComponent.js';
 
 describe('OrderListComponent', () => {
-  it('Scenario: No orders - renders empty state message "No orders yet"', () => {
+  it('Scenario: No orders - renders empty state message "Aún no tienes órdenes"', () => {
     const component = new OrderListComponent({ orders: [] });
     const el = component.render();
 
     const emptyMsg = el.querySelector('.q-orders-empty-message');
     expect(emptyMsg).not.toBeNull();
-    expect(emptyMsg.textContent).toBe('No orders yet');
+    expect(emptyMsg.textContent).toBe('Aún no tienes órdenes');
     expect(el.querySelector('.q-orders-empty-btn')).not.toBeNull();
   });
 

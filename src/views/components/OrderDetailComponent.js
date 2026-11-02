@@ -149,7 +149,7 @@ export class OrderDetailComponent {
 
     const backBtn = document.createElement('button');
     backBtn.type = 'button';
-    backBtn.className = 'q-button q-button--secondary q-order-detail__back-btn';
+    backBtn.className = 'q-btn q-btn--neutral q-btn--sm q-order-detail__back-btn';
     backBtn.setAttribute('data-testid', 'order-detail-back-btn');
     backBtn.innerHTML = `
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

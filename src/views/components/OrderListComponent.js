@@ -92,7 +92,7 @@ export class OrderListComponent {
 
       const emptyMessage = document.createElement('h3');
       emptyMessage.className = 'q-orders-empty-message';
-      emptyMessage.textContent = 'No orders yet';
+      emptyMessage.textContent = 'Aún no tienes órdenes';
 
       const emptySubtitle = document.createElement('p');
       emptySubtitle.className = 'q-orders-empty-subtitle';
@@ -100,7 +100,7 @@ export class OrderListComponent {
         'Aún no has realizado ninguna compra. Explora nuestro catálogo y encuentra lo que necesitas.';
 
       const exploreLink = document.createElement('a');
-      exploreLink.className = 'q-button q-button--primary q-orders-empty-btn';
+      exploreLink.className = 'q-btn q-btn--primary q-btn--block q-orders-empty-btn';
       exploreLink.href = '/products';
       exploreLink.setAttribute('data-route', '');
       exploreLink.textContent = 'Explorar productos';
@@ -172,7 +172,7 @@ export class OrderListComponent {
 
       const viewDetailBtn = document.createElement('button');
       viewDetailBtn.type = 'button';
-      viewDetailBtn.className = 'q-button q-button--secondary q-order-card__action-btn';
+      viewDetailBtn.className = 'q-btn q-btn--outline q-btn--sm q-order-card__action-btn';
       viewDetailBtn.setAttribute('data-testid', 'view-order-details-btn');
       viewDetailBtn.textContent = 'Ver detalle';
 

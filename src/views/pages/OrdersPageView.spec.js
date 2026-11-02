@@ -1,3 +1,4 @@
+import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';
 import { OrdersPageView } from './OrdersPageView.js';
@@ -74,7 +75,7 @@ describe('OrdersPageView', () => {
     expect(totalEl.textContent).toContain('89.99');
   });
 
-  it('Scenario: No orders - renders "No orders yet" empty state message', async () => {
+  it('Scenario: No orders - renders "Aún no tienes órdenes" empty state message', async () => {
     mockApi.listOrders.and.returnValue(
       Promise.resolve({
         data: [],
@@ -89,7 +90,7 @@ describe('OrdersPageView', () => {
 
     const emptyMsg = container.querySelector('.q-orders-empty-message');
     expect(emptyMsg).not.toBeNull();
-    expect(emptyMsg.textContent).toBe('No orders yet');
+    expect(emptyMsg.textContent).toBe('Aún no tienes órdenes');
   });
 
   it('Scenario: Cannot see other buyers orders - displays 403 Forbidden alert', async () => {
@@ -202,5 +203,23 @@ describe('OrdersPageView', () => {
     // Returned to order list
     expect(container.querySelector('[data-testid="order-detail"]')).toBeNull();
     expect(container.querySelector('[data-testid="order-list"]')).not.toBeNull();
+  });
+
+  it('Scenario: Unauthenticated visitor - clicking login redirects to /login and sets returnTo to /orders', () => {
+    authStore.isAuthenticated.and.returnValue(false);
+    const onNavigateSpy = jasmine.createSpy('onNavigate');
+    spyOn(authRedirectStore, 'setReturnTo');
+
+    view = new OrdersPageView({ viewModel, onNavigate: onNavigateSpy });
+    view.mount(container);
+
+    const loginBtn = container.querySelector(
+      '[data-testid="orders-unauthenticated"] a[data-route]'
+    );
+    expect(loginBtn).not.toBeNull();
+    loginBtn.click();
+
+    expect(authRedirectStore.setReturnTo).toHaveBeenCalledWith('/orders');
+    expect(onNavigateSpy).toHaveBeenCalledWith('/login');
   });
 });
