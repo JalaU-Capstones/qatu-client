@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 6 routes × 2 themes × 3 viewports = 36 combinations.
+ * Visual matrix E2E — 8 routes × 2 themes × 3 viewports = 48 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -28,6 +28,8 @@ const ROUTES = [
   { name: 'catalog', path: '/products' },
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart' },
+  { name: 'search', path: '/products?q=the' },
+  { name: 'orders', path: '/orders' },
 ];
 
 const THEMES = ['light', 'dark'];
@@ -127,6 +129,13 @@ for (const route of ROUTES) {
                 grid: check('.q-catalog__grid'),
                 footer: check('.q-footer'),
               };
+            case 'search':
+              return {
+                header: check('.q-header'),
+                catalogSection: check('.q-catalog'),
+                grid: check('.q-catalog__grid'),
+                footer: check('.q-footer'),
+              };
             case 'product-detail':
               return {
                 header: check('.q-header'),
@@ -147,6 +156,17 @@ for (const route of ROUTES) {
                 title: check('.q-cart__title'),
                 emptyState: check('.q-cart__empty'),
                 continueShopping: check('.q-cart__continue'),
+                footer: check('.q-footer'),
+              };
+            case 'orders':
+              return {
+                header: check('.q-header'),
+                ordersPage: check('.q-orders-page'),
+                title: check('.q-orders-page__title'),
+                // The matrix runs anonymous, so the page shows the unauthenticated
+                // prompt. `.q-orders-empty` matches both the empty state and the
+                // unauthenticated state, so it's a safe positive check.
+                emptyOrPrompt: check('.q-orders-empty'),
                 footer: check('.q-footer'),
               };
             default:
