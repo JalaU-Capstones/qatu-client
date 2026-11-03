@@ -21,6 +21,7 @@ import './views/components/quantity-selector.css';
 import './views/components/recommendation-card.css';
 import './views/pages/product-detail.css';
 import './views/pages/cart.css';
+import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { Router } from './router/Router.js';
@@ -38,7 +39,9 @@ import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
+import { CheckoutView } from './views/pages/CheckoutView.js';
 import { HomeView } from './views/pages/HomeView.js';
+import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 
@@ -142,6 +145,33 @@ if (app) {
         authRedirectStore.setReturnTo(window.location.pathname);
         router.navigate('/login');
       },
+      onCheckout: () => router.navigate('/checkout'),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderCheckout = () => {
+    clearCurrentView();
+    currentPageView = new CheckoutView({
+      onLogin: () => {
+        authRedirectStore.setReturnTo('/checkout');
+        router.navigate('/login');
+      },
+      onOrderPlaced: (order) =>
+        router.navigate(`/orders/${order.id}/confirmation`, { replace: true }),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderOrderConfirmation = (orderId) => {
+    clearCurrentView();
+    currentPageView = new OrderConfirmationView({
+      orderId,
+      onNavigate: (path) => router.navigate(path),
+      onLogin: () => {
+        authRedirectStore.setReturnTo(window.location.pathname);
+        router.navigate('/login');
+      },
     });
     currentPageView.mount(mainEl);
   };
@@ -220,6 +250,10 @@ if (app) {
   router.addRoute('/products', () => renderCatalog());
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());
+  router.addRoute('/checkout', () => renderCheckout());
+  router.addRoute('/orders/:orderId/confirmation', (_path, params) =>
+    renderOrderConfirmation(params.orderId)
+  );
   router.addRoute('/orders', () => renderOrders());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
