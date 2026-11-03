@@ -128,4 +128,111 @@ describe('OrdersApi', () => {
       expect(err.message).toBe('You do not have permission to access this order');
     }
   });
+  describe('createOrder (US-10 checkout)', () => {
+    const shippingAddress = {
+      full_name: 'Aaron Florez',
+      phone: '71234567',
+      street: 'Av. Arce #123',
+      city: 'La Paz',
+      country: 'BO',
+    };
+    const created = (
+      status = 201,
+      body = { data: { id: 'ord-9', order_number: 'ORD-00100099' } }
+    ) =>
+      Promise.resolve(
+        new Response(JSON.stringify(body), {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    it('POSTs /orders with only the shipping address (the cart is never sent)', async () => {
+      fetchSpy.and.returnValue(created());
+
+      const result = await api.createOrder({ shippingAddress });
+
+      const [path, options] = fetchSpy.calls.mostRecent().args;
+      expect(path).toBe('/orders');
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body)).toEqual({ shipping_address: shippingAddress });
+      expect(result.data.order_number).toBe('ORD-00100099');
+    });
+
+    it('sends the payment method and notes only when provided', async () => {
+      fetchSpy.and.returnValue(created());
+
+      await api.createOrder({
+        shippingAddress,
+        paymentMethod: 'cash_on_delivery',
+        notes: 'Dejar con el portero',
+      });
+
+      const [, options] = fetchSpy.calls.mostRecent().args;
+      expect(JSON.parse(options.body)).toEqual({
+        shipping_address: shippingAddress,
+        payment_method: 'cash_on_delivery',
+        notes: 'Dejar con el portero',
+      });
+    });
+
+    it('does not send credentials or tokens itself (the HttpOnly cookie + CSRF live in apiFetch)', async () => {
+      fetchSpy.and.returnValue(created());
+
+      await api.createOrder({ shippingAddress });
+
+      const [, options] = fetchSpy.calls.mostRecent().args;
+      expect(options.headers?.Authorization).toBeUndefined();
+      expect(options.withAuth).toBeUndefined();
+    });
+
+    it('throws EMPTY_CART (422) with the API message', async () => {
+      fetchSpy.and.returnValue(
+        created(422, { error: { code: 'EMPTY_CART', message: 'Your cart is empty' } })
+      );
+
+      try {
+        await api.createOrder({ shippingAddress });
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(422);
+        expect(err.code).toBe('EMPTY_CART');
+        expect(err.message).toBe('Your cart is empty');
+      }
+    });
+
+    it('exposes INSUFFICIENT_STOCK details so the UI can name the product', async () => {
+      const details = [{ field: 'items.p-1', message: 'Insufficient stock for Clean Code' }];
+      fetchSpy.and.returnValue(
+        created(422, {
+          error: {
+            code: 'INSUFFICIENT_STOCK',
+            message: 'Insufficient stock for Clean Code',
+            details,
+          },
+        })
+      );
+
+      try {
+        await api.createOrder({ shippingAddress });
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.code).toBe('INSUFFICIENT_STOCK');
+        expect(err.details).toEqual(details);
+      }
+    });
+
+    it('falls back to a generic error when the body is not JSON', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('<html>boom</html>', { status: 502 })));
+
+      try {
+        await api.createOrder({ shippingAddress });
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(502);
+        expect(err.code).toBe('UNKNOWN_ERROR');
+        expect(err.message).toBe('Failed to create order (502)');
+      }
+    });
+  });
 });

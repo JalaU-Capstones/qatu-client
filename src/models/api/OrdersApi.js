@@ -46,6 +46,33 @@ export class OrdersApi {
   }
 
   /**
+   * Checkout (POST /v1/orders). The cart is read by the API, never sent.
+   * Errors carry `code`, `statusCode` and `details` (422: EMPTY_CART, INSUFFICIENT_STOCK...).
+   */
+  async createOrder({ shippingAddress, paymentMethod, notes } = {}) {
+    const payload = { shipping_address: shippingAddress };
+    if (paymentMethod) payload.payment_method = paymentMethod;
+    if (notes) payload.notes = notes;
+
+    const response = await this._fetch('/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const err = new Error(body?.error?.message || `Failed to create order (${response.status})`);
+      err.code = body?.error?.code || 'UNKNOWN_ERROR';
+      err.statusCode = response.status;
+      err.details = body?.error?.details;
+      throw err;
+    }
+
+    return body;
+  }
+
+  /**
    * Returns a single order by ID for the authenticated buyer.
    *
    * @param {string} orderId
