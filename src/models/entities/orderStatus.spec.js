@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   getOrderStatusLabel,
   getSellerNextStatuses,
@@ -5,6 +6,9 @@ import {
   ORDER_STATUS_LABELS,
   ORDER_STATUSES,
 } from './orderStatus.js';
+=======
+import { getOrderStatusLabel, ORDER_STATUS_LABELS, ORDER_STATUSES } from './orderStatus.js';
+>>>>>>> 8e72f6f (fix: corrected format)
 
 describe('orderStatus', () => {
   it('contains exactly the 5 contract statuses without refunded', () => {

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { authStore } from '../../store/authStore.js';
 import { getCsrfToken, isCsrfExemptPath, isMutatingMethod } from './csrf.js';
 
+<<<<<<< HEAD
 /** Matches every PKCE verifier slot key (`*-code-verifier`). */
 export const PKCE_STORAGE_KEY_PATTERN = /-code-verifier$/;
 
@@ -59,6 +60,12 @@ export const supabase = createClient(
       storage: createAuthStorage(),
     },
   }
+=======
+export const supabase = createClient(
+  import.meta.env?.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
+  import.meta.env?.VITE_SUPABASE_ANON_KEY,
+  { auth: { flowType: 'pkce', detectSessionInUrl: true } }
+>>>>>>> 8e72f6f (fix: corrected format)
 );
 
 const DEFAULT_BASE_URL =

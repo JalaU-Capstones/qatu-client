@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Test double for `@supabase/supabase-js`, wired via the importMap in
  * spec/support/jasmine-browser.json.
@@ -44,6 +45,28 @@ function createClient(supabaseUrl, supabaseKey, options = {}) {
   };
 
   return { supabaseUrl, supabaseKey, options, auth };
+=======
+const dummySubscription = { unsubscribe() {} };
+
+function createClient(supabaseUrl, supabaseKey, options = {}) {
+  return {
+    supabaseUrl,
+    supabaseKey,
+    options,
+    auth: {
+      onAuthStateChange() {
+        return { data: { subscription: dummySubscription } };
+      },
+      stopAutoRefresh() {},
+      getSession() {
+        return Promise.resolve({ data: { session: null }, error: null });
+      },
+      signInWithOAuth() {
+        return Promise.resolve({ data: {}, error: null });
+      },
+    },
+  };
+>>>>>>> 8e72f6f (fix: corrected format)
 }
 
 export { createClient };

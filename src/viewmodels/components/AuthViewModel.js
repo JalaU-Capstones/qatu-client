@@ -266,6 +266,7 @@ export class AuthViewModel {
   }
 
   /**
+<<<<<<< HEAD
    * Surfaces OAuth handoff errors redirected from /auth/callback via the
    * `?error=` query param. No-ops when the param is absent or unknown.
    *
@@ -285,6 +286,11 @@ export class AuthViewModel {
   /**
    * Starts the Google OAuth sign-in flow with PKCE and redirects to the
    * callback page. Delegates to `onGoogleAuth` when provided.
+=======
+   * Starts the Google OAuth sign-in flow with PKCE and redirects to the
+   * callback page. Delegates to `onGoogleAuth` when a custom callback is
+   * provided, otherwise drives Supabase directly.
+>>>>>>> 8e72f6f (fix: corrected format)
    *
    * @returns {Promise<void>}
    */
