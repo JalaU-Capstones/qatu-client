@@ -16,6 +16,7 @@ import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/pages/orders.css';
+import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
 import './views/components/recommendation-card.css';
@@ -24,6 +25,7 @@ import './views/pages/cart.css';
 import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
+import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
 import { cartService } from './services/CartService.js';
@@ -34,6 +36,7 @@ import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
+import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -44,6 +47,7 @@ import { HomeView } from './views/pages/HomeView.js';
 import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
+import { ProfileView } from './views/pages/ProfileView.js';
 
 const app = document.getElementById('app');
 
@@ -52,6 +56,14 @@ if (app) {
   themeStore.init();
 
   const authApi = new AuthApi();
+  const profilesApi = new ProfilesApi();
+
+  const buildHeaderUser = (store) => {
+    const user = store.getUser();
+    if (!user) return null;
+    const profile = store.getProfile();
+    return profile ? { ...user, ...profile } : user;
+  };
 
   // Hydrate session from localStorage before mounting anything that reads user state.
   // The local cart hydrates itself in the CartStore constructor, so it survives
@@ -62,7 +74,7 @@ if (app) {
   // while /me resolves. The header renders from `authStore.getUser()` (which
   // was just hydrated from cache).
   const header = new HeaderView();
-  header.viewModel.setUser(authStore.getUser());
+  header.viewModel.setUser(buildHeaderUser(authStore));
   header.viewModel.setCartCount(cartStore.getCount());
   header.mount(app);
   themeStore.subscribe((store) => {
@@ -184,6 +196,26 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderProfile = () => {
+    clearCurrentView();
+    if (!authStore.isAuthenticated()) {
+      authRedirectStore.setReturnTo('/profile');
+      router.navigate('/login');
+      return;
+    }
+
+    const profileViewModel = new ProfileViewModel({
+      profilesApi,
+      authStore,
+      onUnauthorized: () => {
+        authRedirectStore.setReturnTo('/profile');
+        router.navigate('/login');
+      },
+    });
+    currentPageView = new ProfileView(profileViewModel);
+    currentPageView.mount(mainEl);
+  };
+
   const renderAuth = (mode) => {
     // Preserve sliding animation: if we are already on an auth page,
     // switch mode in place instead of remounting.
@@ -255,6 +287,7 @@ if (app) {
     renderOrderConfirmation(params.orderId)
   );
   router.addRoute('/orders', () => renderOrders());
+  router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
 
@@ -265,6 +298,7 @@ if (app) {
   header.viewModel.onLogoClick = () => router.navigate('/');
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
+  header.viewModel.onProfileClick = () => router.navigate('/profile');
 
   // Logout: best-effort server invalidation, THEN local clear, THEN navigate.
   // The API call is wrapped in try/catch so a backend hiccup does not leave
@@ -319,7 +353,7 @@ if (app) {
   };
 
   authStore.subscribe((store) => {
-    header.viewModel.setUser(store.getUser());
+    header.viewModel.setUser(buildHeaderUser(store));
     syncCartWithSession(store);
   });
 
