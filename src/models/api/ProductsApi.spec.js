@@ -1,5 +1,5 @@
-import { ProductsApi } from './ProductsApi.js';
 import { apiFetch } from './client.js';
+import { ProductsApi } from './ProductsApi.js';
 
 describe('ProductsApi', () => {
   let fetchSpy;

@@ -146,4 +146,30 @@ export class AuthApi {
       throw error;
     }
   }
+
+  /**
+   * Sends temporal OAuth Token
+   *
+   * @param {string} accessToken
+   * @param {string} refreshToken
+   * @returns {Promise<{ data: { user: Object, profile: Object, roles: Array }, meta: Object }>}
+   */
+  async exchangeOAuthToken(accessToken, refreshToken) {
+    const response = await apiFetch('/auth/oauth/exchange', {
+      method: 'POST',
+      body: JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const errorMessage = data?.error?.message || data?.message || 'Error en el handoff de OAuth';
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+
+    return data;
+  }
 }

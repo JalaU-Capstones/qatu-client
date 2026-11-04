@@ -1,4 +1,4 @@
-import { ORDER_STATUSES, ORDER_STATUS_LABELS, getOrderStatusLabel } from './orderStatus.js';
+import { getOrderStatusLabel, ORDER_STATUS_LABELS, ORDER_STATUSES } from './orderStatus.js';
 
 describe('orderStatus', () => {
   it('contains exactly the 5 contract statuses without refunded', () => {

@@ -4,7 +4,6 @@ import './views/styles/semantic.css';
 import './views/styles/fonts.css';
 import './views/styles/bulma-overrides.css';
 import './views/styles/main.css';
-
 import './views/components/header.css';
 import './views/components/navbar.css';
 import './views/components/hero.css';
@@ -39,6 +38,7 @@ import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewMode
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
@@ -290,6 +290,13 @@ if (app) {
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
+
+  router.addRoute('/auth/callback', () => {
+    clearCurrentView();
+    const view = new AuthCallbackView();
+    mainEl.appendChild(view.render());
+    currentPageView = view;
+  });
 
   header.viewModel.onLoginClick = () => {
     authRedirectStore.setReturnTo(window.location.pathname);

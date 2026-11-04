@@ -1,4 +1,5 @@
 import { AuthApi } from '../../models/api/AuthApi.js';
+import { supabase } from '../../models/api/client.js';
 import { authStore } from '../../store/authStore.js';
 
 /**
@@ -260,12 +261,42 @@ export class AuthViewModel {
     return true;
   }
 
-  triggerGoogleAuth() {
+  /**
+   * Starts the Google OAuth sign-in flow with PKCE and redirects to the
+   * callback page. Delegates to `onGoogleAuth` when a custom callback is
+   * provided, otherwise drives Supabase directly.
+   *
+   * @returns {Promise<void>}
+   */
+  async triggerGoogleAuth() {
     if (typeof this.onGoogleAuth === 'function') {
       this.onGoogleAuth();
+      return;
+    }
+
+    this.isLoading = true;
+    this._notify();
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          flowType: 'pkce',
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      this.errorMessage = err.message || 'Error al conectar con Google';
+      this.isLoading = false;
+      this._notify();
     }
   }
 
+  /**
+   * Triggers forgot password flow.
+   */
   triggerForgotPassword() {
     if (typeof this.onForgotPassword === 'function') {
       this.onForgotPassword();

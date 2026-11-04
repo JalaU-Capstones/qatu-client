@@ -1,4 +1,4 @@
-import { readCookie, getCsrfToken, isMutatingMethod, isCsrfExemptPath } from './csrf.js';
+import { getCsrfToken, isCsrfExemptPath, isMutatingMethod, readCookie } from './csrf.js';
 
 describe('csrf helpers', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import {
-  SEARCH_MAX_LENGTH,
   createEmptyFilters,
   parsePrice,
+  SEARCH_MAX_LENGTH,
   validateSearchFilters,
 } from './productSearchFilters.js';
 

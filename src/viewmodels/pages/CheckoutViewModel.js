@@ -1,8 +1,8 @@
 import { OrdersApi } from '../../models/api/OrdersApi.js';
 import {
-  SHIPPING_FIELDS,
   apiFieldToFormField,
   createEmptyShippingForm,
+  SHIPPING_FIELDS,
   toCreateOrderInput,
   validateShippingForm,
 } from '../../models/validation/shippingForm.js';
