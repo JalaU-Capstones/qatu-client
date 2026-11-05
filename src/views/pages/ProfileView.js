@@ -3,8 +3,9 @@ import { ProfileViewModel } from '../../viewmodels/pages/ProfileViewModel.js';
 
 /**
  * View for the Buyer Profile page (`/profile`).
- * Displays the user's username, full name, avatar, and bio, and provides a validated
- * form to update full name, bio, and avatar.
+ * Displays the user's username, full name, avatar, bio, and locale, provides an
+ * avatar image upload control (`POST /v1/profiles/me/avatar`) with immediate preview,
+ * and a validated form to update profile fields (`PATCH /v1/profiles/me`).
  */
 export class ProfileView {
   /**
@@ -45,11 +46,49 @@ export class ProfileView {
           <h2 class="q-profile-display-name"></h2>
           <p class="q-profile-username"></p>
           <p class="q-profile-display-bio"></p>
+
+          <div class="q-profile-avatar-upload">
+            <label class="q-profile-btn q-profile-select-avatar-btn" for="q-profile-avatar-file">
+              Cambiar foto de perfil
+            </label>
+            <input
+              id="q-profile-avatar-file"
+              class="q-profile-file-input"
+              type="file"
+              name="image"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              aria-describedby="q-profile-error-avatar"
+            />
+            <button
+              type="button"
+              class="q-profile-btn q-profile-upload-btn"
+              hidden
+            >
+              Subir imagen
+            </button>
+            <p class="q-profile-field-hint">Formatos permitidos: JPEG, PNG, WebP (máx. 2 MB).</p>
+            <p
+              id="q-profile-error-avatar"
+              class="q-profile-field-error"
+              data-error-for="avatar"
+              role="alert"
+              hidden
+            ></p>
+          </div>
         </aside>
 
         <div class="q-profile-card q-profile-form-card">
-          <div class="q-profile-alert q-profile-alert-error" role="alert" hidden></div>
-          <div class="q-profile-alert q-profile-alert-success" role="status" hidden></div>
+          <div class="q-profile-alert q-profile-alert-error" role="alert" tabindex="-1" hidden></div>
+          <div class="q-profile-alert q-profile-alert-success" role="status" hidden>
+            <span class="q-profile-alert-text"></span>
+            <button
+              type="button"
+              class="q-profile-alert-close"
+              aria-label="Cerrar notificación"
+            >
+              &times;
+            </button>
+          </div>
 
           <form class="q-profile-form" novalidate>
             <div class="q-profile-field">
@@ -74,21 +113,54 @@ export class ProfileView {
                 name="full_name"
                 placeholder="Ej. Camila Morales"
                 autocomplete="name"
+                aria-describedby="q-profile-error-full_name"
                 required
               />
-              <p class="q-profile-field-error" data-error-for="full_name" hidden></p>
+              <p
+                id="q-profile-error-full_name"
+                class="q-profile-field-error"
+                data-error-for="full_name"
+                hidden
+              ></p>
             </div>
 
             <div class="q-profile-field">
-              <label class="q-profile-label" for="q-profile-avatar">Avatar (URL o ruta)</label>
+              <label class="q-profile-label" for="q-profile-avatar">Avatar (ruta o URL)</label>
               <input
                 id="q-profile-avatar"
                 class="q-profile-input"
-                type="url"
+                type="text"
                 name="avatar_path"
-                placeholder="https://cdn.qatu.pe/avatars/mi-foto.png"
+                placeholder="avatars/usuario/avatar.webp"
+                aria-describedby="q-profile-error-avatar_path"
               />
-              <p class="q-profile-field-error" data-error-for="avatar_path" hidden></p>
+              <p
+                id="q-profile-error-avatar_path"
+                class="q-profile-field-error"
+                data-error-for="avatar_path"
+                hidden
+              ></p>
+            </div>
+
+            <div class="q-profile-field">
+              <label class="q-profile-label" for="q-profile-locale">Idioma preferido</label>
+              <select
+                id="q-profile-locale"
+                class="q-profile-input q-profile-select"
+                name="locale"
+                aria-describedby="q-profile-error-locale"
+              >
+                <option value="en">English (en)</option>
+                <option value="es">Español (es)</option>
+                <option value="es-PE">Español - Perú (es-PE)</option>
+                <option value="pt-BR">Português - Brasil (pt-BR)</option>
+              </select>
+              <p
+                id="q-profile-error-locale"
+                class="q-profile-field-error"
+                data-error-for="locale"
+                hidden
+              ></p>
             </div>
 
             <div class="q-profile-field">
@@ -102,8 +174,14 @@ export class ProfileView {
                 name="bio"
                 rows="4"
                 placeholder="Cuéntanos un poco sobre ti..."
+                aria-describedby="q-profile-error-bio"
               ></textarea>
-              <p class="q-profile-field-error" data-error-for="bio" hidden></p>
+              <p
+                id="q-profile-error-bio"
+                class="q-profile-field-error"
+                data-error-for="bio"
+                hidden
+              ></p>
             </div>
 
             <div class="q-profile-actions">
@@ -146,7 +224,7 @@ export class ProfileView {
   }
 
   /**
-   * Wires form input and button listeners to the ViewModel.
+   * Wires form input, file selection, upload, and button listeners to the ViewModel.
    * @private
    */
   _bindEvents() {
@@ -154,8 +232,12 @@ export class ProfileView {
 
     const fullNameInput = this.element.querySelector('#q-profile-full-name');
     const avatarInput = this.element.querySelector('#q-profile-avatar');
+    const localeSelect = this.element.querySelector('#q-profile-locale');
     const bioInput = this.element.querySelector('#q-profile-bio');
+    const avatarFileInput = this.element.querySelector('#q-profile-avatar-file');
+    const uploadBtn = this.element.querySelector('.q-profile-upload-btn');
     const resetBtn = this.element.querySelector('.q-profile-reset-btn');
+    const closeAlertBtn = this.element.querySelector('.q-profile-alert-close');
     const form = this.element.querySelector('.q-profile-form');
 
     fullNameInput?.addEventListener('input', (e) => {
@@ -166,13 +248,37 @@ export class ProfileView {
       this.viewModel.setField('avatar_path', e.target.value);
     });
 
+    localeSelect?.addEventListener('change', (e) => {
+      this.viewModel.setField('locale', e.target.value);
+    });
+
     bioInput?.addEventListener('input', (e) => {
       this.viewModel.setField('bio', e.target.value);
+    });
+
+    avatarFileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0] || null;
+      if (file) {
+        this.viewModel.selectAvatarFile(file);
+      }
+    });
+
+    uploadBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void this.viewModel.uploadAvatar();
     });
 
     resetBtn?.addEventListener('click', (e) => {
       e.preventDefault();
       this.viewModel.resetForm();
+      if (avatarFileInput) {
+        avatarFileInput.value = '';
+      }
+    });
+
+    closeAlertBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.viewModel.dismissMessages();
     });
 
     form?.addEventListener('submit', (e) => {
@@ -190,20 +296,21 @@ export class ProfileView {
   _update(vm) {
     if (!this.element) return;
 
+    const viewProfile = vm.viewProfile || {};
     const profile = vm.profile || {};
-    const username = profile.username || '';
-    const displayName = profile.full_name || username || 'Usuario';
-    const bioText = profile.bio || 'Sin biografía registrada.';
-    const avatarPath = profile.avatar_path || '';
+    const username = viewProfile.username || profile.username || '';
+    const displayName = viewProfile.fullName || profile.full_name || username || 'Usuario';
+    const bioText = viewProfile.bio || profile.bio || 'Sin biografía registrada.';
+    const avatarSrc = vm.avatarPreviewUrl || viewProfile.avatarPath || profile.avatar_path || '';
 
-    // 1. Summary card
+    // 1. Summary card & avatar preview
     const avatarFrame = this.element.querySelector('.q-profile-avatar-frame');
     if (avatarFrame) {
       avatarFrame.innerHTML = '';
-      if (avatarPath) {
+      if (avatarSrc) {
         const img = document.createElement('img');
         img.className = 'q-profile-avatar-img';
-        img.src = avatarPath;
+        img.src = avatarSrc;
         img.alt = `Avatar de ${displayName}`;
         avatarFrame.appendChild(img);
       } else {
@@ -231,7 +338,20 @@ export class ProfileView {
       bioEl.textContent = bioText;
     }
 
-    // 2. Form inputs
+    // 2. Avatar upload button state
+    const uploadBtn = this.element.querySelector('.q-profile-upload-btn');
+    const avatarFileInput = this.element.querySelector('#q-profile-avatar-file');
+    if (uploadBtn) {
+      if (vm.selectedAvatarFile || vm.isUploadingAvatar) {
+        uploadBtn.removeAttribute('hidden');
+      } else {
+        uploadBtn.setAttribute('hidden', '');
+      }
+      uploadBtn.disabled = vm.isUploadingAvatar || vm.isLoading || vm.isSaving;
+      uploadBtn.textContent = vm.isUploadingAvatar ? 'Subiendo...' : 'Subir imagen';
+    }
+
+    // 3. Form inputs
     const usernameInput = this.element.querySelector('#q-profile-username-input');
     if (usernameInput) {
       usernameInput.value = username;
@@ -247,6 +367,21 @@ export class ProfileView {
       avatarInput.value = vm.formData.avatar_path ?? '';
     }
 
+    const localeSelect = this.element.querySelector('#q-profile-locale');
+    if (localeSelect && vm.formData.locale) {
+      const targetLocale = vm.formData.locale;
+      const hasOption = Array.from(localeSelect.options).some((opt) => opt.value === targetLocale);
+      if (!hasOption) {
+        const customOpt = document.createElement('option');
+        customOpt.value = targetLocale;
+        customOpt.textContent = targetLocale;
+        localeSelect.appendChild(customOpt);
+      }
+      if (localeSelect.value !== targetLocale) {
+        localeSelect.value = targetLocale;
+      }
+    }
+
     const bioInput = this.element.querySelector('#q-profile-bio');
     if (bioInput && bioInput.value !== (vm.formData.bio ?? '')) {
       bioInput.value = vm.formData.bio ?? '';
@@ -260,12 +395,14 @@ export class ProfileView {
       bioCounter.classList.toggle('is-over-limit', currentLength > BIO_MAX_LENGTH);
     }
 
-    // 3. Field validation errors
+    // 4. Field validation errors
     this._updateFieldError('full_name', fullNameInput, vm.fieldErrors.full_name);
     this._updateFieldError('avatar_path', avatarInput, vm.fieldErrors.avatar_path);
+    this._updateFieldError('locale', localeSelect, vm.fieldErrors.locale);
     this._updateFieldError('bio', bioInput, vm.fieldErrors.bio);
+    this._updateFieldError('avatar', avatarFileInput, vm.fieldErrors.avatar);
 
-    // 4. Alert banners
+    // 5. Alert banners
     const errorBanner = this.element.querySelector('.q-profile-alert-error');
     if (errorBanner) {
       if (vm.errorMessage) {
@@ -278,20 +415,27 @@ export class ProfileView {
     }
 
     const successBanner = this.element.querySelector('.q-profile-alert-success');
+    const successText = this.element.querySelector('.q-profile-alert-text');
     if (successBanner) {
       if (vm.successMessage) {
-        successBanner.textContent = vm.successMessage;
+        if (successText) {
+          successText.textContent = vm.successMessage;
+        } else {
+          successBanner.textContent = vm.successMessage;
+        }
         successBanner.removeAttribute('hidden');
       } else {
-        successBanner.textContent = '';
+        if (successText) {
+          successText.textContent = '';
+        }
         successBanner.setAttribute('hidden', '');
       }
     }
 
-    // 5. Loading / saving states
+    // 6. Loading / saving states
     const saveBtn = this.element.querySelector('.q-profile-save-btn');
     const resetBtn = this.element.querySelector('.q-profile-reset-btn');
-    const isBusy = vm.isLoading || vm.isSaving;
+    const isBusy = vm.isLoading || vm.isSaving || vm.isUploadingAvatar;
     if (saveBtn) {
       saveBtn.disabled = isBusy;
       saveBtn.textContent = vm.isSaving ? 'Guardando...' : 'Guardar cambios';
@@ -302,7 +446,7 @@ export class ProfileView {
   }
 
   /**
-   * Toggles per-field error text and input `.is-invalid` state.
+   * Toggles per-field error text and input `.is-invalid` / `aria-invalid` state.
    *
    * @param {string} fieldName
    * @param {HTMLElement|null} inputEl

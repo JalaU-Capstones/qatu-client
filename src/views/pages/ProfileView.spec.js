@@ -13,7 +13,7 @@ describe('ProfileView', () => {
     id: '22222222-2222-4222-8222-222222222222',
     username: 'camila_m',
     full_name: 'Camila Morales',
-    avatar_path: 'https://cdn.qatu.pe/avatars/camila.png',
+    avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/avatar.webp',
     bio: 'Compradora frecuente de artesanías peruanas.',
     locale: 'es-PE',
     created_at: '2026-01-10T10:00:00.000Z',
@@ -37,6 +37,14 @@ describe('ProfileView', () => {
         },
         meta: {},
       })),
+      uploadAvatar: jasmine.createSpy('uploadAvatar').and.resolveTo({
+        data: {
+          ...sampleProfile,
+          avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/uploaded.webp',
+          updated_at: '2026-02-01T12:10:00.000Z',
+        },
+        meta: {},
+      }),
     };
 
     authStore = new AuthStore();
@@ -64,7 +72,7 @@ describe('ProfileView', () => {
   });
 
   describe('Scenario: View own profile', () => {
-    it('renders username, full name, avatar, and bio when profile loads', async () => {
+    it('renders username, full name, avatar, bio, and locale when profile loads', async () => {
       const el = view.mount(container);
       await viewModel.loadProfile();
 
@@ -77,13 +85,13 @@ describe('ProfileView', () => {
       expect(username.textContent).toBe('@camila_m');
       expect(displayBio.textContent).toBe('Compradora frecuente de artesanías peruanas.');
       expect(avatarImg).not.toBeNull();
-      expect(avatarImg.getAttribute('src')).toBe('https://cdn.qatu.pe/avatars/camila.png');
+      expect(avatarImg.getAttribute('src')).toBe(
+        'avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
+      );
 
       expect(el.querySelector('#q-profile-username-input').value).toBe('camila_m');
       expect(el.querySelector('#q-profile-full-name').value).toBe('Camila Morales');
-      expect(el.querySelector('#q-profile-avatar').value).toBe(
-        'https://cdn.qatu.pe/avatars/camila.png'
-      );
+      expect(el.querySelector('#q-profile-locale').value).toBe('es-PE');
       expect(el.querySelector('#q-profile-bio').value).toBe(
         'Compradora frecuente de artesanías peruanas.'
       );
@@ -103,14 +111,13 @@ describe('ProfileView', () => {
     });
   });
 
-  describe('Scenario: Update profile', () => {
-    it('submits updated full name, bio, and avatar, updates the summary card, and shows confirmation message', async () => {
+  describe('Scenario: Update profile & Upload avatar', () => {
+    it('submits only changed fields on save, updates the summary card, and shows confirmation message', async () => {
       const el = view.mount(container);
       await viewModel.loadProfile();
 
       const fullNameInput = el.querySelector('#q-profile-full-name');
       const bioInput = el.querySelector('#q-profile-bio');
-      const avatarInput = el.querySelector('#q-profile-avatar');
 
       fullNameInput.value = 'Camila Morales Actualizada';
       fullNameInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -118,15 +125,11 @@ describe('ProfileView', () => {
       bioInput.value = 'Nueva biografía de compradora.';
       bioInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-      avatarInput.value = 'https://cdn.qatu.pe/avatars/camila-v2.png';
-      avatarInput.dispatchEvent(new Event('input', { bubbles: true }));
-
       await viewModel.saveProfile();
 
       expect(mockProfilesApi.updateMe).toHaveBeenCalledWith({
         full_name: 'Camila Morales Actualizada',
         bio: 'Nueva biografía de compradora.',
-        avatar_path: 'https://cdn.qatu.pe/avatars/camila-v2.png',
       });
 
       expect(el.querySelector('.q-profile-display-name').textContent).toBe(
@@ -135,18 +138,45 @@ describe('ProfileView', () => {
       expect(el.querySelector('.q-profile-display-bio').textContent).toBe(
         'Nueva biografía de compradora.'
       );
-      expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
-        'https://cdn.qatu.pe/avatars/camila-v2.png'
-      );
 
       const successBanner = el.querySelector('.q-profile-alert-success');
       expect(successBanner.hasAttribute('hidden')).toBe(false);
-      expect(successBanner.textContent).toContain('Perfil actualizado correctamente.');
+      expect(successBanner.textContent).toContain('Perfil actualizado correctamente');
+    });
+
+    it('previews selected avatar image and uploads via Subir imagen button', async () => {
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+
+      const mockFile = {
+        name: 'foto.webp',
+        type: 'image/webp',
+        size: 50 * 1024,
+        previewUrl: 'blob:local-preview',
+      };
+
+      viewModel.selectAvatarFile(mockFile);
+
+      const uploadBtn = el.querySelector('.q-profile-upload-btn');
+      expect(uploadBtn.hasAttribute('hidden')).toBe(false);
+      expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
+        'blob:local-preview'
+      );
+
+      await viewModel.uploadAvatar();
+
+      expect(mockProfilesApi.uploadAvatar).toHaveBeenCalledWith(mockFile);
+      expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
+        'avatars/22222222-2222-4222-8222-222222222222/uploaded.webp'
+      );
+      expect(el.querySelector('.q-profile-alert-success').textContent).toContain(
+        'Foto de perfil actualizada'
+      );
     });
   });
 
   describe('Scenario: Update with invalid data', () => {
-    it('displays validation errors and does NOT update profile when bio is too long (> 500 chars)', async () => {
+    it('displays validation errors with aria-invalid and does NOT update profile when bio is too long (> 500 chars)', async () => {
       const el = view.mount(container);
       await viewModel.loadProfile();
 
@@ -161,14 +191,14 @@ describe('ProfileView', () => {
 
       const bioError = el.querySelector('[data-error-for="bio"]');
       expect(bioError.hasAttribute('hidden')).toBe(false);
-      expect(bioError.textContent).toContain('500 caracteres');
+      expect(bioError.textContent).toBe('La biografía no puede exceder 500 caracteres');
       expect(bioInput.classList.contains('is-invalid')).toBe(true);
+      expect(bioInput.getAttribute('aria-invalid')).toBe('true');
 
       const errorBanner = el.querySelector('.q-profile-alert-error');
       expect(errorBanner.hasAttribute('hidden')).toBe(false);
-      expect(errorBanner.textContent).toContain('500 caracteres');
+      expect(errorBanner.textContent).toBe('La biografía no puede exceder 500 caracteres');
 
-      // Summary card remains unchanged
       expect(el.querySelector('.q-profile-display-bio').textContent).toBe(
         'Compradora frecuente de artesanías peruanas.'
       );
