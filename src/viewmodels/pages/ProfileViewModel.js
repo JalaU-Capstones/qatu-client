@@ -1,11 +1,17 @@
 import { ProfilesApi } from '../../models/api/ProfilesApi.js';
-import { validateProfileUpdate } from '../../models/validation/profileValidation.js';
+import {
+  validateAvatarFile,
+  validateProfileUpdate,
+} from '../../models/validation/profileValidation.js';
 import { authStore as defaultAuthStore } from '../../store/authStore.js';
+
+const ALLOWED_UPDATE_FIELDS = ['full_name', 'bio', 'avatar_path', 'locale'];
 
 /**
  * ViewModel for the Buyer Profile page (`/profile`).
- * Coordinates viewing own profile, editing profile fields, client-side validation,
- * and persisting updates via `PATCH /v1/profiles/me`.
+ * Coordinates viewing own profile, editing profile fields, avatar upload via
+ * `POST /v1/profiles/me/avatar`, client-side validation, and partial updates
+ * via `PATCH /v1/profiles/me`.
  */
 export class ProfileViewModel {
   /**
@@ -20,16 +26,22 @@ export class ProfileViewModel {
     this.onUnauthorized = options.onUnauthorized || null;
 
     this.profile = null;
+    this.viewProfile = null;
     this.formData = {
       full_name: '',
       bio: '',
       avatar_path: '',
+      locale: 'en',
     };
+    this.selectedAvatarFile = null;
+    this.avatarPreviewUrl = '';
     this.isLoading = false;
     this.isSaving = false;
+    this.isUploadingAvatar = false;
     this.errorMessage = '';
     this.successMessage = '';
     this.fieldErrors = {};
+    this._dirtyFields = new Set();
     this._listeners = new Set();
   }
 
@@ -72,14 +84,12 @@ export class ProfileViewModel {
       const loaded = response?.data || response;
       if (loaded) {
         this._applyProfileData(loaded);
-        this._syncAuthStore(loaded);
+        this._syncAuthStore(this.profile);
       }
-      return loaded;
+      return this.profile;
     } catch (err) {
-      if (err?.status === 401 && typeof this.onUnauthorized === 'function') {
-        this.onUnauthorized();
-      }
-      this.errorMessage = err?.message || 'No se pudo cargar el perfil';
+      this._handleAuthError(err);
+      this.errorMessage = this._mapErrorMessage(err, 'No se pudo cargar el perfil');
       return null;
     } finally {
       this.isLoading = false;
@@ -90,7 +100,7 @@ export class ProfileViewModel {
   /**
    * Updates a single form field and clears any previous field error or status banner.
    *
-   * @param {'full_name'|'bio'|'avatar_path'} field
+   * @param {'full_name'|'bio'|'avatar_path'|'locale'} field
    * @param {string} value
    */
   setField(field, value) {
@@ -102,6 +112,7 @@ export class ProfileViewModel {
       ...this.formData,
       [field]: value,
     };
+    this._dirtyFields.add(field);
 
     if (this.fieldErrors[field]) {
       const nextErrors = { ...this.fieldErrors };
@@ -115,14 +126,119 @@ export class ProfileViewModel {
   }
 
   /**
+   * Validates a user-selected avatar file and creates an immediate client-side preview URL.
+   *
+   * @param {File|Blob|Object|null} file
+   * @returns {boolean} true if file is valid for preview/upload
+   */
+  selectAvatarFile(file) {
+    this._revokeAvatarPreview();
+    this.selectedAvatarFile = null;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    const validation = validateAvatarFile(file);
+    if (!validation.isValid) {
+      this.fieldErrors = {
+        ...this.fieldErrors,
+        avatar: validation.error,
+      };
+      this.errorMessage = validation.error;
+      this._notify();
+      return false;
+    }
+
+    const nextErrors = { ...this.fieldErrors };
+    delete nextErrors.avatar;
+    this.fieldErrors = nextErrors;
+
+    this.selectedAvatarFile = file;
+    if (
+      typeof URL !== 'undefined' &&
+      typeof URL.createObjectURL === 'function' &&
+      typeof Blob !== 'undefined' &&
+      file instanceof Blob
+    ) {
+      this.avatarPreviewUrl = URL.createObjectURL(file);
+    } else {
+      this.avatarPreviewUrl = file.previewUrl || 'blob:avatar-preview';
+    }
+
+    this._notify();
+    return true;
+  }
+
+  /**
+   * Uploads the selected avatar image via `POST /v1/profiles/me/avatar` and updates state
+   * from the returned profile envelope.
+   *
+   * @param {File|Blob|Object} [file=this.selectedAvatarFile]
+   * @returns {Promise<boolean>}
+   */
+  async uploadAvatar(file = this.selectedAvatarFile) {
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    const validation = validateAvatarFile(file);
+    if (!validation.isValid) {
+      this.fieldErrors = {
+        ...this.fieldErrors,
+        avatar: validation.error,
+      };
+      this.errorMessage = validation.error;
+      this._notify();
+      return false;
+    }
+
+    const nextErrors = { ...this.fieldErrors };
+    delete nextErrors.avatar;
+    this.fieldErrors = nextErrors;
+
+    this.isUploadingAvatar = true;
+    this._notify();
+
+    try {
+      const response = await this.profilesApi.uploadAvatar(file);
+      const updated = response?.data || response;
+      if (updated) {
+        this._applyProfileData(updated);
+        this._syncAuthStore(this.profile);
+      }
+      this._revokeAvatarPreview();
+      this.selectedAvatarFile = null;
+      this.successMessage = 'Foto de perfil actualizada';
+      return true;
+    } catch (err) {
+      this._handleAuthError(err);
+      const message = this._mapErrorMessage(
+        err,
+        'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+      );
+      this.fieldErrors = {
+        ...this.fieldErrors,
+        avatar: message,
+      };
+      this.errorMessage = message;
+      return false;
+    } finally {
+      this.isUploadingAvatar = false;
+      this._notify();
+    }
+  }
+
+  /**
    * Resets the editable form back to the currently loaded profile values.
    */
   resetForm() {
+    this._revokeAvatarPreview();
+    this.selectedAvatarFile = null;
     this.formData = {
       full_name: this.profile?.full_name || '',
       bio: this.profile?.bio || '',
       avatar_path: this.profile?.avatar_path || '',
+      locale: this.profile?.locale || 'en',
     };
+    this._dirtyFields.clear();
     this.fieldErrors = {};
     this.errorMessage = '';
     this.successMessage = '';
@@ -130,7 +246,16 @@ export class ProfileViewModel {
   }
 
   /**
-   * Validates form inputs and persists changes via `PATCH /v1/profiles/me`.
+   * Clears alert messages (`errorMessage` and `successMessage`).
+   */
+  dismissMessages() {
+    this.errorMessage = '';
+    this.successMessage = '';
+    this._notify();
+  }
+
+  /**
+   * Validates form inputs and persists changed fields via `PATCH /v1/profiles/me`.
    *
    * @returns {Promise<boolean>} true when update succeeded, false otherwise
    */
@@ -148,22 +273,23 @@ export class ProfileViewModel {
       return false;
     }
 
+    const partialPayload = this._buildPartialPayload(validation.values);
+
     this.isSaving = true;
     this._notify();
 
     try {
-      const response = await this.profilesApi.updateMe(validation.values);
+      const response = await this.profilesApi.updateMe(partialPayload);
       const updated = response?.data || response;
       if (updated) {
         this._applyProfileData(updated);
-        this._syncAuthStore(updated);
+        this._syncAuthStore(this.profile);
       }
-      this.successMessage = 'Perfil actualizado correctamente.';
+      this._dirtyFields.clear();
+      this.successMessage = 'Perfil actualizado correctamente';
       return true;
     } catch (err) {
-      if (err?.status === 401 && typeof this.onUnauthorized === 'function') {
-        this.onUnauthorized();
-      }
+      this._handleAuthError(err);
 
       const details = err?.data?.error?.details;
       if (Array.isArray(details) && details.length > 0) {
@@ -176,7 +302,10 @@ export class ProfileViewModel {
         this.fieldErrors = mappedErrors;
       }
 
-      this.errorMessage = err?.message || 'No se pudo actualizar el perfil';
+      this.errorMessage = this._mapErrorMessage(
+        err,
+        'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+      );
       return false;
     } finally {
       this.isSaving = false;
@@ -196,29 +325,102 @@ export class ProfileViewModel {
   }
 
   /**
-   * Applies a profile object to `this.profile` and `this.formData`.
+   * Builds a partial update payload containing only allowed fields that changed.
+   *
+   * @param {Object} validatedValues
+   * @returns {Object}
+   * @private
+   */
+  _buildPartialPayload(validatedValues) {
+    const payload = {};
+
+    for (const field of ALLOWED_UPDATE_FIELDS) {
+      if (!Object.prototype.hasOwnProperty.call(validatedValues, field)) {
+        continue;
+      }
+
+      const nextValue = validatedValues[field];
+      const currentValue = this.profile ? (this.profile[field] ?? null) : undefined;
+      const isDirty = this._dirtyFields.has(field);
+      const isChanged = !this.profile || nextValue !== currentValue;
+
+      if (field === 'bio' && nextValue === null) {
+        // Only send bio: null if the user explicitly cleared it or had a previous bio
+        if (isDirty || (this.profile && this.profile.bio !== null)) {
+          payload.bio = null;
+        }
+        continue;
+      }
+
+      if (field === 'avatar_path' && nextValue === null) {
+        if (isDirty || (this.profile && this.profile.avatar_path !== null)) {
+          payload.avatar_path = null;
+        }
+        continue;
+      }
+
+      if (isDirty || isChanged) {
+        payload[field] = nextValue;
+      }
+    }
+
+    if (Object.keys(payload).length === 0) {
+      payload.full_name = validatedValues.full_name;
+    }
+
+    return payload;
+  }
+
+  /**
+   * Applies a snake_case profile object to `this.profile`, camelCase `this.viewProfile`,
+   * and `this.formData`, always excluding sensitive fields (`email`).
    *
    * @param {Object} profileData
    * @private
    */
   _applyProfileData(profileData) {
+    const id = profileData.id || '';
+    const username = profileData.username || '';
+    const fullName = profileData.full_name || profileData.username || '';
+    const avatarPath = profileData.avatar_path ?? null;
+    const bio = profileData.bio ?? null;
+    const locale = profileData.locale || 'en';
+    const createdAt = profileData.created_at || null;
+    const updatedAt = profileData.updated_at || null;
+
     this.profile = {
-      ...profileData,
-      username: profileData.username || '',
-      full_name: profileData.full_name || profileData.username || '',
-      bio: profileData.bio ?? null,
-      avatar_path: profileData.avatar_path ?? null,
+      id,
+      username,
+      full_name: fullName,
+      avatar_path: avatarPath,
+      bio,
+      locale,
+      ...(createdAt ? { created_at: createdAt } : {}),
+      ...(updatedAt ? { updated_at: updatedAt } : {}),
     };
+
+    this.viewProfile = {
+      id,
+      username,
+      fullName,
+      avatarPath,
+      bio,
+      locale,
+      createdAt,
+      updatedAt,
+    };
+
     this.formData = {
-      full_name: this.profile.full_name || '',
-      bio: this.profile.bio || '',
-      avatar_path: this.profile.avatar_path || '',
+      full_name: fullName,
+      bio: bio || '',
+      avatar_path: avatarPath || '',
+      locale,
     };
   }
 
   /**
    * Synchronizes the updated profile into `authStore` so the header and session cache
-   * immediately reflect the latest full name and avatar.
+   * immediately reflect the latest full_name and avatar_path.
    *
    * @param {Object} profileData
    * @private
@@ -240,7 +442,6 @@ export class ProfileViewModel {
       username: profileData.username || currentUser?.username || '',
       full_name: profileData.full_name || currentUser?.full_name || '',
       avatar_path: profileData.avatar_path ?? currentUser?.avatar_path ?? null,
-      avatar_url: profileData.avatar_path ?? currentUser?.avatar_url ?? null,
     };
 
     this.authStore.setSession({
@@ -251,6 +452,77 @@ export class ProfileViewModel {
       },
       roles: this.authStore.getRoles?.() || [],
     });
+  }
+
+  /**
+   * Triggers `onUnauthorized` when a 401 or `SESSION_EXPIRED` error occurs.
+   *
+   * @param {Error & { status?: number, code?: string }} err
+   * @private
+   */
+  _handleAuthError(err) {
+    if (
+      (err?.status === 401 || err?.code === 'SESSION_EXPIRED') &&
+      typeof this.onUnauthorized === 'function'
+    ) {
+      this.onUnauthorized();
+    }
+  }
+
+  /**
+   * Maps HTTP status codes to contract-compliant Spanish messages without exposing server details.
+   *
+   * @param {Error & { status?: number, code?: string, data?: Object }} err
+   * @param {string} fallbackMessage
+   * @returns {string}
+   * @private
+   */
+  _mapErrorMessage(err, fallbackMessage) {
+    const status = err?.status;
+    const code = err?.code || err?.data?.error?.code || '';
+
+    if (status === 403) {
+      return 'No tienes permiso para modificar este perfil';
+    }
+    if (status === 404) {
+      return 'Perfil no encontrado';
+    }
+    if (status === 422 && code === 'FILE_TOO_LARGE') {
+      return 'La imagen excede el límite de 2 MB';
+    }
+    if (status === 422 && code === 'INVALID_FILE_FORMAT') {
+      return 'Solo se aceptan imágenes JPEG, PNG y WebP';
+    }
+    if (status >= 500) {
+      return 'Error al guardar los cambios. Inténtalo de nuevo más tarde';
+    }
+
+    const firstDetail = err?.data?.error?.details?.[0]?.message;
+    if (firstDetail) {
+      return firstDetail;
+    }
+
+    return err?.message || fallbackMessage;
+  }
+
+  /**
+   * Revokes any active object URL created for client-side avatar preview.
+   * @private
+   */
+  _revokeAvatarPreview() {
+    if (
+      this.avatarPreviewUrl &&
+      this.avatarPreviewUrl.startsWith('blob:') &&
+      typeof URL !== 'undefined' &&
+      typeof URL.revokeObjectURL === 'function'
+    ) {
+      try {
+        URL.revokeObjectURL(this.avatarPreviewUrl);
+      } catch {
+        // Ignore revoke errors
+      }
+    }
+    this.avatarPreviewUrl = '';
   }
 
   /**
