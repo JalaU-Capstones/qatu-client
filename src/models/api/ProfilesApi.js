@@ -18,15 +18,7 @@ export class ProfilesApi {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const errorMessage =
-        data?.error?.details?.[0]?.message ||
-        data?.error?.message ||
-        data?.message ||
-        'No se pudo cargar el perfil';
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.data = data;
-      throw error;
+      throw this._createApiError(response.status, data, 'No se pudo cargar el perfil');
     }
 
     return data;
@@ -51,17 +43,79 @@ export class ProfilesApi {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const errorMessage =
-        data?.error?.details?.[0]?.message ||
-        data?.error?.message ||
-        data?.message ||
-        'No se pudo actualizar el perfil';
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.data = data;
-      throw error;
+      throw this._createApiError(
+        response.status,
+        data,
+        'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+      );
     }
 
     return data;
+  }
+
+  /**
+   * Uploads an avatar image via `multipart/form-data` (`POST /v1/profiles/me/avatar`).
+   *
+   * @param {File|Blob} file
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   */
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await apiFetch('/profiles/me/avatar', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw this._createApiError(
+        response.status,
+        data,
+        'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+      );
+    }
+
+    return data;
+  }
+
+  /**
+   * Maps HTTP status codes and backend error payloads to user-safe errors.
+   *
+   * @param {number} status
+   * @param {Object} data
+   * @param {string} fallbackMessage
+   * @returns {Error & { status: number, code?: string, data: Object }}
+   * @private
+   */
+  _createApiError(status, data, fallbackMessage) {
+    const code = data?.error?.code || '';
+    let message;
+
+    if (status === 403) {
+      message = 'No tienes permiso para modificar este perfil';
+    } else if (status === 404) {
+      message = 'Perfil no encontrado';
+    } else if (status === 422 && code === 'FILE_TOO_LARGE') {
+      message = 'La imagen excede el límite de 2 MB';
+    } else if (status === 422 && code === 'INVALID_FILE_FORMAT') {
+      message = 'Solo se aceptan imágenes JPEG, PNG y WebP';
+    } else if (status >= 500) {
+      message = 'Error al guardar los cambios. Inténtalo de nuevo más tarde';
+    } else {
+      message =
+        data?.error?.details?.[0]?.message ||
+        data?.error?.message ||
+        data?.message ||
+        fallbackMessage;
+    }
+
+    const error = new Error(message);
+    error.status = status;
+    error.code = code;
+    error.data = data;
+    return error;
   }
 }
