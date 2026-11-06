@@ -281,10 +281,27 @@ export class ProfileView {
       this.viewModel.dismissMessages();
     });
 
-    form?.addEventListener('submit', (e) => {
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      void this.viewModel.saveProfile();
+      const saved = await this.viewModel.saveProfile();
+      if (!saved) {
+        this._focusFirstInvalidField();
+      }
     });
+  }
+
+  /**
+   * Moves focus to the first form control with a validation error.
+   * @private
+   */
+  _focusFirstInvalidField() {
+    if (!this.element) return;
+    const firstInvalid = this.element.querySelector(
+      '.q-profile-form [aria-invalid="true"], .q-profile-form .is-invalid'
+    );
+    if (firstInvalid && typeof firstInvalid.focus === 'function') {
+      firstInvalid.focus();
+    }
   }
 
   /**
@@ -309,9 +326,9 @@ export class ProfileView {
       avatarFrame.innerHTML = '';
       if (avatarSrc) {
         const img = document.createElement('img');
-        img.className = 'q-profile-avatar-img';
+        img.className = 'q-profile-avatar-img avatar-image';
         img.src = avatarSrc;
-        img.alt = `Avatar de ${displayName}`;
+        img.alt = 'Foto de perfil';
         avatarFrame.appendChild(img);
       } else {
         avatarFrame.innerHTML = `

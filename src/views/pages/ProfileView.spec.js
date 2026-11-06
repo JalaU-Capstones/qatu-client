@@ -13,7 +13,8 @@ describe('ProfileView', () => {
     id: '22222222-2222-4222-8222-222222222222',
     username: 'camila_m',
     full_name: 'Camila Morales',
-    avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/avatar.webp',
+    avatar_path:
+      'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/avatar.webp',
     bio: 'Compradora frecuente de artesanías peruanas.',
     locale: 'es-PE',
     created_at: '2026-01-10T10:00:00.000Z',
@@ -40,7 +41,8 @@ describe('ProfileView', () => {
       uploadAvatar: jasmine.createSpy('uploadAvatar').and.resolveTo({
         data: {
           ...sampleProfile,
-          avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/uploaded.webp',
+          avatar_path:
+            'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/uploaded.webp',
           updated_at: '2026-02-01T12:10:00.000Z',
         },
         meta: {},
@@ -86,7 +88,7 @@ describe('ProfileView', () => {
       expect(displayBio.textContent).toBe('Compradora frecuente de artesanías peruanas.');
       expect(avatarImg).not.toBeNull();
       expect(avatarImg.getAttribute('src')).toBe(
-        'avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
+        'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
       );
 
       expect(el.querySelector('#q-profile-username-input').value).toBe('camila_m');
@@ -167,10 +169,10 @@ describe('ProfileView', () => {
 
       expect(mockProfilesApi.uploadAvatar).toHaveBeenCalledWith(mockFile);
       expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
-        'avatars/22222222-2222-4222-8222-222222222222/uploaded.webp'
+        'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/uploaded.webp'
       );
       expect(el.querySelector('.q-profile-alert-success').textContent).toContain(
-        'Foto de perfil actualizada'
+        'Foto de perfil actualizada correctamente'
       );
     });
   });

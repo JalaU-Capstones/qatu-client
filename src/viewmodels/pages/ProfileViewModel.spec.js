@@ -11,7 +11,8 @@ describe('ProfileViewModel', () => {
     id: '22222222-2222-4222-8222-222222222222',
     username: 'camila_m',
     full_name: 'Camila Morales',
-    avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/avatar.webp',
+    avatar_path:
+      'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/avatar.webp',
     bio: 'Compradora frecuente de artesanías peruanas.',
     locale: 'es-PE',
     created_at: '2026-01-10T10:00:00.000Z',
@@ -35,7 +36,8 @@ describe('ProfileViewModel', () => {
       uploadAvatar: jasmine.createSpy('uploadAvatar').and.resolveTo({
         data: {
           ...sampleProfile,
-          avatar_path: 'avatars/22222222-2222-4222-8222-222222222222/new-avatar.webp',
+          avatar_path:
+            'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/new-avatar.webp',
           updated_at: '2026-02-01T12:05:00.000Z',
         },
         meta: {},
@@ -70,13 +72,13 @@ describe('ProfileViewModel', () => {
       expect(viewModel.profile.username).toBe('camila_m');
       expect(viewModel.profile.full_name).toBe('Camila Morales');
       expect(viewModel.profile.avatar_path).toBe(
-        'avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
+        'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
       );
       expect(viewModel.profile.bio).toBe('Compradora frecuente de artesanías peruanas.');
       expect(viewModel.profile.email).toBeUndefined();
       expect(viewModel.viewProfile.fullName).toBe('Camila Morales');
       expect(viewModel.viewProfile.avatarPath).toBe(
-        'avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
+        'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/avatar.webp'
       );
     });
 
@@ -163,9 +165,9 @@ describe('ProfileViewModel', () => {
       expect(uploaded).toBe(true);
       expect(mockProfilesApi.uploadAvatar).toHaveBeenCalledWith(validFile);
       expect(viewModel.profile.avatar_path).toBe(
-        'avatars/22222222-2222-4222-8222-222222222222/new-avatar.webp'
+        'https://example.supabase.co/storage/v1/object/public/avatars/22222222-2222-4222-8222-222222222222/new-avatar.webp'
       );
-      expect(viewModel.successMessage).toBe('Foto de perfil actualizada');
+      expect(viewModel.successMessage).toBe('Foto de perfil actualizada correctamente');
     });
 
     it('rejects files > 2 MB with "La imagen excede el límite de 2 MB" before calling API', async () => {

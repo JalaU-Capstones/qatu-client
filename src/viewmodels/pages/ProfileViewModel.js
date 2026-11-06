@@ -206,7 +206,7 @@ export class ProfileViewModel {
       }
       this._revokeAvatarPreview();
       this.selectedAvatarFile = null;
-      this.successMessage = 'Foto de perfil actualizada';
+      this.successMessage = 'Foto de perfil actualizada correctamente';
       return true;
     } catch (err) {
       this._handleAuthError(err);
