@@ -136,7 +136,6 @@ export class AuthApi {
    */
   async logout() {
     const response = await apiFetch('/auth/logout', { method: 'POST' });
-    // 204 expected. Propagate other errors (rare).
     if (!response.ok && response.status !== 204) {
       const data = await response.json().catch(() => ({}));
       const errorMessage = data?.error?.message || data?.message || 'No se pudo cerrar sesión';

@@ -207,10 +207,6 @@ export class AuthCallbackView {
 
       supabase.auth.stopAutoRefresh();
 
-      // Handoff complete. The backend now owns the session (HttpOnly
-      // cookies), so discard the browser-side Supabase session WITHOUT
-      // calling signOut() — that endpoint would revoke the very session
-      // the backend cookie holds.
       _clearSupabaseStorage();
 
       this.navigate('/');

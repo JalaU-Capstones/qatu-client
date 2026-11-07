@@ -30,10 +30,12 @@ describe('AuthCallbackView', () => {
   let fakeAuthApi;
   let navigate;
   let initialHref;
+  let clockInstalled;
 
   beforeEach(() => {
     initialHref = window.location.href;
     history.replaceState(null, '', '/auth/callback');
+    clockInstalled = false;
 
     window.localStorage.clear();
     window.sessionStorage.clear();
@@ -46,8 +48,6 @@ describe('AuthCallbackView', () => {
 
     navigate = jasmine.createSpy('navigate');
 
-    // Simulate what Supabase persists after the PKCE redirect — these keys
-    // MUST be gone after the handoff.
     window.localStorage.setItem(
       'sb-project-ref-auth-token',
       JSON.stringify({
@@ -60,10 +60,8 @@ describe('AuthCallbackView', () => {
   });
 
   afterEach(() => {
-    try {
+    if (clockInstalled) {
       jasmine.clock().uninstall();
-    } catch {
-      // clock not installed in this spec; safe to ignore.
     }
     history.replaceState(null, '', initialHref);
   });
@@ -153,6 +151,7 @@ describe('AuthCallbackView', () => {
       redirectDelayMs: 5,
     });
     jasmine.clock().install();
+    clockInstalled = true;
     view.render();
 
     supabase.auth._emitAuthEvent('SIGNED_IN', FAKE_SUPABASE_SESSION);
@@ -162,11 +161,9 @@ describe('AuthCallbackView', () => {
       'No se pudo completar el inicio de sesión con Google.'
     );
 
-    // Storage already cleaned — dead tokens never linger, even on failure.
     expect(tokenKeysIn(window.localStorage)).toEqual([]);
     expect(tokenKeysIn(window.sessionStorage)).toEqual([]);
 
-    // Brief inline message, then redirect to /login with the error code.
     jasmine.clock().tick(10);
     expect(navigate).toHaveBeenCalledWith('/login?error=oauth_failed');
 
@@ -185,15 +182,13 @@ describe('AuthCallbackView', () => {
       navigate,
       redirectDelayMs: 5,
     });
-    // Clock is installed BEFORE render() so the redirect timer is faked.
     jasmine.clock().install();
+    clockInstalled = true;
     view.render();
 
     expect(view.element.textContent).toContain('Autorización cancelada.');
-    // No exchange attempt for a cancelled authorization.
     expect(fakeAuthApi.exchangeOAuthToken).not.toHaveBeenCalled();
 
-    // Partial state cleared even on cancellation.
     expect(supabaseKeysIn(window.localStorage)).toEqual([]);
     expect(supabaseKeysIn(window.sessionStorage)).toEqual([]);
 
@@ -211,6 +206,7 @@ describe('AuthCallbackView', () => {
       redirectDelayMs: 5,
     });
     jasmine.clock().install();
+    clockInstalled = true;
     view.render();
 
     jasmine.clock().tick(50);
@@ -230,11 +226,12 @@ describe('AuthCallbackView', () => {
       redirectDelayMs: 5,
     });
     jasmine.clock().install();
+    clockInstalled = true;
     view.render();
 
-    jasmine.clock().tick(50); // guard fires → settled
+    jasmine.clock().tick(50);
     supabase.auth._emitAuthEvent('SIGNED_IN', FAKE_SUPABASE_SESSION);
-    jasmine.clock().tick(50); // any late redirect timer resolves
+    jasmine.clock().tick(50);
 
     expect(fakeAuthApi.exchangeOAuthToken).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/login?error=oauth_timeout');

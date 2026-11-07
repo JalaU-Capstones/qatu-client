@@ -123,10 +123,6 @@ describe('AuthViewModel', () => {
     expect(viewModel.registerData.acceptTerms).toBe(true);
   });
 
-  // Documents a callback that AuthViewModel declares and fires, but that is
-  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
-  // Keep this spec: it validates the callback contract. If the team later
-  // removes the callback, remove this spec in the same commit.
   it('should validate and fail login submit if fields are missing', async () => {
     let loggedIn = false;
     viewModel.onLogin = () => {
@@ -139,10 +135,6 @@ describe('AuthViewModel', () => {
     expect(viewModel.errorMessage).toBe('Por favor completa todos los campos.');
   });
 
-  // Documents a callback that AuthViewModel declares and fires, but that is
-  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
-  // Keep this spec: it validates the callback contract. If the team later
-  // removes the callback, remove this spec in the same commit.
   it('should succeed login submit, call API, store session and navigate home', async () => {
     let capturedData = null;
     let navigatedPath = null;
@@ -203,7 +195,7 @@ describe('AuthViewModel', () => {
 
   it('should validate and fail register submit if fields missing or terms not accepted', async () => {
     viewModel.setRegisterField('name', 'Carlos');
-    viewModel.setRegisterField('username', 'carlos'); // <--- Agregá esta línea
+    viewModel.setRegisterField('username', 'carlos');
     viewModel.setRegisterField('email', 'carlos@qatu.pe');
     viewModel.setRegisterField('password', 'pass123');
     viewModel.setRegisterField('confirmPassword', 'differentPass');
@@ -218,10 +210,6 @@ describe('AuthViewModel', () => {
     expect(viewModel.errorMessage).toBe('Debes aceptar los términos y condiciones.');
   });
 
-  // Documents a callback that AuthViewModel declares and fires, but that is
-  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
-  // Keep this spec: it validates the callback contract. If the team later
-  // removes the callback, remove this spec in the same commit.
   it('should succeed register submit and call API with payload', async () => {
     let capturedData = null;
     let navigatedPath = null;
@@ -292,10 +280,6 @@ describe('AuthViewModel', () => {
     expect(viewModel.isLoading).toBe(false);
   });
 
-  // Documents a callback that AuthViewModel declares and fires, but that is
-  // NOT wired by AuthPageView/main.js today (see FE-04 audit @ 087b05b).
-  // Keep this spec: it validates the callback contract. If the team later
-  // removes the callback, remove this spec in the same commit.
   it('should trigger onGoogleAuth and onForgotPassword callbacks', () => {
     let googleClicked = false;
     let forgotClicked = false;

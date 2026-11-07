@@ -10,9 +10,6 @@ export const supabase = createClient(
     auth: {
       flowType: 'pkce',
       detectSessionInUrl: true,
-      // Session lives ONLY in memory: the backend owns the real session via
-      // HttpOnly cookies (ADR-012), so nothing may (re)persist tokens in
-      // localStorage after the /auth/callback handoff.
       persistSession: false,
     },
   }
@@ -85,7 +82,7 @@ async function _refreshSession() {
  */
 export async function apiFetch(path, options = {}) {
   const { headers, ...rest } = options;
-  delete rest.withAuth; // deprecated, no-op
+  delete rest.withAuth;
 
   const url = `${DEFAULT_BASE_URL}${path}`;
   const method = (rest.method || 'GET').toUpperCase();
@@ -96,7 +93,6 @@ export async function apiFetch(path, options = {}) {
     ...(headers || {}),
   };
 
-  // Attach CSRF on mutating non-auth paths.
   if (isMutatingMethod(method) && !isCsrfExemptPath(path)) {
     const csrf = getCsrfToken();
     if (csrf) finalHeaders['X-CSRF-Token'] = csrf;
@@ -113,15 +109,11 @@ export async function apiFetch(path, options = {}) {
     return response;
   }
 
-  // 401 handling.
   const isAuthPath = isCsrfExemptPath(path);
   if (isAuthPath) {
-    // Bad credentials on /auth/login, invalid refresh on /auth/refresh, etc.
-    // Propagate raw — the caller (AuthViewModel or auto-refresh) decides.
     return response;
   }
 
-  // Non-auth path: try refresh-then-retry ONCE for REFRESH_REQUIRED.
   const cloned = response.clone();
   const errBody = await cloned.json().catch(() => ({}));
   const code = errBody?.error?.code;
@@ -135,7 +127,6 @@ export async function apiFetch(path, options = {}) {
     }
 
     if (refreshResponse && refreshResponse.ok) {
-      // Rebuild CSRF header with the fresh cookie value.
       const retryHeaders = { ...finalHeaders };
       if (isMutatingMethod(method) && !isCsrfExemptPath(path)) {
         const freshCsrf = getCsrfToken();
@@ -152,6 +143,5 @@ export async function apiFetch(path, options = {}) {
     }
   }
 
-  // No REFRESH_REQUIRED, or refresh failed → hard failure.
   return _handleHardAuthFailure();
 }
