@@ -6,7 +6,7 @@
 #   - Manually triggered via workflow_dispatch in the GitHub Actions UI.
 #
 # Target registry:
-#   ghcr.io/jala-university1/qatu-client
+#   ghcr.io/jalau-capstones/qatu-client
 #
 # Required repository settings:
 #   Settings → Actions → General → Workflow permissions = "Read and write"
@@ -77,7 +77,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/jala-university1/qatu-client
+          images: ghcr.io/jalau-capstones/qatu-client
           tags: |
             type=raw,value=${{ steps.tag.outputs.value }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
@@ -85,7 +85,7 @@ jobs:
             org.opencontainers.image.title=Qatu Client
             org.opencontainers.image.description=Single Page Application for Qatu Marketplace
             org.opencontainers.image.url=https://gitlab.com/jala-university1/cohort-5/ES.CSSD-245.GA.T2.26.M2/SD/group-b/grupo-2/client
-            org.opencontainers.image.source=https://github.com/jala-university1/qatu-client
+            org.opencontainers.image.source=https://github.com/JalaU-Capstones/qatu-client
 
       - name: Build & push
         uses: docker/build-push-action@v6
@@ -98,8 +98,8 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=/v1
           tags: |
-            ghcr.io/jala-university1/qatu-client:${{ steps.tag.outputs.value }}
-            ghcr.io/jala-university1/qatu-client:latest
+            ghcr.io/jalau-capstones/qatu-client:${{ steps.tag.outputs.value }}
+            ghcr.io/jalau-capstones/qatu-client:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -110,10 +110,10 @@ jobs:
         run: |
           echo "### 📦 Published to GHCR" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Image:** \`ghcr.io/jala-university1/qatu-client\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Image:** \`ghcr.io/jalau-capstones/qatu-client\`" >> "$GITHUB_STEP_SUMMARY"
           echo "**Tags:**" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "ghcr.io/jala-university1/qatu-client:${{ steps.tag.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "ghcr.io/jala-university1/qatu-client:latest" >> "$GITHUB_STEP_SUMMARY"
+          echo "ghcr.io/jalau-capstones/qatu-client:${{ steps.tag.outputs.value }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "ghcr.io/jalau-capstones/qatu-client:latest" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "**Platforms:** linux/amd64, linux/arm64" >> "$GITHUB_STEP_SUMMARY"

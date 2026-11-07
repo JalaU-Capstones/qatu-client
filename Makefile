@@ -1,4 +1,4 @@
-.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e matrix
+.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e matrix publish-check tag tag-push
 
 help:
 	@echo "Usage: make <target>"
@@ -19,6 +19,11 @@ help:
 	@echo "  lint      Run ESLint"
 	@echo "  format    Run Prettier write"
 	@echo "  tokens    Regenerate design tokens"
+	@echo ""
+	@echo "Publish:"
+	@echo "  publish-check  Sanity check registry paths before tagging"
+	@echo "  tag            Create annotated v* tag locally"
+	@echo "  tag-push       Push most recent v* tag to trigger workflows"
 
 install:
 	pnpm install --frozen-lockfile
@@ -60,3 +65,23 @@ format:
 
 tokens:
 	pnpm tokens:build
+
+# ── Publish (post-merge only) ──
+
+publish-check:                 # Sanity check registry paths before tagging
+	@echo "GHCR path in workflow:"
+	@grep -E 'ghcr\.io/[a-zA-Z0-9-]+/qatu-client' .github/workflows/publish-image.yml | head -3
+	@echo ""
+	@echo "GitLab CI uses \$$CI_REGISTRY_IMAGE (auto-resolves). Correct path:"
+	@echo "  registry.gitlab.com/jala-university1/cohort-5/es.cssd-245.ga.t2.26.m2/sd/group-b/grupo-2/client"
+	@grep -n 'CI_REGISTRY_IMAGE' .gitlab-ci.yml | head -3
+
+tag:                           # Create annotated v0.1.0 tag (do NOT push from here)
+	@read -p "Version (e.g. v0.1.0): " v && \
+	git tag -a "$$v" -m "release: $$v" && \
+	echo "Tag created locally: $$v. Push with: git push origin $$v"
+
+tag-push:                      # Push the most recent v* tag (triggers both registries)
+	@tag=$$(git describe --tags --abbrev=0) && \
+	git push origin "$$tag" && \
+	echo "Pushed $$tag — GHCR + GitLab Registry workflows are now running."
