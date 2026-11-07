@@ -386,6 +386,84 @@ Both should return JSON from the API (not an nginx error page).
 
 ---
 
+## Test the production image locally (no compose)
+
+This section simulates production locally with standalone `docker run` containers — no `docker-compose`. It exercises the same runtime image + nginx config that will ship in production, including the `/v1` reverse proxy and deferred DNS resolution.
+
+There are two scenarios:
+
+### Scenario A — Client alone (api down)
+
+Proves the SPA is served correctly and the `/v1` reverse proxy is wired but unreachable (returns 502, container does NOT crash).
+
+```bash
+# 1. Ensure the shared network exists (idempotent)
+docker network inspect qatu-net >/dev/null 2>&1 || docker network create qatu-net
+
+# 2. Build the runtime image with the PROD base URL baked in
+#    (MUST pass --build-arg VITE_API_BASE_URL=/v1 — the dev default is
+#    http://localhost:3000/v1, which would bypass the /v1 proxy)
+docker build --target runtime --build-arg VITE_API_BASE_URL=/v1 -t qatu-client:local-prod .
+
+# 3. Run it (no api container on qatu-net yet)
+docker run -d --name qatu-client-local \
+  --network qatu-net \
+  -p 8080:8080 \
+  qatu-client:local-prod
+
+# 4. Verify
+sleep 2
+curl -s http://localhost:8080/healthz        # → ok
+curl -s http://localhost:8080/ | grep '<div id="app">'   # → matches
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/v1/products   # → 502
+docker ps --filter name=qatu-client-local --format '{{.Status}}'
+# → Up X seconds (healthy) — the container MUST NOT crash on the 502
+
+# 5. Tear down
+docker stop qatu-client-local && docker rm qatu-client-local
+```
+
+**Why this proves the deferred DNS fix works:** nginx resolves `api` at request time (via `resolver 127.0.0.11 valid=5s`). If we still used static upstream resolution (the Phase 1 behavior), the container would fail to start with `[emerg] host not found in upstream "api"`. The 502 response is the correct outcome when the upstream is absent.
+
+### Scenario B — Client + api (end-to-end proxy)
+
+Proves the `/v1` reverse proxy reaches a real api container on `qatu-net` and returns live JSON.
+
+```bash
+# 1. Start the api stack first (compose is fine here — this is about testing
+#    the client image standalone, not about running the api standalone)
+cd ../api
+make docker-up-dev    # or docker-up-prod for a prod-like run
+cd -
+
+# 2. Build + run the client image (same as Scenario A steps 1–3)
+docker build --target runtime --build-arg VITE_API_BASE_URL=/v1 -t qatu-client:local-prod .
+docker run -d --name qatu-client-local \
+  --network qatu-net \
+  -p 8080:8080 \
+  qatu-client:local-prod
+
+# 3. Verify the proxy works
+sleep 2
+curl -sf http://localhost:8080/healthz        # → ok
+curl -s http://localhost:8080/v1/products | head -c 100
+# → {"data":[{"id":"..." — real JSON from the api
+docker logs qatu-client-local --tail 20        # → nginx access log shows 200 on /v1/products
+
+# 4. Tear down
+docker stop qatu-client-local && docker rm qatu-client-local
+cd ../api && make docker-down && cd -
+```
+
+### Why use this flow instead of compose?
+
+- Proves the client image is self-contained (no compose magic, no bind mounts, no Vite dev server).
+- Exercises the same nginx config a Kubernetes/ECS deployment would use.
+- Verifies the `/v1` proxy is functional BEFORE publishing a `v*` tag.
+- Useful for rollback drills: `docker run` a previous image tag and confirm `/healthz` + `/v1/products` behave as expected.
+
+---
+
 ## Reference
 
 - **Dockerfile:** `./Dockerfile` (four stages: deps → build → development → runtime)
