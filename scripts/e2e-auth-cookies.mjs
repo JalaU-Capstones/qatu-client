@@ -68,8 +68,12 @@ if (!feOk || !apiOk) {
 log('Pre-flight OK');
 
 // ── Seed a throwaway user via the real backend ───────────────────────────────
-// Use a timestamped address so the same test can be re-run on the same DB.
-const email = `e2e+${Date.now()}@qatu.test`;
+// Note: @example.com (not @qatu.test) because the backend's /v1/auth/login
+// validator rejects RFC-2606 reserved TLDs (.test, .example, .invalid, .localhost).
+// The backend's /v1/auth/register validator accepts them, creating an
+// asymmetry that breaks E2E. @example.com is accepted by both endpoints.
+// Backend follow-up: align register/login validators (separate issue).
+const email = `e2e-fe-${Date.now()}@example.com`;
 const username = `e2efe_${Date.now()}`;
 const password = 'StrongPassword123!';
 
@@ -91,6 +95,19 @@ const context = await browser.createBrowserContext();
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+
+// If running against an origin not in the backend's default ALLOWED_ORIGINS
+// (e.g. prod container on :8080), alias Origin to :5173 so backend CORS accepts it.
+await page.setRequestInterception(true);
+page.on('request', (req) => {
+  const headers = { ...req.headers() };
+  if (headers['origin'] && headers['origin'].includes(':8080')) {
+    headers['origin'] = 'http://localhost:5173';
+    req.continue({ headers });
+  } else {
+    req.continue();
+  }
+});
 
 // Helper
 async function clearStorageAndCookies() {
