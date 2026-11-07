@@ -30,6 +30,9 @@ export class AuthPageView {
       onNavigate,
       onModeChange,
     });
+    // Surface OAuth handoff errors redirected from /auth/callback
+    // (e.g. /login?error=oauth_cancelled) before the first render.
+    this.viewModel.applyOAuthErrorFeedback();
     this.view = new AuthView(this.viewModel);
   }
 

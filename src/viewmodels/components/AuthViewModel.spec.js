@@ -371,4 +371,32 @@ describe('AuthViewModel', () => {
       jasmine.objectContaining({ user: jasmine.any(Object), roles: rolesData })
     );
   });
+
+  describe('applyOAuthErrorFeedback', () => {
+    it('maps /auth/callback redirect codes to a user-facing banner', () => {
+      expect(viewModel.applyOAuthErrorFeedback('?error=oauth_cancelled')).toBe(true);
+      expect(viewModel.errorMessage).toBe('Autorización cancelada. Puedes intentarlo de nuevo.');
+
+      expect(viewModel.applyOAuthErrorFeedback('?error=oauth_failed')).toBe(true);
+      expect(viewModel.errorMessage).toContain('No se pudo completar el inicio de sesión');
+
+      expect(viewModel.applyOAuthErrorFeedback('?error=oauth_timeout')).toBe(true);
+      expect(viewModel.errorMessage).toContain('tardó demasiado');
+    });
+
+    it('is a no-op without an error param or with an unknown code', () => {
+      expect(viewModel.applyOAuthErrorFeedback('?code=abc')).toBe(false);
+      expect(viewModel.errorMessage).toBe('');
+
+      expect(viewModel.applyOAuthErrorFeedback('?error=unknown_code')).toBe(false);
+      expect(viewModel.errorMessage).toBe('');
+    });
+
+    it('clears success messages when the banner is applied', () => {
+      viewModel.setSuccess('Éxito');
+      viewModel.applyOAuthErrorFeedback('?error=oauth_cancelled');
+      expect(viewModel.errorMessage).toContain('Autorización cancelada');
+      expect(viewModel.successMessage).toBe('');
+    });
+  });
 });

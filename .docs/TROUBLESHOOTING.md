@@ -55,6 +55,9 @@
 ## 4.8 Supabase Issues
 
 - **Missing environment variables:** Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`.
+- **Silent auth failures / connection refused on login:** Ensure
+  `VITE_SUPABASE_URL` uses port **54321** (the API gateway / Kong) — **not**
+  54323 (Supabase Studio, the dashboard). See [Auth & OAuth Setup](AUTH-OAUTH-SETUP.md).
 
 ## Styling
 

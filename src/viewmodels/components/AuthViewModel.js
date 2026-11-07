@@ -3,6 +3,18 @@ import { supabase } from '../../models/api/client.js';
 import { authStore } from '../../store/authStore.js';
 
 /**
+ * Maps the `error` query param used on /login to a human-readable message.
+ * The /auth/callback route redirects back with these values after a failed
+ * (or cancelled) OAuth handoff, e.g. `/login?error=oauth_cancelled` when
+ * Google reports `error=access_denied`.
+ */
+export const OAUTH_LOGIN_ERROR_MESSAGES = {
+  oauth_cancelled: 'Autorización cancelada. Puedes intentarlo de nuevo.',
+  oauth_failed: 'No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo.',
+  oauth_timeout: 'El inicio de sesión tardó demasiado. Inténtalo de nuevo.',
+};
+
+/**
  * ViewModel for Authentication (Login and Register) component.
  * Manages mode switching ('login' vs 'register'), form states, validation,
  * API integration for registration and login, session management, and routing navigation.
@@ -258,6 +270,24 @@ export class AuthViewModel {
       }
     }
 
+    return true;
+  }
+
+  /**
+   * Surfaces OAuth handoff errors redirected from /auth/callback via the
+   * `?error=` query param (oauth_cancelled | oauth_failed | oauth_timeout).
+   * No-ops when the param is absent or unknown.
+   *
+   * @param {string} [search] Query string to inspect (defaults to the current URL).
+   * @returns {boolean} true when an OAuth error message was applied.
+   */
+  applyOAuthErrorFeedback(search = window.location.search) {
+    const code = new URLSearchParams(search).get('error');
+    const message = OAUTH_LOGIN_ERROR_MESSAGES[code];
+    if (!message) {
+      return false;
+    }
+    this.setError(message);
     return true;
   }
 
