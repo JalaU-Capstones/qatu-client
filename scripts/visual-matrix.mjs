@@ -11,6 +11,10 @@
  *   pnpm dev &              # in another terminal
  *   node scripts/visual-matrix.mjs
  *
+ * Environment:
+ *   MATRIX_BASE_URL          Target base URL (default: http://localhost:5173)
+ *   MATRIX_SKIP_AUTH_ROUTES  Set to "1" to skip routes that require authentication
+ *
  * Requires: puppeteer (already a devDependency).
  */
 import puppeteer from 'puppeteer';
@@ -18,6 +22,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BASE = process.env.MATRIX_BASE_URL || 'http://localhost:5173';
+const SKIP_AUTH_ROUTES = process.env.MATRIX_SKIP_AUTH_ROUTES === '1';
+const BASE_LABEL = process.env.MATRIX_BASE_URL ? 'containerized' : 'local-host';
+
+console.log(`Running visual matrix against ${BASE} (${BASE_LABEL})`);
+if (SKIP_AUTH_ROUTES) console.log('MATRIX_SKIP_AUTH_ROUTES=1: skipping authenticated routes');
+
 const OUT_DIR = '/tmp/qatu-matrix';
 mkdirSync(OUT_DIR, { recursive: true });
 
@@ -29,8 +39,10 @@ const ROUTES = [
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart' },
   { name: 'search', path: '/products?q=the' },
-  { name: 'orders', path: '/orders' },
+  { name: 'orders', path: '/orders', authenticated: true },
 ];
+
+const activeRoutes = SKIP_AUTH_ROUTES ? ROUTES.filter((r) => !r.authenticated) : ROUTES;
 
 const THEMES = ['light', 'dark'];
 
@@ -45,7 +57,7 @@ const results = [];
 
 const browser = await puppeteer.launch({ headless: 'new' });
 
-for (const route of ROUTES) {
+for (const route of activeRoutes) {
   for (const theme of THEMES) {
     for (const vp of VIEWPORTS) {
       const combo = { route: route.name, theme, viewport: vp.name, status: 'PASS', errors: [] };
@@ -248,6 +260,7 @@ const fail = results.filter((r) => r.status === 'FAIL').length;
 
 console.log('\n══════════════════════════════════════════');
 console.log(`  MATRIX SUMMARY: ${pass}/${results.length} PASS, ${fail} FAIL`);
+console.log(`  Target: ${BASE}`);
 console.log('══════════════════════════════════════════');
 if (fail > 0) {
   console.log('\nFailures:');
@@ -266,4 +279,4 @@ console.log('  report.json written');
 
 // Exit code 1 if any failure — CI-friendly
 if (fail > 0) process.exit(1);
-console.log('\n[MATRIX] OK');
+console.log(`\n[MATRIX] OK — ${results.length} screenshots from ${BASE}`);

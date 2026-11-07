@@ -1,4 +1,4 @@
-.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e matrix publish-check tag tag-push
+.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e e2e-prod matrix matrix-prod publish-check tag tag-push
 
 help:
 	@echo "Usage: make <target>"
@@ -24,6 +24,12 @@ help:
 	@echo "  publish-check  Sanity check registry paths before tagging"
 	@echo "  tag            Create annotated v* tag locally"
 	@echo "  tag-push       Push most recent v* tag to trigger workflows"
+	@echo ""
+	@echo "E2E:"
+	@echo "  e2e            Auth cookie E2E against dev container  (FE :5173 + API :3000)"
+	@echo "  e2e-prod       Auth cookie E2E against prod container (FE :8080 + API :3000)"
+	@echo "  matrix         Visual regression matrix against dev container  (:5173)"
+	@echo "  matrix-prod    Visual regression matrix against prod container (:8080)"
 
 install:
 	pnpm install --frozen-lockfile
@@ -85,3 +91,23 @@ tag-push:                      # Push the most recent v* tag (triggers both regi
 	@tag=$$(git describe --tags --abbrev=0) && \
 	git push origin "$$tag" && \
 	echo "Pushed $$tag — GHCR + GitLab Registry workflows are now running."
+
+# ── E2E / Visual Matrix ──────────────────────────────────────────────────────
+
+e2e:                           ## Auth cookie E2E against dev container (FE :5173 + API :3000)
+	@./scripts/preflight-e2e.sh dev
+	E2E_BASE_URL=http://localhost:5173 E2E_API_BASE_URL=http://localhost:3000 \
+	  pnpm test:e2e:auth
+
+e2e-prod:                      ## Auth cookie E2E against prod container (FE :8080 + API :3000)
+	@./scripts/preflight-e2e.sh prod
+	E2E_BASE_URL=http://localhost:8080 E2E_API_BASE_URL=http://localhost:3000 \
+	  pnpm test:e2e:auth
+
+matrix:                        ## Visual regression matrix against dev container (:5173)
+	@./scripts/preflight-e2e.sh dev-matrix
+	MATRIX_BASE_URL=http://localhost:5173 pnpm test:matrix
+
+matrix-prod:                   ## Visual regression matrix against prod container (:8080)
+	@./scripts/preflight-e2e.sh prod-matrix
+	MATRIX_BASE_URL=http://localhost:8080 pnpm test:matrix

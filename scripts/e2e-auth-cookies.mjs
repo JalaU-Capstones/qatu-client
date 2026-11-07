@@ -1,4 +1,4 @@
-/* global process, console, fetch, window, document, setTimeout, localStorage, sessionStorage */
+/* global process, console, fetch, AbortController, clearTimeout, setTimeout, window, document, localStorage, sessionStorage */
 /**
  * E2E authentication smoke test — HttpOnly cookie session flow.
  *
@@ -11,25 +11,65 @@
  *   6. Storage cleared + reload → /me rehydrates from cookie
  *
  * Prerequisites:
- *   - Backend running on http://localhost:3000
- *   - Frontend running on http://localhost:5173
+ *   - Backend running on E2E_API_BASE_URL (default: http://localhost:3000)
+ *   - Frontend running on E2E_BASE_URL (default: http://localhost:5173)
  *
  * Usage:
  *   pnpm test:e2e:auth
  *
+ * Environment:
+ *   E2E_BASE_URL      Frontend base URL (default: http://localhost:5173)
+ *   E2E_API_BASE_URL  Backend base URL  (default: http://localhost:3000)
+ *
  * Exit codes:
  *   0 — all 6 scenarios PASS
  *   1 — any scenario fails (details in stderr)
+ *   2 — precondition failure (FE or API unreachable)
  */
 
 import puppeteer from 'puppeteer';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:5173';
-const API = process.env.E2E_API_URL || 'http://localhost:3000/v1';
+const API_BASE = process.env.E2E_API_BASE_URL || 'http://localhost:3000';
+const API = `${API_BASE}/v1`;
 const log = (...a) => console.log('[E2E]', ...a);
 
-// Seed a throwaway user via the real backend
-const email = `e2e-fe-${Date.now()}@example.com`;
+log(`Running auth E2E against FE=${BASE} API=${API_BASE}`);
+
+// ── Pre-flight health probes ─────────────────────────────────────────────────
+const probe = async (url) => {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return res.ok || res.status < 500; // 4xx is fine — the server is up
+  } catch {
+    return false;
+  }
+};
+
+const feOk = await probe(`${BASE}/`);
+const apiOk = await probe(`${API_BASE}/health`);
+
+if (!feOk || !apiOk) {
+  console.error('[E2E] Pre-flight FAILED — required services are unreachable:');
+  if (!feOk) console.error(`  ✗ Frontend: ${BASE}/`);
+  if (!apiOk) console.error(`  ✗ API:      ${API_BASE}/health`);
+  console.error('');
+  console.error('Fix:');
+  console.error('  Client (dev):   make up-dev');
+  console.error('  Client (prod):  make up-prod');
+  console.error('  API:            cd ../api && make docker-up-dev');
+  console.error('Then retry: make e2e  (or  make e2e-prod)');
+  process.exit(2);
+}
+
+log('Pre-flight OK');
+
+// ── Seed a throwaway user via the real backend ───────────────────────────────
+// Use a timestamped address so the same test can be re-run on the same DB.
+const email = `e2e+${Date.now()}@qatu.test`;
 const username = `e2efe_${Date.now()}`;
 const password = 'StrongPassword123!';
 

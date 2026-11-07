@@ -34,7 +34,7 @@ docker compose version        # Docker Compose version v2.x.x
 - `5173` (client dev server, `CLIENT_DEV_PORT`, dev only)
 - `8080` (client prod nginx, `CLIENT_PORT`, prod default)
 
-_(Note: Puppeteer E2E tests and visual regression tests are covered separately; see [Known limitations](#known-limitations-phase-4b-pending).)_
+_(Note: Puppeteer E2E tests and visual regression tests are covered separately; see [Containerized E2E](#containerized-e2e).)_
 
 ---
 
@@ -311,10 +311,78 @@ For GHCR: Go to GitHub → Actions → "Publish Container Image" → Run workflo
 
 ---
 
-## Known limitations (Phase 4b pending)
+## Containerized E2E
 
-- The Puppeteer end-to-end tests (`pnpm test:e2e:auth`) and the visual regression matrix (`pnpm test:matrix`) are not yet integrated into the containerized stack. They currently expect a local host dev server (`:5173`) and local API.
-- Phase 4b will introduce `make e2e` and `make matrix` targets to execute these suites directly against the containerized topology (`client` + `api` + `supabase`).
+Both test suites support running against the containerized stack via environment variables and
+dedicated Makefile targets.
+
+### Auth cookie E2E (`scripts/e2e-auth-cookies.mjs`)
+
+Six scenarios cover the full session lifecycle (fresh visit → login → reload → logout → expiry → rehydration).
+The script requires a live API (real Supabase + PostgreSQL) and a live frontend.
+
+| Target          | Frontend                 | API     | Precondition                                       |
+| --------------- | ------------------------ | ------- | -------------------------------------------------- |
+| `make e2e`      | `:5173` (dev container)  | `:3000` | `make up-dev` + `cd ../api && make docker-up-dev`  |
+| `make e2e-prod` | `:8080` (prod container) | `:3000` | `make up-prod` + `cd ../api && make docker-up-dev` |
+
+```bash
+# Dev stack
+make up-dev
+cd ../api && make docker-up-dev && cd -
+make e2e
+
+# Prod stack
+make up-prod
+make e2e-prod
+```
+
+**Exit codes:** `0` = all 6 PASS, `1` = scenario failure, `2` = pre-flight (FE or API unreachable).
+
+> [!NOTE]
+> `make e2e` and `make e2e-prod` will be **SKIPPED** (pre-flight exits 2) if Supabase is not running.
+> This is expected in environments without a full backend stack.
+
+### Visual regression matrix (`scripts/visual-matrix.mjs`)
+
+8 routes × 2 themes × 3 viewports = **48 screenshots** saved to `/tmp/qatu-matrix/`.
+The matrix uses Puppeteer request interception to mock the authenticated `/v1/auth/me` response for
+the `orders` route — it does **not** require a live API unless `MATRIX_SKIP_AUTH_ROUTES` is unset
+and the target is a real server.
+
+| Target             | Frontend                 | API required | Output                   |
+| ------------------ | ------------------------ | ------------ | ------------------------ |
+| `make matrix`      | `:5173` (dev container)  | No           | `/tmp/qatu-matrix/*.png` |
+| `make matrix-prod` | `:8080` (prod container) | No           | `/tmp/qatu-matrix/*.png` |
+
+```bash
+# Dev stack (client only)
+make up-dev
+make matrix
+ls /tmp/qatu-matrix/*.png | wc -l   # → 48
+
+# Prod stack (client only)
+make up-prod
+make matrix-prod
+ls /tmp/qatu-matrix/*.png | wc -l   # → 48
+
+# Skip authenticated routes when running against real API without credentials
+MATRIX_SKIP_AUTH_ROUTES=1 pnpm test:matrix
+```
+
+### /v1 proxy verification
+
+When the API is running, verify the reverse proxy before E2E:
+
+```bash
+# Dev
+curl -sf http://localhost:5173/v1/products | head -c 100
+
+# Prod
+curl -sf http://localhost:8080/v1/products | head -c 100
+```
+
+Both should return JSON from the API (not an nginx error page).
 
 ---
 
