@@ -1,56 +1,62 @@
-.PHONY: help install dev build tokens-build preview lint lint-fix format format-check test test-watch test-coverage clean
+.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e matrix
 
 help:
-	@echo "Available targets:"
-	@echo "  install        - Install dependencies with pnpm"
-	@echo "  dev            - Start Vite development server"
-	@echo "  build          - Production build with Vite"
-	@echo "  tokens-build   - Build design tokens with Style Dictionary"
-	@echo "  preview        - Preview production build"
-	@echo "  lint           - Run ESLint"
-	@echo "  lint-fix       - Run ESLint with auto-fix"
-	@echo "  format         - Run Prettier"
-	@echo "  format-check   - Check formatting"
-	@echo "  test           - Run Jasmine tests in browser"
-	@echo "  test-watch     - Run Jasmine tests in watch mode"
-	@echo "  test-coverage  - Run Jasmine tests with coverage"
-	@echo "  clean          - Remove node_modules, dist, and coverage"
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Docker:"
+	@echo "  network   Create qatu-net if missing"
+	@echo "  up-dev    Start client in dev mode (pnpm dev, port 5173)"
+	@echo "  up-prod   Start client in prod mode (nginx, port CLIENT_PORT=8080)"
+	@echo "  down      Stop and remove containers"
+	@echo "  logs      Follow client logs"
+	@echo "  build     Build the prod image"
+	@echo "  clean     Down + remove volumes + local images"
+	@echo ""
+	@echo "Local:"
+	@echo "  install   pnpm install --frozen-lockfile"
+	@echo "  dev       Start Vite dev server (host, no Docker)"
+	@echo "  test      Run Jasmine specs"
+	@echo "  lint      Run ESLint"
+	@echo "  format    Run Prettier write"
+	@echo "  tokens    Regenerate design tokens"
 
 install:
-	pnpm install
+	pnpm install --frozen-lockfile
+
+network:
+	@docker network inspect qatu-net >/dev/null 2>&1 || (echo "Creating qatu-net..." && docker network create qatu-net)
+
+up-dev: network
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+up-prod: network
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+down:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+logs:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f client
+
+build: network
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+
+clean: down
+	docker image rm qatu-client:dev qatu-client:prod qatu-client:latest 2>/dev/null || true
 
 dev:
-	pnpm run dev
-
-build:
-	pnpm run build
-
-tokens-build:
-	pnpm tokens:build
-
-preview:
-	pnpm run preview
-
-lint:
-	pnpm run lint
-
-lint-fix:
-	pnpm run lint:fix
-
-format:
-	pnpm run format
-
-format-check:
-	pnpm run format:check
+	pnpm dev
 
 test:
-	pnpm run test
+	pnpm test
 
-test-watch:
-	pnpm run test:watch
+lint:
+	pnpm lint
+	pnpm format:check
 
-test-coverage:
-	@echo "Coverage not yet configured"
+format:
+	pnpm format
 
-clean:
-	rm -rf node_modules dist coverage
+tokens:
+	pnpm tokens:build

@@ -6,18 +6,19 @@ ARG NGINX_VERSION=1.29
 # ── Stage 1: deps ───────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS deps
 WORKDIR /app
+RUN chown node:node /app
 ENV HUSKY=0
 RUN npm install -g corepack && corepack enable && corepack prepare pnpm@11 --activate
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+USER node
 RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: build ──────────────────────────────────────────────────────────
 FROM deps AS build
-COPY . .
+COPY --chown=node:node . .
 ARG VITE_API_BASE_URL=/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN pnpm build
-RUN chown -R node:node /app
 
 # ── Stage 3: development ────────────────────────────────────────────────────
 FROM build AS development
