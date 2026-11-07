@@ -98,10 +98,45 @@ When tokens change in Figma:
 
 The Figma source: [Q-atu Design System](https://www.figma.com/design/CdDUOKZHnmoPbvgxMolUNE/Q-atu?node-id=9-1370&m=dev&t=Ybulw0EgYe4IZW5j-1)
 
+## Containerization
+
+The client runs in Docker for both development and production. Full guide: [`.docs/CONTAINERIZATION.md`](./.docs/CONTAINERIZATION.md).
+
+**Quick start (development):**
+
+```bash
+cp .env.example .env
+# Ensure the api stack is running so /v1 reverse proxy can resolve:
+#   In a separate terminal: cd ../api && make docker-up-dev
+make network
+make up-dev
+```
+
+The client will be available at `http://localhost:5173`. Healthcheck: `curl http://localhost:5173/` returns the SPA.
+
+**Quick start (production):**
+
+```bash
+make network
+make up-prod
+```
+
+The client will be available at `http://localhost:8080`. Healthcheck: `curl http://localhost:8080/healthz` returns `ok`. The SPA reverse-proxies `/v1/*` to `api:3000` over the shared `qatu-net` external network.
+
+**Images:**
+
+- `ghcr.io/jalau-capstones/qatu-client:latest` (GHCR, via GitHub Actions)
+- `$CI_REGISTRY_IMAGE:latest` (GitLab Container Registry, via GitLab CI)
+
+Publishing is triggered by pushing a `v*` tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+
+See [`.docs/CONTAINERIZATION.md`](./.docs/CONTAINERIZATION.md) for prerequisites, the `/v1` reverse proxy, deferred DNS resolution, the three `VITE_API_BASE_URL` modes (dev/prod), and the "add a new service" checklist.
+
 ## Documentation
 
 Detailed documentation is available in the `.docs/` directory:
 
+- [Containerization](.docs/CONTAINERIZATION.md) — Docker multi-stage build, compose topology (dev/prod), nginx /v1 reverse proxy, deferred DNS, debugging, and CI/CD publishing.
 - [Architecture](.docs/ARCHITECTURE.md) — MVVM pattern, components, folder structure, cross-cutting concerns, and testing strategy.
 - [Design System](.docs/DESIGN-SYSTEM.md) — Overview of design tokens, token build pipeline, Bulma overrides, fonts, and dark mode.
 - [Troubleshooting](.docs/TROUBLESHOOTING.md) — Common issues with pnpm, Node.js, Vite, Bulma, Jasmine, Husky, ESLint, and Supabase.
