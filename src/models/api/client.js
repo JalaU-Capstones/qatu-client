@@ -6,7 +6,16 @@ import { getCsrfToken, isCsrfExemptPath, isMutatingMethod } from './csrf.js';
 export const supabase = createClient(
   import.meta.env?.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
   import.meta.env?.VITE_SUPABASE_ANON_KEY,
-  { auth: { flowType: 'pkce', detectSessionInUrl: true } }
+  {
+    auth: {
+      flowType: 'pkce',
+      detectSessionInUrl: true,
+      // Session lives ONLY in memory: the backend owns the real session via
+      // HttpOnly cookies (ADR-012), so nothing may (re)persist tokens in
+      // localStorage after the /auth/callback handoff.
+      persistSession: false,
+    },
+  }
 );
 
 const DEFAULT_BASE_URL =

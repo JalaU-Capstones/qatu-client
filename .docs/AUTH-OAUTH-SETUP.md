@@ -16,6 +16,11 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=<anon/public key from supabase/themes or dashboard>
 ```
 
+The client is created in `src/models/api/client.js` with
+`{ flowType: 'pkce', detectSessionInUrl: true, persistSession: false }` —
+the Supabase session lives **only in memory** and is handed to the backend in
+step 4 below; nothing writes tokens to persistent storage.
+
 After changing `.env`, restart the Vite dev server — `import.meta.env` values
 are baked in at startup.
 
