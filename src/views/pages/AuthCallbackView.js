@@ -18,14 +18,41 @@ const DEFAULT_HANDOFF_TIMEOUT_MS = 8000;
 /** Brief pause so the user can read the inline message before redirecting. */
 const DEFAULT_REDIRECT_DELAY_MS = 1200;
 
+/** Dev-only gate for the structured debug logger (US-03 review F5). */
+const DEBUG = Boolean(import.meta.env?.DEV);
+
+/**
+ * Structured debug logging for the OAuth handoff (US-03 review F5).
+ *
+ * Raw `console.log` must NOT ship to production: every message flows through
+ * this single helper, which is gated behind the Vite DEV flag (`import.meta
+ * .env.DEV`), defers emission to a macrotask (so logging never perturbs the
+ * handoff's async timing while debugging) and logs a structured event +
+ * payload object instead of a formatted string — easy to filter in DevTools
+ * (`Console → network level → `[OAuth Callback]`).
+ *
+ * @param {string} event Short, dot-free key of what happened.
+ * @param {Object} [details] Structured payload.
+ * @private
+ */
+function debugLog(event, details = {}) {
+  if (!DEBUG) return;
+  setTimeout(() => {
+    // eslint-disable-next-line no-console
+    console.debug('[OAuth Callback]', event, details);
+  }, 0);
+}
+
 /**
  * Removes every Supabase-managed key from localStorage AND sessionStorage.
  *
- * After the handoff the backend owns the session (HttpOnly cookies), so the
- * browser-side tokens — stored by Supabase under `sb-*` keys — must not
- * survive. We deliberately do NOT call `supabase.auth.signOut()`: that
- * endpoint would revoke the very session the backend cookie now holds
- * (see ADR-012).
+ * After the handoff the backend owns the session (HttpOnly cookies), so no
+ * Supabase-managed material should survive locally:
+ *  - `supabase.auth.signOut({ scope: 'local' })` (review F4) revokes the
+ *    Supabase session server-side and clears the SDK's in-memory session
+ *    (it fires AFTER the tokens were already consumed by the exchange).
+ *  - This wipe is the belt-and-braces pass: it guarantees the DoD audit —
+ *    search any `sb-*` or `*supabase*` key after the flow, it must be empty.
  *
  * @private
  */
@@ -44,10 +71,13 @@ function _clearSupabaseStorage() {
  *  1. Supabase (`detectSessionInUrl`) consumes the `code` in the URL using the
  *     stored PKCE verifier and emits SIGNED_IN with the provider session.
  *  2. We POST the short-lived Supabase tokens to `POST /v1/auth/oauth/exchange`
- *     and the backend answers with its own session (Set-Cookie: HttpOnly).
- *  3. We wipe ALL Supabase token storage and redirect home. Zero tokens are
- *     ever left in localStorage/sessionStorage (DoD audit: search any `sb-*`
- *     or `*supabase*` key after the flow — it must be empty).
+ *     (`ApiFetch` always sends `credentials: 'include'`, review F3) and the
+ *     backend answers with its own session (Set-Cookie: HttpOnly).
+ *  3. We revoke the local-only Supabase session
+ *     (`signOut({ scope: 'local' })`, review F4), wipe ALL Supabase token
+ *     storage and redirect home. Zero tokens are ever left in
+ *     localStorage/sessionStorage (DoD audit: search any `sb-*` or
+ *     `*supabase*` key after the flow — it must be empty).
  */
 export class AuthCallbackView {
   /**
@@ -83,6 +113,7 @@ export class AuthCallbackView {
 
   render() {
     this._renderLoading();
+    debugLog('route-mounted', { href: window.location.href });
 
     if (this._handleOAuthErrorParam()) {
       return this.element;
@@ -139,6 +170,7 @@ export class AuthCallbackView {
     }
 
     const isCancelled = oauthError === 'access_denied';
+    debugLog('oauth-error-param', { error: oauthError, cancelled: isCancelled });
     this._renderError(
       isCancelled
         ? 'Autorización cancelada.'
@@ -154,6 +186,7 @@ export class AuthCallbackView {
 
   /** Subscribes to Supabase auth events (keeps the subscription for destroy). @private */
   _listenForSession() {
+    debugLog('awaiting-signed-in', { storageKeyPattern: '-code-verifier' });
     const { data } = supabase.auth.onAuthStateChange((event, session) =>
       this._onAuthStateChange(event, session)
     );
@@ -169,6 +202,7 @@ export class AuthCallbackView {
     this._timeoutId = setTimeout(() => {
       if (this._settled) return;
       this._settled = true;
+      debugLog('handoff-timeout', { ms: this.handoffTimeoutMs });
       this._renderError(
         'El inicio de sesión tardó demasiado.',
         'Redirigiendo al inicio de sesión…'
@@ -193,11 +227,37 @@ export class AuthCallbackView {
       this._timeoutId = null;
     }
 
+    debugLog('signed-in-received', {
+      hasAccessToken: Boolean(session?.access_token),
+      hasRefreshToken: Boolean(session?.refresh_token),
+    });
+
+    if (!session?.access_token || !session?.refresh_token) {
+      debugLog('signed-in-incomplete', { status: 'skipping-exchange' });
+      this._renderError(
+        'No se pudo completar el inicio de sesión con Google.',
+        'Redirigiendo al inicio de sesión…'
+      );
+      _clearSupabaseStorage();
+      this._redirectToLogin('oauth_timeout');
+      return;
+    }
+
     try {
+      debugLog('exchange-starting', {
+        endpoint: '/v1/auth/oauth/exchange',
+        credentials: 'include',
+      });
+
       const { data } = await this.authApi.exchangeOAuthToken(
         session.access_token,
         session.refresh_token
       );
+
+      debugLog('exchange-finished', {
+        hasUser: Boolean(data?.user),
+        hasProfile: Boolean(data?.profile),
+      });
 
       authStore.setSession({
         user: data.user,
@@ -205,14 +265,24 @@ export class AuthCallbackView {
         roles: data.roles,
       });
 
+      // Review F4: revoke the local-only Supabase session (it fires the
+      // /logout call against Supabase only for THIS session — the tokens were
+      // already consumed by the exchange). Failures must never block the
+      // redirect; the storage wipe below is the authoritative cleanup.
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (signOutError) {
+        debugLog('signout-failed', { message: signOutError?.message });
+      }
+
       supabase.auth.stopAutoRefresh();
 
       _clearSupabaseStorage();
 
+      debugLog('handoff-completed', { next: '/' });
       this.navigate('/');
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error en handoff OAuth', error);
+      debugLog('exchange-failed', { message: error?.message, status: error?.status ?? null });
       this._renderError(
         'No se pudo completar el inicio de sesión con Google.',
         'Redirigiendo al inicio de sesión…'

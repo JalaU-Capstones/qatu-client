@@ -26,6 +26,14 @@ function createClient(supabaseUrl, supabaseKey, options = {}) {
 
     stopAutoRefresh() {},
 
+    signOut(options = {}) {
+      this.signOutCalls.push(options);
+      return Promise.resolve({ error: null });
+    },
+
+    /** Calls recorded by `signOut` (spec assertions about scope: 'local'). */
+    signOutCalls: [],
+
     getSession() {
       return Promise.resolve({ data: { session: null }, error: null });
     },

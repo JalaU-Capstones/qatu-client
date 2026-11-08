@@ -3,6 +3,81 @@ import { createClient } from '@supabase/supabase-js';
 import { authStore } from '../../store/authStore.js';
 import { getCsrfToken, isCsrfExemptPath, isMutatingMethod } from './csrf.js';
 
+/**
+ * Keys holding PKCE flow material. Every verifier slot the SDK uses ends with
+ * `-code-verifier`: the legacy slot (`<key>-code-verifier`), the per-flow
+ * slots (`<key>-flow-<n>-code-verifier`) and the slot index
+ * (`<key>-flows-code-verifier`). Exported for the Supabase client specs.
+ *
+ * @private
+ */
+export const PKCE_STORAGE_KEY_PATTERN = /-code-verifier$/;
+
+/**
+ * Storage adapter for the Supabase auth client (US-03 review F1).
+ *
+ * The Google OAuth PKCE handoff requires the code verifier created on `/login`
+ * (`signInWithOAuth`) to survive the full-page redirect to `/auth/callback`.
+ * `persistSession: false` alone breaks the flow here: the SDK would keep the
+ * verifier in a memory-only adapter that dies with the login page, so on the
+ * callback page the URL is no longer recognized as a PKCE callback, SIGNED_IN
+ * never fires and the handoff times out (the reported flow-stops issue).
+ *
+ * The adapter therefore persists ONLY `-code-verifier` keys to localStorage.
+ * Everything else — above all `access_token` and `refresh_token` — stays in a
+ * memory map that never outlives the page: no Supabase token is ever written
+ * to persistent storage, the backend owns the real session via HttpOnly
+ * cookies (ADR-012) and the zero-token DoD audit still passes.
+ *
+ * @returns {Storage} localStorage-compatible adapter (getItem/setItem/removeItem).
+ * @private
+ */
+export function createAuthStorage() {
+  const memory = new Map();
+  const persistent =
+    typeof window !== 'undefined' && window.localStorage ? window.localStorage : null;
+
+  const isPkceKey = (key) => PKCE_STORAGE_KEY_PATTERN.test(key);
+
+  return {
+    getItem(key) {
+      if (isPkceKey(key) && persistent) {
+        return persistent.getItem(key);
+      }
+      return memory.get(key) ?? null;
+    },
+    setItem(key, value) {
+      if (isPkceKey(key) && persistent) {
+        persistent.setItem(key, value);
+        return;
+      }
+      memory.set(key, value);
+    },
+    removeItem(key) {
+      if (isPkceKey(key) && persistent) {
+        persistent.removeItem(key);
+        return;
+      }
+      memory.delete(key);
+    },
+  };
+}
+
+/**
+ * Supabase auth client shared application-wide.
+ *
+ * OAuth handoff contract:
+ *  - `flowType: 'pkce'` + `detectSessionInUrl: true`: the SDK consumes the
+ *    `code` on `/auth/callback` using the stored verifier and emits
+ *    `SIGNED_IN` (also validates the `state` param — CSRF defense).
+ *  - `autoRefreshToken: false`: the short-lived Supabase session lives only
+ *    long enough to be POSTed to `/auth/oauth/exchange`; the backend session
+ *    (cookies) is refreshed by `/auth/refresh`, never by this SDK.
+ *  - `storage: createAuthStorage()`: PKCE verifier persists across the Google
+ *    redirect, tokens do NOT persist (see above).
+ *  - Fallback URL must be port 54321 (Kong API gateway), never 54323
+ *    (Supabase Studio).
+ */
 export const supabase = createClient(
   import.meta.env?.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
   import.meta.env?.VITE_SUPABASE_ANON_KEY,
@@ -10,7 +85,8 @@ export const supabase = createClient(
     auth: {
       flowType: 'pkce',
       detectSessionInUrl: true,
-      persistSession: false,
+      autoRefreshToken: false,
+      storage: createAuthStorage(),
     },
   }
 );

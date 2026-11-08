@@ -57,6 +57,8 @@ describe('AuthCallbackView', () => {
     );
     window.sessionStorage.setItem('sb-project-ref-auth-token', 'partial-state');
     window.localStorage.setItem('supabase.auth.token', 'legacy-key');
+
+    supabase.auth.signOutCalls = [];
   });
 
   afterEach(() => {
@@ -109,6 +111,43 @@ describe('AuthCallbackView', () => {
       profile: FAKE_BACKEND_SESSION.data.profile,
       roles: FAKE_BACKEND_SESSION.data.roles,
     });
+
+    view.destroy();
+  });
+
+  it('revokes only the local Supabase session with signOut({scope: "local"}) before redirecting (review F4)', async () => {
+    const view = new AuthCallbackView({ authApi: fakeAuthApi, navigate });
+    view.render();
+
+    supabase.auth._emitAuthEvent('SIGNED_IN', FAKE_SUPABASE_SESSION);
+    await flushMicrotasks();
+
+    expect(supabase.auth.signOutCalls).toContain(jasmine.objectContaining({ scope: 'local' }));
+    expect(navigate).toHaveBeenCalledWith('/');
+
+    view.destroy();
+  });
+
+  it('sends NO exchange request when SIGNED_IN arrives without tokens, and times out per review §2', async () => {
+    const view = new AuthCallbackView({
+      authApi: fakeAuthApi,
+      navigate,
+      redirectDelayMs: 5,
+    });
+    jasmine.clock().install();
+    clockInstalled = true;
+    view.render();
+
+    supabase.auth._emitAuthEvent('SIGNED_IN', {});
+    await flushMicrotasks();
+
+    expect(fakeAuthApi.exchangeOAuthToken).not.toHaveBeenCalled();
+
+    expect(tokenKeysIn(window.localStorage)).toEqual([]);
+    expect(tokenKeysIn(window.sessionStorage)).toEqual([]);
+
+    jasmine.clock().tick(10);
+    expect(navigate).toHaveBeenCalledWith('/login?error=oauth_timeout');
 
     view.destroy();
   });
