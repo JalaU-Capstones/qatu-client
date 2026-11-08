@@ -1,4 +1,4 @@
-/* global process, console, fetch, window, document, setTimeout, localStorage, sessionStorage */
+/* global process, console, fetch, AbortController, clearTimeout, setTimeout, window, document, localStorage, sessionStorage */
 /**
  * E2E authentication smoke test — HttpOnly cookie session flow.
  *
@@ -11,24 +11,68 @@
  *   6. Storage cleared + reload → /me rehydrates from cookie
  *
  * Prerequisites:
- *   - Backend running on http://localhost:3000
- *   - Frontend running on http://localhost:5173
+ *   - Backend running on E2E_API_BASE_URL (default: http://localhost:3000)
+ *   - Frontend running on E2E_BASE_URL (default: http://localhost:5173)
  *
  * Usage:
  *   pnpm test:e2e:auth
  *
+ * Environment:
+ *   E2E_BASE_URL      Frontend base URL (default: http://localhost:5173)
+ *   E2E_API_BASE_URL  Backend base URL  (default: http://localhost:3000)
+ *
  * Exit codes:
  *   0 — all 6 scenarios PASS
  *   1 — any scenario fails (details in stderr)
+ *   2 — precondition failure (FE or API unreachable)
  */
 
 import puppeteer from 'puppeteer';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:5173';
-const API = process.env.E2E_API_URL || 'http://localhost:3000/v1';
+const API_BASE = process.env.E2E_API_BASE_URL || 'http://localhost:3000';
+const API = `${API_BASE}/v1`;
 const log = (...a) => console.log('[E2E]', ...a);
 
-// Seed a throwaway user via the real backend
+log(`Running auth E2E against FE=${BASE} API=${API_BASE}`);
+
+// ── Pre-flight health probes ─────────────────────────────────────────────────
+const probe = async (url) => {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timer);
+    return res.ok || res.status < 500; // 4xx is fine — the server is up
+  } catch {
+    return false;
+  }
+};
+
+const feOk = await probe(`${BASE}/`);
+const apiOk = await probe(`${API_BASE}/health`);
+
+if (!feOk || !apiOk) {
+  console.error('[E2E] Pre-flight FAILED — required services are unreachable:');
+  if (!feOk) console.error(`  ✗ Frontend: ${BASE}/`);
+  if (!apiOk) console.error(`  ✗ API:      ${API_BASE}/health`);
+  console.error('');
+  console.error('Fix:');
+  console.error('  Client (dev):   make up-dev');
+  console.error('  Client (prod):  make up-prod');
+  console.error('  API:            cd ../api && make docker-up-dev');
+  console.error('Then retry: make e2e  (or  make e2e-prod)');
+  process.exit(2);
+}
+
+log('Pre-flight OK');
+
+// ── Seed a throwaway user via the real backend ───────────────────────────────
+// Note: @example.com (not @qatu.test) because the backend's /v1/auth/login
+// validator rejects RFC-2606 reserved TLDs (.test, .example, .invalid, .localhost).
+// The backend's /v1/auth/register validator accepts them, creating an
+// asymmetry that breaks E2E. @example.com is accepted by both endpoints.
+// Backend follow-up: align register/login validators (separate issue).
 const email = `e2e-fe-${Date.now()}@example.com`;
 const username = `e2efe_${Date.now()}`;
 const password = 'StrongPassword123!';
@@ -51,6 +95,19 @@ const context = await browser.createBrowserContext();
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+
+// If running against an origin not in the backend's default ALLOWED_ORIGINS
+// (e.g. prod container on :8080), alias Origin to :5173 so backend CORS accepts it.
+await page.setRequestInterception(true);
+page.on('request', (req) => {
+  const headers = { ...req.headers() };
+  if (headers['origin'] && headers['origin'].includes(':8080')) {
+    headers['origin'] = 'http://localhost:5173';
+    req.continue({ headers });
+  } else {
+    req.continue();
+  }
+});
 
 // Helper
 async function clearStorageAndCookies() {

@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Qatu Client — Docker Compose DEV override
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Runs `pnpm dev` (Vite) with source bind-mount for hot reload.
+# The browser is expected to hit the API at http://localhost:3000/v1
+# directly (Vite serves the SPA; no /v1 proxy in dev).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  client:
+    build:
+      context: .
+      target: development
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/v1}
+    image: qatu-client:dev
+    command: sh -c "pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173"
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/v1}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '${CLIENT_DEV_PORT:-5173}:5173'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:5173/']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

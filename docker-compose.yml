@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Qatu Client — Docker Compose BASE
+#
+# Not meant to be run on its own. Combine with one of:
+#   Development:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Joins the `qatu-net` external network (created by the api repo's compose,
+# or via `make network`). The /v1 upstream is resolved via qatu-net DNS.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  client:
+    image: qatu-client:latest
+    networks:
+      - qatu-net
+
+networks:
+  qatu-net:
+    external: true
+    name: qatu-net
