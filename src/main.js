@@ -65,14 +65,8 @@ if (app) {
     return profile ? { ...user, ...profile } : user;
   };
 
-  // Hydrate session from localStorage before mounting anything that reads user state.
-  // The local cart hydrates itself in the CartStore constructor, so it survives
-  // page reloads for anonymous visitors too.
   authStore.loadFromStorage();
 
-  // Persistent shell — mount BEFORE async boot so the page is interactive
-  // while /me resolves. The header renders from `authStore.getUser()` (which
-  // was just hydrated from cache).
   const header = new HeaderView();
   header.viewModel.setUser(buildHeaderUser(authStore));
   header.viewModel.setCartCount(cartStore.getCount());
@@ -90,9 +84,6 @@ if (app) {
   const footer = new FooterView();
   footer.mount(app);
 
-  // Boot step 2: async /me hydration. Fire-and-forget — must never block
-  // the UI. On success, updates authStore (and thus the header via the
-  // subscription below). On 401, clears cache. On network/5xx, keeps cache.
   const bootstrapService = new AuthBootstrapService({ authApi, authStore });
   void bootstrapService.bootstrap();
 
@@ -122,7 +113,6 @@ if (app) {
 
   const renderCatalog = () => {
     clearCurrentView();
-    // Each applied filter gets a history entry; Back re-renders the catalog from the URL.
     const catalogViewModel = new CatalogViewModel({
       onFiltersChange: (query) => window.history.pushState({}, '', `/products${query}`),
     });
@@ -217,8 +207,6 @@ if (app) {
   };
 
   const renderAuth = (mode) => {
-    // Preserve sliding animation: if we are already on an auth page,
-    // switch mode in place instead of remounting.
     if (activeAuth && activeAuth.mode !== mode) {
       activeAuth.setMode(mode);
       return;
@@ -250,12 +238,10 @@ if (app) {
   };
 
   /**
-   * Called by the product cards on Home/Catalog when the user clicks "Añadir".
-   * Delegates to `CartService`: authenticated users are synced with the
-   * backend (POST /v1/cart/items) and guests get a prompt to log in — the
-   * intent is queued in `pendingCartActionStore` and replayed after login.
+   * Product-card "Añadir" handler: delegates to CartService; guests are
+   * redirected to /login and their intent is queued for replay after login.
    *
-   * @param {Object} product Product snapshot (id, name, price, currency, ...).
+   * @param {Object} product
    * @param {number} [quantity=1]
    * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
    */
@@ -307,9 +293,6 @@ if (app) {
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
   header.viewModel.onProfileClick = () => router.navigate('/profile');
 
-  // Logout: best-effort server invalidation, THEN local clear, THEN navigate.
-  // The API call is wrapped in try/catch so a backend hiccup does not leave
-  // the user stuck logged in locally.
   header.viewModel.onLogoutClick = async () => {
     try {
       await authApi.logout();
@@ -326,9 +309,6 @@ if (app) {
     router.navigate('/login');
   };
 
-  // 401 on a non-auth request: client.js#_handleHardAuthFailure already
-  // cleared the store and dispatched this event. Here we only redirect +
-  // preserve the return path. No clearSession (avoids double-clear).
   window.addEventListener('qatu:auth-expired', () => {
     authRedirectStore.setReturnTo(window.location.pathname);
     router.navigate('/login');
@@ -336,10 +316,8 @@ if (app) {
 
   /**
    * Keeps the local cart in sync with the backend for the current session:
-   *  - authenticated → replay any queued guest action, then hydrate the cart
-   *    from GET /v1/cart (badge + cart page depend on this).
-   *  - guest → the API cart does not exist; clear the local mirror so the
-   *    UI never shows products that are not in the server cart.
+   * authenticated sessions replay queued actions and hydrate the cart;
+   * guests clear the in-memory mirror (no server cart exists).
    * @param {Object} store authStore snapshot
    */
   const syncCartWithSession = (store) => {
@@ -352,9 +330,6 @@ if (app) {
         // eslint-disable-next-line no-console
         .catch((err) => console.error('[main] Failed to load user cart:', err));
     } else {
-      // Guest: no server cart exists. Clear the in-memory mirror so the badge
-      // shows 0. Do NOT clear pendingCartActionStore — it is the guest's queued
-      // intent and must survive until login (or explicit logout).
       cartStore.clear();
     }
   };
@@ -364,8 +339,6 @@ if (app) {
     syncCartWithSession(store);
   });
 
-  // Boot: the session may already be hydrated from cache (loadFromStorage
-  // fired no listeners because the header is mounted before this point).
   syncCartWithSession(authStore);
 
   cartStore.subscribe((store) => {

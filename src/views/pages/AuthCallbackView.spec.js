@@ -16,10 +16,6 @@ const FAKE_SUPABASE_SESSION = {
   provider_token: 'google-oauth-token',
 };
 
-/**
- * DoD audit helper: "verify no access_token or refresh_token appears in
- * localStorage after OAuth login completes".
- */
 const tokenKeysIn = (storage) =>
   Object.keys(storage).filter((key) => key.toLowerCase().includes('token'));
 
@@ -68,7 +64,6 @@ describe('AuthCallbackView', () => {
     history.replaceState(null, '', initialHref);
   });
 
-  /** Flushes the async SIGNED_IN handler (exchange → setSession → clean → redirect). */
   async function flushMicrotasks() {
     for (let i = 0; i < 6; i += 1) {
       await Promise.resolve();

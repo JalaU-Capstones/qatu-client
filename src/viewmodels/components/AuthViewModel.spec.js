@@ -1,14 +1,6 @@
 import { AuthStore } from '../../store/authStore.js';
 import { AuthViewModel, LoginRegisterViewModel } from './AuthViewModel.js';
 
-/**
- * NOTE (FE-04 audit @ 087b05b): several callbacks exercised in this file
- * (onLoginSuccess, onRegisterSuccess, onLogin, onRegister, onGoogleAuth,
- * onForgotPassword) are declared by AuthViewModel but NOT wired by
- * AuthPageView or main.js in production. The specs that exercise them
- * are kept as contract tests. Dead-code removal is tracked separately.
- */
-
 describe('AuthViewModel', () => {
   let viewModel;
   let mockAuthApi;

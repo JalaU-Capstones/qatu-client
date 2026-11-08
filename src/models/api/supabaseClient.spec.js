@@ -1,16 +1,5 @@
 import { createAuthStorage, PKCE_STORAGE_KEY_PATTERN, supabase } from './client.js';
 
-/**
- * Contract spec for the Supabase client configuration (US-03 review).
- * If any of these drifts, the OAuth handoff breaks:
- *  - `flowType: 'pkce'` + `detectSessionInUrl` are required for the
- *    /auth/callback handoff AND for the PKCE state validation (CSRF defense).
- *  - The storage adapter must keep the PKCE verifier path (the ONLY Supabase
- *    material allowed to touch persisted storage — it has to survive the
- *    full-page Google redirect) and keep tokens memory-only (ADR-012).
- *  - Fallback URL must be port 54321 (Kong API gateway), never 54323
- *    (Supabase Studio).
- */
 describe('supabase client', () => {
   it('enforces the PKCE flow with URL detection and in-memory session storage', () => {
     expect(supabase.options.auth).toEqual(
@@ -29,7 +18,7 @@ describe('supabase client', () => {
   });
 });
 
-describe('createAuthStorage (PKCE verifier persistence contract)', () => {
+describe('createAuthStorage', () => {
   let storage;
   let seededKeys;
 
@@ -44,7 +33,7 @@ describe('createAuthStorage (PKCE verifier persistence contract)', () => {
       .forEach((key) => window.localStorage.removeItem(key));
   });
 
-  it('persists PKCE verifier keys across pages (legacy slot, per-flow slot, flow index)', () => {
+  it('persists PKCE verifier keys to localStorage', () => {
     [
       'sb-127.0.0.1:54321-auth-token-code-verifier',
       'sb-127.0.0.1:54321-flow-1-code-verifier',
@@ -55,7 +44,7 @@ describe('createAuthStorage (PKCE verifier persistence contract)', () => {
     });
   });
 
-  it('never persists session/token keys — they die with the page (zero tokens on disk)', () => {
+  it('keeps session/token keys in memory only (zero tokens on disk)', () => {
     const sessionKey = 'sb-127.0.0.1:54321-auth-token';
     storage.setItem(
       sessionKey,
@@ -66,7 +55,7 @@ describe('createAuthStorage (PKCE verifier persistence contract)', () => {
     expect(storage.getItem(sessionKey)).toContain('supabase-access-token');
   });
 
-  it('removes verifier keys from localStorage and keeps the memory contract consistent', () => {
+  it('removes verifier keys and keeps the memory contract consistent', () => {
     const verifierKey = 'sb-127.0.0.1:54321-code-verifier';
     const sessionKey = 'sb-127.0.0.1:54321-auth-token';
     storage.setItem(verifierKey, 'verifier');
@@ -80,7 +69,7 @@ describe('createAuthStorage (PKCE verifier persistence contract)', () => {
     expect(storage.getItem(sessionKey)).toBeNull();
   });
 
-  it('labels every possible verifier slot via the shared key pattern', () => {
+  it('matches only verifier-slot keys with the shared pattern', () => {
     [
       'sb-127.0.0.1:54321-code-verifier',
       'sb-127.0.0.1:54321-flow-40-code-verifier',

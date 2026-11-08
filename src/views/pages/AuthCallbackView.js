@@ -2,37 +2,18 @@ import { AuthApi } from '../../models/api/AuthApi.js';
 import { supabase } from '../../models/api/client.js';
 import { authStore } from '../../store/authStore.js';
 
-/**
- * Guard time for the OAuth handoff. If Supabase never emits SIGNED_IN (e.g.
- * the PKCE `state` did not match — CSRF attempt — the code was already
- * consumed, or the network died), the user is NOT left on a blank screen:
- * we show the error inline and send them back to /login.
- *
- * Note on CSRF: Supabase (flowType 'pkce' + detectSessionInUrl) validates the
- * `state` parameter against the PKCE verifier it stored before redirecting to
- * Google. If the state does not match, NO SIGNED_IN event fires, so this
- * timeout is the catch-all for state-mismatch and stale/failed callbacks.
- */
 const DEFAULT_HANDOFF_TIMEOUT_MS = 8000;
-
-/** Brief pause so the user can read the inline message before redirecting. */
 const DEFAULT_REDIRECT_DELAY_MS = 1200;
 
-/** Dev-only gate for the structured debug logger (US-03 review F5). */
+/** Dev-only gate: debug output is stripped from production builds. */
 const DEBUG = Boolean(import.meta.env?.DEV);
 
 /**
- * Structured debug logging for the OAuth handoff (US-03 review F5).
+ * Structured debug logging, gated behind `import.meta.env.DEV` so no raw
+ * console output ships to production (review F5).
  *
- * Raw `console.log` must NOT ship to production: every message flows through
- * this single helper, which is gated behind the Vite DEV flag (`import.meta
- * .env.DEV`), defers emission to a macrotask (so logging never perturbs the
- * handoff's async timing while debugging) and logs a structured event +
- * payload object instead of a formatted string — easy to filter in DevTools
- * (`Console → network level → `[OAuth Callback]`).
- *
- * @param {string} event Short, dot-free key of what happened.
- * @param {Object} [details] Structured payload.
+ * @param {string} event
+ * @param {Object} [details]
  * @private
  */
 function debugLog(event, details = {}) {
@@ -44,15 +25,8 @@ function debugLog(event, details = {}) {
 }
 
 /**
- * Removes every Supabase-managed key from localStorage AND sessionStorage.
- *
- * After the handoff the backend owns the session (HttpOnly cookies), so no
- * Supabase-managed material should survive locally:
- *  - `supabase.auth.signOut({ scope: 'local' })` (review F4) revokes the
- *    Supabase session server-side and clears the SDK's in-memory session
- *    (it fires AFTER the tokens were already consumed by the exchange).
- *  - This wipe is the belt-and-braces pass: it guarantees the DoD audit —
- *    search any `sb-*` or `*supabase*` key after the flow, it must be empty.
+ * Removes every Supabase-managed key from localStorage and sessionStorage,
+ * leaving zero tokens behind after the handoff (DoD audit).
  *
  * @private
  */
@@ -65,19 +39,10 @@ function _clearSupabaseStorage() {
 }
 
 /**
- * /auth/callback page view (Google OAuth handoff).
- *
- * Flow:
- *  1. Supabase (`detectSessionInUrl`) consumes the `code` in the URL using the
- *     stored PKCE verifier and emits SIGNED_IN with the provider session.
- *  2. We POST the short-lived Supabase tokens to `POST /v1/auth/oauth/exchange`
- *     (`ApiFetch` always sends `credentials: 'include'`, review F3) and the
- *     backend answers with its own session (Set-Cookie: HttpOnly).
- *  3. We revoke the local-only Supabase session
- *     (`signOut({ scope: 'local' })`, review F4), wipe ALL Supabase token
- *     storage and redirect home. Zero tokens are ever left in
- *     localStorage/sessionStorage (DoD audit: search any `sb-*` or
- *     `*supabase*` key after the flow — it must be empty).
+ * /auth/callback page view (Google OAuth handoff). Waits for Supabase to
+ * consume the PKCE code (SIGNED_IN), POSTs the tokens to
+ * /v1/auth/oauth/exchange, clears the local Supabase session and redirects
+ * home or back to /login with an error code.
  */
 export class AuthCallbackView {
   /**
@@ -85,9 +50,7 @@ export class AuthCallbackView {
    * @param {AuthApi} [options.authApi]
    * @param {number} [options.handoffTimeoutMs=8000]
    * @param {number} [options.redirectDelayMs=1200]
-   * @param {Function} [options.navigate] Full-page redirect (defaults to
-   *   `window.location.replace`). Injectable so specs can observe navigation
-   *   without stubbing the `Location` object.
+   * @param {Function} [options.navigate] Full-page redirect injected for specs.
    */
   constructor({
     authApi = new AuthApi(),
@@ -111,6 +74,7 @@ export class AuthCallbackView {
     this._settled = false;
   }
 
+  /** @returns {HTMLElement} */
   render() {
     this._renderLoading();
     debugLog('route-mounted', { href: window.location.href });
@@ -125,7 +89,7 @@ export class AuthCallbackView {
     return this.element;
   }
 
-  /** Clears timers/listeners. Called by the app shell when navigating away. */
+  /** Clears timers and listeners. Called by the app shell when navigating away. */
   destroy() {
     if (this._subscription) {
       this._subscription.unsubscribe();
@@ -141,22 +105,14 @@ export class AuthCallbackView {
     }
   }
 
-  /**
-   * Loading state: "Completando inicio de sesión…" — the route must never
-   * render a blank screen while the handoff is in flight.
-   * @private
-   */
+  /** @private */
   _renderLoading() {
     this.element.innerHTML = '<h3>Completando inicio de sesión…</h3><p>Por favor, espera.</p>';
   }
 
   /**
-   * Handles a cancelled/failed provider authorization. Google redirects back
-   * with `error=access_denied` (user closed the consent screen) or similar in
-   * the query string — Supabase will never emit SIGNED_IN in that case.
-   *
-   * Clears partial state and returns the user to the login page with
-   * `?error=oauth_cancelled`, which AuthViewModel surfaces as a banner.
+   * Handles a cancelled/failed provider authorization (`error=access_denied`
+   * in the query string). Supabase never emits SIGNED_IN in that case.
    *
    * @returns {boolean} true when an OAuth error param was present.
    * @private
@@ -184,9 +140,9 @@ export class AuthCallbackView {
     return true;
   }
 
-  /** Subscribes to Supabase auth events (keeps the subscription for destroy). @private */
+  /** @private */
   _listenForSession() {
-    debugLog('awaiting-signed-in', { storageKeyPattern: '-code-verifier' });
+    debugLog('awaiting-signed-in', {});
     const { data } = supabase.auth.onAuthStateChange((event, session) =>
       this._onAuthStateChange(event, session)
     );
@@ -194,8 +150,7 @@ export class AuthCallbackView {
   }
 
   /**
-   * Fallback for the "nothing ever happens" edge cases: unmatched PKCE state
-   * (CSRF check fails), consumed `code`, or network timeout.
+   * Fallback for PKCE state mismatch, consumed code or network failure.
    * @private
    */
   _startTimeoutGuard() {
@@ -213,7 +168,8 @@ export class AuthCallbackView {
   }
 
   /**
-   * SIGNED_IN handler: exchange the Supabase tokens for the backend session.
+   * SIGNED_IN handler: exchange the Supabase tokens for the backend session,
+   * then clear the local-only Supabase session and redirect home.
    * @private
    */
   async _onAuthStateChange(event, session) {
@@ -233,7 +189,7 @@ export class AuthCallbackView {
     });
 
     if (!session?.access_token || !session?.refresh_token) {
-      debugLog('signed-in-incomplete', { status: 'skipping-exchange' });
+      debugLog('signed-in-incomplete', {});
       this._renderError(
         'No se pudo completar el inicio de sesión con Google.',
         'Redirigiendo al inicio de sesión…'
@@ -244,10 +200,7 @@ export class AuthCallbackView {
     }
 
     try {
-      debugLog('exchange-starting', {
-        endpoint: '/v1/auth/oauth/exchange',
-        credentials: 'include',
-      });
+      debugLog('exchange-starting', { endpoint: '/v1/auth/oauth/exchange' });
 
       const { data } = await this.authApi.exchangeOAuthToken(
         session.access_token,
@@ -265,10 +218,6 @@ export class AuthCallbackView {
         roles: data.roles,
       });
 
-      // Review F4: revoke the local-only Supabase session (it fires the
-      // /logout call against Supabase only for THIS session — the tokens were
-      // already consumed by the exchange). Failures must never block the
-      // redirect; the storage wipe below is the authoritative cleanup.
       try {
         await supabase.auth.signOut({ scope: 'local' });
       } catch (signOutError) {
@@ -276,7 +225,6 @@ export class AuthCallbackView {
       }
 
       supabase.auth.stopAutoRefresh();
-
       _clearSupabaseStorage();
 
       debugLog('handoff-completed', { next: '/' });
@@ -293,8 +241,8 @@ export class AuthCallbackView {
   }
 
   /**
-   * Inline error UI (never a blank screen), then redirect to /login so the
-   * AuthViewModel banner can repeat the context there.
+   * Renders an inline error message, then redirects to /login so
+   * AuthViewModel surfaces a banner with the same context.
    * @private
    */
   _renderError(title, detail) {

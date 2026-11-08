@@ -1,9 +1,6 @@
 /**
- * Test double for `@supabase/supabase-js` used by the Jasmine browser suite
- * (wired via the importMap in spec/support/jasmine-browser.json).
- *
- * `auth.onAuthStateChange` registers real callbacks so specs can drive the
- * OAuth handoff with `client.auth._emitAuthEvent(event, session)`.
+ * Test double for `@supabase/supabase-js`, wired via the importMap in
+ * spec/support/jasmine-browser.json.
  */
 function createClient(supabaseUrl, supabaseKey, options = {}) {
   const listeners = new Set();
@@ -13,6 +10,7 @@ function createClient(supabaseUrl, supabaseKey, options = {}) {
     supabaseKey,
     options,
     listeners,
+    signOutCalls: [],
 
     onAuthStateChange(callback) {
       listeners.add(callback);
@@ -30,9 +28,6 @@ function createClient(supabaseUrl, supabaseKey, options = {}) {
       this.signOutCalls.push(options);
       return Promise.resolve({ error: null });
     },
-
-    /** Calls recorded by `signOut` (spec assertions about scope: 'local'). */
-    signOutCalls: [],
 
     getSession() {
       return Promise.resolve({ data: { session: null }, error: null });
