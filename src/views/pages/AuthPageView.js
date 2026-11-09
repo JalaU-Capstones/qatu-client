@@ -30,6 +30,7 @@ export class AuthPageView {
       onNavigate,
       onModeChange,
     });
+    this.viewModel.applyOAuthErrorFeedback();
     this.view = new AuthView(this.viewModel);
   }
 

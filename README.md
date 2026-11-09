@@ -139,6 +139,7 @@ Detailed documentation is available in the `.docs/` directory:
 - [Containerization](.docs/CONTAINERIZATION.md) — Docker multi-stage build, compose topology (dev/prod), nginx /v1 reverse proxy, deferred DNS, debugging, and CI/CD publishing.
 - [Architecture](.docs/ARCHITECTURE.md) — MVVM pattern, components, folder structure, cross-cutting concerns, and testing strategy.
 - [Profile Management](.docs/PROFILE-MANAGEMENT.md) — View and edit profile, upload avatar (US-04).
+- [Auth & OAuth Setup](.docs/AUTH-OAUTH-SETUP.md) — Google/Supabase social login configuration: redirect URIs, Google Cloud Console origins, PKCE flow, and the zero-token audit.
 - [Design System](.docs/DESIGN-SYSTEM.md) — Overview of design tokens, token build pipeline, Bulma overrides, fonts, and dark mode.
 - [Troubleshooting](.docs/TROUBLESHOOTING.md) — Common issues with pnpm, Node.js, Vite, Bulma, Jasmine, Husky, ESLint, and Supabase.
 - [Git Rules](.docs/GIT_RULES.md) — Branching strategy (GitFlow), commit message convention (Conventional Commits), merge request guidelines, and remote configuration.

@@ -1,5 +1,13 @@
 import { AuthApi } from '../../models/api/AuthApi.js';
+import { supabase } from '../../models/api/client.js';
 import { authStore } from '../../store/authStore.js';
+
+/** Maps the /login `error` query param to a user-facing message. */
+export const OAUTH_LOGIN_ERROR_MESSAGES = {
+  oauth_cancelled: 'Autorización cancelada. Puedes intentarlo de nuevo.',
+  oauth_failed: 'No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo.',
+  oauth_timeout: 'El inicio de sesión tardó demasiado. Inténtalo de nuevo.',
+};
 
 /**
  * ViewModel for Authentication (Login and Register) component.
@@ -124,9 +132,8 @@ export class AuthViewModel {
   }
 
   /**
-   * Submits the login form.
-   * Validates required fields, sends POST to /v1/auth/login, manages loading state,
-   * stores session upon success, redirects to home (/), and displays error feedback on failure.
+   * Submits the login form: validates fields, calls the login endpoint and
+   * stores the session on success.
    *
    * @returns {Promise<boolean>}
    */
@@ -182,10 +189,8 @@ export class AuthViewModel {
   }
 
   /**
-   * Submits the register form.
-   * Validates required fields, password match, and terms acceptance.
-   * Sends POST to /v1/auth/register, manages loading state, stores session upon success,
-   * redirects to home (/), and displays error feedback on failure.
+   * Submits the register form: validates fields, password match and terms,
+   * then calls the register endpoint and stores the session on success.
    *
    * @returns {Promise<boolean>}
    */
@@ -260,12 +265,58 @@ export class AuthViewModel {
     return true;
   }
 
-  triggerGoogleAuth() {
+  /**
+   * Surfaces OAuth handoff errors redirected from /auth/callback via the
+   * `?error=` query param. No-ops when the param is absent or unknown.
+   *
+   * @param {string} [search] Query string to inspect (defaults to the current URL).
+   * @returns {boolean} true when an OAuth error message was applied.
+   */
+  applyOAuthErrorFeedback(search = window.location.search) {
+    const code = new URLSearchParams(search).get('error');
+    const message = OAUTH_LOGIN_ERROR_MESSAGES[code];
+    if (!message) {
+      return false;
+    }
+    this.setError(message);
+    return true;
+  }
+
+  /**
+   * Starts the Google OAuth sign-in flow with PKCE and redirects to the
+   * callback page. Delegates to `onGoogleAuth` when provided.
+   *
+   * @returns {Promise<void>}
+   */
+  async triggerGoogleAuth() {
     if (typeof this.onGoogleAuth === 'function') {
       this.onGoogleAuth();
+      return;
+    }
+
+    this.isLoading = true;
+    this._notify();
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          flowType: 'pkce',
+        },
+      });
+
+      if (error) throw error;
+    } catch (err) {
+      this.errorMessage = err.message || 'Error al conectar con Google';
+      this.isLoading = false;
+      this._notify();
     }
   }
 
+  /**
+   * Triggers forgot password flow.
+   */
   triggerForgotPassword() {
     if (typeof this.onForgotPassword === 'function') {
       this.onForgotPassword();

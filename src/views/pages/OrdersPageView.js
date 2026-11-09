@@ -1,4 +1,4 @@
-import { ORDER_STATUSES, getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+import { getOrderStatusLabel, ORDER_STATUSES } from '../../models/entities/orderStatus.js';
 import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';

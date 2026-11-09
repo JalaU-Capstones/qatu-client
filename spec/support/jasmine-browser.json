@@ -6,6 +6,11 @@
   "helpers": [],
   "random": true,
   "esmFilenameExtension": ".js",
+  "importMap": {
+    "imports": {
+      "@supabase/supabase-js": "./src/testing/supabase-stub.js"
+    }
+  },
   "browser": {
     "name": "headlessChrome",
     "usePuppeteer": true,

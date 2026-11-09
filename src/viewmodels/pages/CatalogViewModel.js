@@ -1,8 +1,8 @@
 import { CategoriesApi } from '../../models/api/CategoriesApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import {
-  SEARCH_MAX_LENGTH,
   createEmptyFilters,
+  SEARCH_MAX_LENGTH,
   validateSearchFilters,
 } from '../../models/validation/productSearchFilters.js';
 

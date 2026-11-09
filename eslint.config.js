@@ -1,6 +1,6 @@
 import js from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
 
 export default [
@@ -17,17 +17,13 @@ export default [
       },
     },
     plugins: {
-      import: importPlugin,
+      'simple-import-sort': simpleImportSort,
     },
     rules: {
       'no-console': 'warn',
       'no-unused-vars': 'error',
-      'import/order': [
-        'error',
-        {
-          alphabetize: { order: 'asc' },
-        },
-      ],
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
     },
   },
   {

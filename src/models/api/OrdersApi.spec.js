@@ -1,5 +1,5 @@
-import { OrdersApi } from './OrdersApi.js';
 import { apiFetch } from './client.js';
+import { OrdersApi } from './OrdersApi.js';
 
 describe('OrdersApi', () => {
   let fetchSpy;
