@@ -72,9 +72,10 @@ export async function apiFetch(path, options = {}) {
 
   const url = `${DEFAULT_BASE_URL}${path}`;
   const method = (rest.method || 'GET').toUpperCase();
+  const isFormData = typeof FormData !== 'undefined' && rest.body instanceof FormData;
 
   const finalHeaders = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(headers || {}),
   };
 

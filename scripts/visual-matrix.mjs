@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 8 routes × 2 themes × 3 viewports = 48 combinations.
+ * Visual matrix E2E — 9 routes × 2 themes × 3 viewports = 54 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -40,6 +40,7 @@ const ROUTES = [
   { name: 'cart', path: '/cart' },
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
+  { name: 'profile', path: '/profile', authenticated: true },
 ];
 
 const activeRoutes = SKIP_AUTH_ROUTES ? ROUTES.filter((r) => !r.authenticated) : ROUTES;
@@ -64,9 +65,12 @@ for (const route of activeRoutes) {
       const page = await browser.newPage();
       const pageErrors = [];
       const rateLimitedEndpoints = [];
+      const notFoundEndpoints = [];
       page.on('response', (res) => {
         if (res.status() === 429) {
           rateLimitedEndpoints.push(res.url());
+        } else if (res.status() === 404) {
+          notFoundEndpoints.push(res.url());
         }
       });
       page.on('pageerror', (e) => pageErrors.push('PAGEERROR: ' + e.message));
@@ -84,14 +88,181 @@ for (const route of activeRoutes) {
 
       await page.setViewport({ width: vp.width, height: vp.height });
 
-      // Set theme before navigation so first paint is themed
-      await page.evaluateOnNewDocument((t) => {
-        try {
-          window.localStorage.setItem('qatu.theme', t);
-        } catch {
-          /* ignore */
-        }
-      }, theme);
+      if (route.authenticated) {
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+          const url = req.url();
+          const corsHeaders = {
+            'Access-Control-Allow-Origin': req.headers().origin || BASE,
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Authorization',
+          };
+
+          if (
+            url.includes('/v1/auth/me') ||
+            url.includes('/v1/profiles/') ||
+            url.includes('/v1/cart') ||
+            url.includes('/v1/orders')
+          ) {
+            if (req.method() === 'OPTIONS') {
+              return req.respond({
+                status: 204,
+                headers: corsHeaders,
+              });
+            }
+
+            const sampleProfile = {
+              id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+              username: 'camila_m',
+              full_name: 'Camila Morales',
+              avatar_path: null,
+              bio: 'Coleccionista de artesanía y textiles andinos.',
+              locale: 'es-PE',
+              created_at: '2026-10-01T00:00:00.000Z',
+              updated_at: '2026-10-01T00:00:00.000Z',
+            };
+
+            let body;
+            if (url.includes('/v1/auth/me')) {
+              body = {
+                data: {
+                  user: {
+                    id: sampleProfile.id,
+                    username: sampleProfile.username,
+                    full_name: sampleProfile.full_name,
+                  },
+                  profile: sampleProfile,
+                  roles: [{ name: 'buyer' }],
+                },
+                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+              };
+            } else if (url.includes('/v1/cart')) {
+              body = {
+                data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
+                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+              };
+            } else if (url.includes('/v1/orders')) {
+              body = {
+                data: [],
+                meta: {
+                  page: 1,
+                  per_page: 10,
+                  total: 0,
+                  total_pages: 0,
+                  timestamp: '2026-10-14T12:00:00.000Z',
+                },
+              };
+            } else {
+              body = {
+                data: sampleProfile,
+                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+              };
+            }
+
+            return req.respond({
+              status: 200,
+              contentType: 'application/json',
+              headers: corsHeaders,
+              body: JSON.stringify(body),
+            });
+          }
+          return req.continue();
+        });
+      }
+
+      // Set theme and optional authenticated session before navigation so first paint is themed
+      await page.evaluateOnNewDocument(
+        (t, isAuth) => {
+          try {
+            window.localStorage.setItem('qatu.theme', t);
+            if (isAuth) {
+              const profile = {
+                id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                username: 'camila_m',
+                full_name: 'Camila Morales',
+                avatar_path: null,
+                bio: 'Coleccionista de artesanía y textiles andinos.',
+                locale: 'es-PE',
+                created_at: '2026-10-01T00:00:00.000Z',
+                updated_at: '2026-10-01T00:00:00.000Z',
+              };
+              window.sessionStorage.setItem(
+                'qatu.auth.session',
+                JSON.stringify({
+                  v: 2,
+                  user: {
+                    id: profile.id,
+                    username: profile.username,
+                    full_name: profile.full_name,
+                  },
+                  profile,
+                  roles: [{ name: 'buyer' }],
+                  savedAt: new Date().toISOString(),
+                })
+              );
+
+              const originalFetch = window.fetch.bind(window);
+              window.fetch = async (input, init) => {
+                const url = typeof input === 'string' ? input : input?.url || '';
+                if (
+                  url.includes('/v1/auth/me') ||
+                  url.includes('/v1/profiles/') ||
+                  url.includes('/v1/cart') ||
+                  url.includes('/v1/orders')
+                ) {
+                  let body;
+                  if (url.includes('/v1/auth/me')) {
+                    body = {
+                      data: {
+                        user: {
+                          id: profile.id,
+                          username: profile.username,
+                          full_name: profile.full_name,
+                        },
+                        profile,
+                        roles: [{ name: 'buyer' }],
+                      },
+                      meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/cart')) {
+                    body = {
+                      data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
+                      meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/orders')) {
+                    body = {
+                      data: [],
+                      meta: {
+                        page: 1,
+                        per_page: 10,
+                        total: 0,
+                        total_pages: 0,
+                        timestamp: '2026-10-14T12:00:00.000Z',
+                      },
+                    };
+                  } else {
+                    body = {
+                      data: profile,
+                      meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  }
+
+                  return new window.Response(JSON.stringify(body), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+                }
+                return originalFetch(input, init);
+              };
+            }
+          } catch {
+            /* ignore */
+          }
+        },
+        theme,
+        Boolean(route.authenticated)
+      );
 
       try {
         await page.goto(BASE + route.path, { waitUntil: 'networkidle0', timeout: 15000 });
@@ -181,6 +352,14 @@ for (const route of activeRoutes) {
                 emptyOrPrompt: check('.q-orders-empty'),
                 footer: check('.q-footer'),
               };
+            case 'profile':
+              return {
+                header: check('.q-header'),
+                profileSection: check('.q-profile'),
+                summaryCard: check('.q-profile-summary-card'),
+                formCard: check('.q-profile-form-card'),
+                footer: check('.q-footer'),
+              };
             default:
               return {};
           }
@@ -226,6 +405,14 @@ for (const route of activeRoutes) {
               err.includes('Too Many Requests') &&
               rateLimitedEndpoints.length > 0 &&
               rateLimitedEndpoints.every((url) => url.includes('/auth/me'))
+            ) {
+              return false;
+            }
+            if (
+              err.includes('404') &&
+              err.includes('Not Found') &&
+              notFoundEndpoints.length > 0 &&
+              notFoundEndpoints.every((url) => url.endsWith('/favicon.ico'))
             ) {
               return false;
             }

@@ -110,12 +110,14 @@ export class HeaderViewModel {
   }
 
   /**
-   * Triggers user profile avatar click.
+   * Triggers user profile navigation and closes the dropdown.
    */
   triggerProfile() {
+    this.isDropdownOpen = false;
     if (typeof this.onProfileClick === 'function') {
       this.onProfileClick(this.user);
     }
+    this._notify();
   }
 
   /**

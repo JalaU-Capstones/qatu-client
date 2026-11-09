@@ -200,7 +200,7 @@ export class HeaderView {
     avatar.setAttribute('aria-label', `Perfil de ${user.username || user.full_name || 'usuario'}`);
     avatar.setAttribute('title', user.username || user.full_name || 'Perfil de usuario');
 
-    const avatarUrl = user.avatar_url || user.avatarUrl;
+    const avatarUrl = user.avatar_path || user.avatarPath || user.avatar_url || user.avatarUrl;
     if (avatarUrl) {
       const img = document.createElement('img');
       img.src = avatarUrl;
@@ -241,6 +241,16 @@ export class HeaderView {
     dropdownHeader.appendChild(nameSpan);
     dropdownHeader.appendChild(emailSpan);
 
+    const profileBtn = document.createElement('button');
+    profileBtn.type = 'button';
+    profileBtn.className = 'q-header-dropdown-item q-header-profile-btn';
+    profileBtn.textContent = 'Mi Perfil';
+    profileBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerProfile();
+    });
+
     const ordersBtn = document.createElement('a');
     ordersBtn.className = 'q-header-dropdown-item q-header-orders-btn';
     ordersBtn.href = '/orders';
@@ -263,6 +273,7 @@ export class HeaderView {
     });
 
     dropdown.appendChild(dropdownHeader);
+    dropdown.appendChild(profileBtn);
     dropdown.appendChild(ordersBtn);
     dropdown.appendChild(logoutBtn);
 
@@ -323,6 +334,40 @@ export class HeaderView {
         if (existingLogin) existingLogin.remove();
         if (!existingAvatarWrapper) {
           actionsWrapper.appendChild(this._createUserAvatar(vm.user));
+        } else {
+          const nameSpan = existingAvatarWrapper.querySelector('.q-header-dropdown-name');
+          if (nameSpan) {
+            nameSpan.textContent = vm.user.full_name || vm.user.username || vm.user.email || '';
+          }
+          const emailSpan = existingAvatarWrapper.querySelector('.q-header-dropdown-email');
+          if (emailSpan) {
+            emailSpan.textContent = vm.user.email || '';
+          }
+          const avatarBtn = existingAvatarWrapper.querySelector('.q-header-user-avatar');
+          const avatarUrl =
+            vm.user.avatar_path || vm.user.avatarPath || vm.user.avatar_url || vm.user.avatarUrl;
+          if (avatarBtn) {
+            const existingImg = avatarBtn.querySelector('.q-header-avatar-img');
+            if (avatarUrl) {
+              if (existingImg) {
+                existingImg.src = avatarUrl;
+              } else {
+                avatarBtn.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = vm.user.username || vm.user.full_name || 'Usuario';
+                img.className = 'q-header-avatar-img';
+                avatarBtn.appendChild(img);
+              }
+            } else if (existingImg) {
+              avatarBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-avatar-placeholder">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              `;
+            }
+          }
         }
       } else {
         if (existingAvatarWrapper) existingAvatarWrapper.remove();

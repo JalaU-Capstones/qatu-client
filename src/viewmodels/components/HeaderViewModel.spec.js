@@ -138,6 +138,22 @@ describe('HeaderViewModel', () => {
     expect(viewModel.isDropdownOpen).toBe(false);
   });
 
+  it('triggerProfile() calls onProfileClick and closes dropdown', () => {
+    let profileUser = null;
+    const vm = new HeaderViewModel({
+      user: { username: 'camila' },
+      onProfileClick: (user) => {
+        profileUser = user;
+      },
+    });
+    vm.toggleDropdown();
+    expect(vm.isDropdownOpen).toBe(true);
+
+    vm.triggerProfile();
+    expect(profileUser).toEqual({ username: 'camila' });
+    expect(vm.isDropdownOpen).toBe(false);
+  });
+
   it('setUser(null) forces isDropdownOpen to false', () => {
     viewModel.setUser({ username: 'dani' });
     viewModel.toggleDropdown();

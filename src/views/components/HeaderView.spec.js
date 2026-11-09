@@ -209,6 +209,22 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('.q-header-profile-btn click calls viewModel.triggerProfile()', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'vera', email: 'vera@q.com' },
+    });
+    spyOn(loggedInVM, 'triggerProfile');
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const profileBtn = el.querySelector('.q-header-profile-btn');
+    expect(profileBtn).not.toBeNull();
+    expect(profileBtn.textContent).toBe('Mi Perfil');
+    profileBtn.click();
+    expect(loggedInVM.triggerProfile).toHaveBeenCalled();
+    loggedInView.destroy();
+  });
+
   it('when user transitions null → object, avatar wrapper with dropdown is created', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
