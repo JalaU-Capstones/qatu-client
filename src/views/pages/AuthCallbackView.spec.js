@@ -110,14 +110,14 @@ describe('AuthCallbackView', () => {
     view.destroy();
   });
 
-  it('revokes only the local Supabase session with signOut({scope: "local"}) before redirecting (review F4)', async () => {
+  it('does NOT revoke the Supabase session after the handoff (ADR-012: the network signOut kills the backend-issued session)', async () => {
     const view = new AuthCallbackView({ authApi: fakeAuthApi, navigate });
     view.render();
 
     supabase.auth._emitAuthEvent('SIGNED_IN', FAKE_SUPABASE_SESSION);
     await flushMicrotasks();
 
-    expect(supabase.auth.signOutCalls).toContain(jasmine.objectContaining({ scope: 'local' }));
+    expect(supabase.auth.signOutCalls).toEqual([]);
     expect(navigate).toHaveBeenCalledWith('/');
 
     view.destroy();

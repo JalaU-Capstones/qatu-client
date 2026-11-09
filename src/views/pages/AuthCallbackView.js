@@ -218,12 +218,6 @@ export class AuthCallbackView {
         roles: data.roles,
       });
 
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch (signOutError) {
-        debugLog('signout-failed', { message: signOutError?.message });
-      }
-
       supabase.auth.stopAutoRefresh();
       _clearSupabaseStorage();
 

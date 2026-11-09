@@ -63,9 +63,10 @@ flowType: 'pkce' })` with `redirectTo = <origin>/auth/callback`; the SDK
    `POST /v1/auth/oauth/exchange` (`credentials: 'include'` via `apiFetch`);
    the backend answers with its own session (`Set-Cookie`: HttpOnly
    `access_token`, `refresh_token`, `csrf_token`).
-4. The view revokes the local Supabase session
-   (`signOut({ scope: 'local' })`), wipes every `sb-*`/`*supabase*` key from
-   localStorage and sessionStorage, and redirects to `/`.
+4. The view stops the SDK auto-refresh and wipes every `sb-*`/`*supabase*`
+   key from localStorage and sessionStorage (never `supabase.auth.signOut` —
+   its network revoke breaks the backend-issued session, see ADR-012 and
+   the review F4 note below), then redirects to `/`.
 5. `AuthBootstrapService` rehydrates via `GET /auth/me` on the next boot.
 
 | Scenario                    | Detection                    | Behavior (`/login?error=…`) |
@@ -75,6 +76,16 @@ flowType: 'pkce' })` with `redirectTo = <origin>/auth/callback`; the SDK
 | Stale code / state mismatch | No `SIGNED_IN` within 8 s    | `oauth_timeout`             |
 
 `AuthViewModel.applyOAuthErrorFeedback` translates those codes into a banner.
+
+### Review F4 note (2026-11-08)
+
+Review item F4 asked for `supabase.auth.signOut({ scope: 'local' })` after the
+handoff. It was implemented and reverted after testing proved it breaks the
+flow: the signOut makes a network `POST /auth/v1/logout?scope=local` that
+revokes the Supabase session the backend just consumed, so the next
+`GET /auth/me` returns 401 and `qatu:auth-expired` sends the (just logged-in)
+user back to `/login`. The backend owns the session (ADR-012); the frontend
+only clears SDK state locally.
 
 ## 5. Zero-token audit (DoD)
 
