@@ -65,9 +65,12 @@ for (const route of activeRoutes) {
       const page = await browser.newPage();
       const pageErrors = [];
       const rateLimitedEndpoints = [];
+      const notFoundEndpoints = [];
       page.on('response', (res) => {
         if (res.status() === 429) {
           rateLimitedEndpoints.push(res.url());
+        } else if (res.status() === 404) {
+          notFoundEndpoints.push(res.url());
         }
       });
       page.on('pageerror', (e) => pageErrors.push('PAGEERROR: ' + e.message));
@@ -402,6 +405,14 @@ for (const route of activeRoutes) {
               err.includes('Too Many Requests') &&
               rateLimitedEndpoints.length > 0 &&
               rateLimitedEndpoints.every((url) => url.includes('/auth/me'))
+            ) {
+              return false;
+            }
+            if (
+              err.includes('404') &&
+              err.includes('Not Found') &&
+              notFoundEndpoints.length > 0 &&
+              notFoundEndpoints.every((url) => url.endsWith('/favicon.ico'))
             ) {
               return false;
             }
