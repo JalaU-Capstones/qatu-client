@@ -34,6 +34,7 @@ export class HeaderViewModel {
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
+    this.onSellerOrdersClick = options.onSellerOrdersClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.isDropdownOpen = false;
@@ -127,6 +128,15 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onOrdersClick === 'function') {
       this.onOrdersClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller orders dashboard. */
+  triggerSellerOrders() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerOrdersClick === 'function') {
+      this.onSellerOrdersClick();
     }
     this._notify();
   }

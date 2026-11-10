@@ -1,3 +1,4 @@
+import { authStore } from '../../store/authStore.js';
 import { HeaderViewModel } from '../../viewmodels/components/HeaderViewModel.js';
 import { NavbarView } from './NavbarView.js';
 
@@ -262,6 +263,24 @@ export class HeaderView {
       this.viewModel.triggerOrders();
     });
 
+    dropdown.appendChild(dropdownHeader);
+    dropdown.appendChild(profileBtn);
+    dropdown.appendChild(ordersBtn);
+
+    if (authStore.isSeller()) {
+      const salesBtn = document.createElement('a');
+      salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
+      salesBtn.href = '/seller/orders';
+      salesBtn.dataset.route = '';
+      salesBtn.textContent = 'Mis ventas';
+      salesBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.viewModel.triggerSellerOrders();
+      });
+      dropdown.appendChild(salesBtn);
+    }
+
     const logoutBtn = document.createElement('button');
     logoutBtn.type = 'button';
     logoutBtn.className = 'q-header-dropdown-item q-header-logout-btn';
@@ -272,9 +291,6 @@ export class HeaderView {
       this.viewModel.triggerLogout();
     });
 
-    dropdown.appendChild(dropdownHeader);
-    dropdown.appendChild(profileBtn);
-    dropdown.appendChild(ordersBtn);
     dropdown.appendChild(logoutBtn);
 
     wrapper.appendChild(avatar);
