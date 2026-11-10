@@ -49,6 +49,56 @@ describe('OrdersApi', () => {
     expect(result.meta.page).toBe(1);
   });
 
+  it('listOrders appends view=seller for the seller dashboard', async () => {
+    await api.listOrders({ page: 1, limit: 10, view: 'seller' });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/orders?page=1&limit=10&view=seller',
+      jasmine.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('updateOrderStatus PATCHes /orders/:id/status', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(JSON.stringify({ data: { id: 'ord-1', status: 'shipped' }, meta: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+
+    const result = await api.updateOrderStatus('ord-1', 'shipped');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/orders/ord-1/status',
+      jasmine.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'shipped' }),
+      })
+    );
+    expect(result.data.status).toBe('shipped');
+  });
+
+  it('updateOrderStatus surfaces INVALID_STATUS_TRANSITION', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: { code: 'INVALID_STATUS_TRANSITION', message: 'Invalid status transition' },
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    try {
+      await api.updateOrderStatus('ord-1', 'pending');
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.statusCode).toBe(422);
+      expect(err.code).toBe('INVALID_STATUS_TRANSITION');
+    }
+  });
+
   it('listOrders throws on error response', async () => {
     fetchSpy.and.returnValue(
       Promise.resolve(
