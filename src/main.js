@@ -15,6 +15,7 @@ import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/pages/orders.css';
+import './views/pages/seller-orders.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -48,6 +49,7 @@ import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
+import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
 
 const app = document.getElementById('app');
 
@@ -186,6 +188,14 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderSellerOrders = () => {
+    clearCurrentView();
+    currentPageView = new SellerOrdersPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  };
+
   const renderProfile = () => {
     clearCurrentView();
     if (!authStore.isAuthenticated()) {
@@ -273,6 +283,7 @@ if (app) {
     renderOrderConfirmation(params.orderId)
   );
   router.addRoute('/orders', () => renderOrders());
+  router.addRoute('/seller/orders', () => renderSellerOrders());
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
@@ -291,6 +302,7 @@ if (app) {
   header.viewModel.onLogoClick = () => router.navigate('/');
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
+  header.viewModel.onSellerOrdersClick = () => router.navigate('/seller/orders');
   header.viewModel.onProfileClick = () => router.navigate('/profile');
 
   header.viewModel.onLogoutClick = async () => {
