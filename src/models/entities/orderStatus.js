@@ -11,6 +11,9 @@ export const ORDER_STATUSES = Object.freeze([
   'cancelled',
 ]);
 
+/** List scopes accepted by `GET /v1/orders?view=` */
+export const ORDER_VIEWS = Object.freeze(['buyer', 'seller', 'admin']);
+
 export const ORDER_STATUS_LABELS = Object.freeze({
   pending: 'Pendiente',
   confirmed: 'Confirmada',

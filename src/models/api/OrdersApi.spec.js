@@ -57,6 +57,117 @@ describe('OrdersApi', () => {
     );
   });
 
+  it('listOrders rejects an unknown view without calling the API', async () => {
+    try {
+      await api.listOrders({ view: 'superadmin' });
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.code).toBe('INVALID_REQUEST');
+      expect(err.statusCode).toBe(400);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('listOrders rejects an unknown status filter without calling the API', async () => {
+    try {
+      await api.listOrders({ status: 'teleported' });
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.code).toBe('INVALID_REQUEST');
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('listOrders accepts every documented view', async () => {
+    for (const view of ['buyer', 'seller', 'admin']) {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(JSON.stringify({ data: [], meta: {} }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+      await api.listOrders({ view });
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('updateOrderStatus rejects an unknown status or missing id without calling the API', async () => {
+    for (const [id, status] of [
+      ['ord-1', 'teleported'],
+      ['ord-1', ''],
+      ['', 'shipped'],
+    ]) {
+      try {
+        await api.updateOrderStatus(id, status);
+        fail(`Expected to throw for (${id}, ${status})`);
+      } catch (err) {
+        expect(err.code).toBe('INVALID_REQUEST');
+      }
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('updateOrderStatus surfaces FORBIDDEN (403) and NOT_FOUND (404) with their codes', async () => {
+    for (const [status, code] of [
+      [403, 'FORBIDDEN'],
+      [404, 'NOT_FOUND'],
+    ]) {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(JSON.stringify({ error: { code, message: 'nope' } }), {
+            status,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+      try {
+        await api.updateOrderStatus('ord-1', 'shipped');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(status);
+        expect(err.code).toBe(code);
+      }
+    }
+  });
+
+  it('updateOrderStatus keeps the INVALID_CSRF_TOKEN code (a 403 that is not a permission error)', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ error: { code: 'INVALID_CSRF_TOKEN', message: 'Invalid CSRF token' } }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+    try {
+      await api.updateOrderStatus('ord-1', 'shipped');
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.statusCode).toBe(403);
+      expect(err.code).toBe('INVALID_CSRF_TOKEN');
+    }
+  });
+
+  it('updateOrderStatus falls back to a code derived from the HTTP status when the body is not JSON', async () => {
+    for (const [status, code] of [
+      [403, 'FORBIDDEN'],
+      [404, 'NOT_FOUND'],
+      [422, 'INVALID_STATUS_TRANSITION'],
+      [500, 'UNKNOWN_ERROR'],
+    ]) {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('<html>boom</html>', { status })));
+      try {
+        await api.updateOrderStatus('ord-1', 'shipped');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(status);
+        expect(err.code).toBe(code);
+      }
+    }
+  });
+
   it('updateOrderStatus PATCHes /orders/:id/status', async () => {
     fetchSpy.and.returnValue(
       Promise.resolve(
