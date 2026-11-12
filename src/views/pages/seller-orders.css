@@ -85,6 +85,23 @@
   background: color-mix(in srgb, var(--q-bg-surface) 88%, var(--q-fg-primary) 12%);
 }
 
+/* Previous rows stay readable while a new page or filter loads. */
+.q-seller-orders-table-wrap.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.q-seller-orders-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.q-seller-orders-updating {
+  color: var(--q-fg-muted);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+}
+
 .q-seller-orders-empty {
   padding: calc(var(--q-geist-space-8x, 32) * 1px);
   text-align: center;
