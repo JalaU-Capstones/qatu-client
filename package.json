@@ -7,20 +7,40 @@
     "node": ">=26.0.0",
     "pnpm": ">=11.0.0"
   },
+  "overrides": {
+    "qs": "6.16.1",
+    "minimatch": ">=11.0.1",
+    "glob": ">=14.0.2"
+  },
+  "auditConfig": {
+    "ignoreCves": [
+      "GHSA-gcqx-w48m-w2h4"
+    ]
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "docker:build": "docker build --target runtime -t qatu-client:dev .",
+    "docker:build:dev": "docker build --target development -t qatu-client:dev-env .",
+    "docker:run": "docker run --rm -p 8080:8080 qatu-client:dev",
+    "docker:network": "docker network inspect qatu-net >/dev/null 2>&1 || docker network create qatu-net",
+    "docker:up:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+    "docker:up:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down && docker compose -f docker-compose.yml -f docker-compose.prod.yml down",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jasmine-browser-runner runSpecs",
+    "test:matrix": "node scripts/visual-matrix.mjs",
+    "test:e2e:auth": "node scripts/e2e-auth-cookies.mjs",
     "test:watch": "jasmine-browser-runner runSpecs --watch",
+    "tokens:build": "style-dictionary build --config ./style-dictionary.config.js",
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.js": [
+    "*.{js,mjs}": [
       "eslint --fix",
       "prettier --write"
     ],
@@ -41,7 +61,8 @@
     "jasmine-browser-runner": "^5.0.0",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
-    "puppeteer": "^25.13.0",
+    "puppeteer": "^25.16.0",
+    "style-dictionary": "^5.6.1",
     "vite": "^8.3.4"
   },
   "dependencies": {

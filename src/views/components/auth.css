@@ -1,0 +1,367 @@
+/**
+ * Authentication (Login & Register) component styling
+ * Fully aligned with Qatu design tokens and semantic variables
+ */
+
+/* ─── Auth page layout (2-column: marketing + form) ─────────── */
+
+.q-auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: calc(100vh - var(--q-header-height, 64) * 1px);
+  width: 100%;
+  background-color: transparent;
+}
+
+/* ─── Marketing column ─────────────────────────────────────── */
+
+.q-auth-marketing {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 48px;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+.q-auth-marketing__content {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.q-auth-marketing__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border: 1.5px solid var(--q-fg-primary);
+  border-radius: 6px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary);
+  width: fit-content;
+  margin-bottom: 8px;
+}
+
+.q-auth-marketing__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--q-accent-fg);
+  margin: 0;
+}
+
+.q-auth-marketing__title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary);
+  margin: 0;
+}
+
+.q-auth-marketing__subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--q-fg-secondary);
+  margin: 0;
+}
+
+.q-auth-marketing__features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 16px 0 0 0;
+  padding: 0;
+}
+
+.q-auth-marketing__feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9375rem;
+  color: var(--q-fg-primary);
+}
+
+.q-auth-marketing__check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--q-fg-primary);
+}
+
+/* ─── Form column ─────────────────────────────────────────── */
+
+.q-auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background-color: transparent;
+}
+
+.q-auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 40px 32px;
+  border-radius: calc(var(--q-radius-xl, 12) * 1px);
+  box-sizing: border-box;
+}
+
+/* Panels — only one visible based on data-mode */
+
+.q-auth-panel {
+  display: none;
+  flex-direction: column;
+}
+
+.q-auth-card[data-mode='login'] .q-auth-login-panel {
+  display: flex;
+}
+
+.q-auth-card[data-mode='register'] .q-auth-register-panel {
+  display: flex;
+}
+
+/* Form Elements Styling */
+.q-auth-header {
+  margin-bottom: 16px;
+}
+
+.q-auth-brand {
+  margin-bottom: 12px;
+}
+
+.q-auth-brand-logo {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.q-auth-title {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--q-fg-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.q-auth-subtitle {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  color: var(--q-fg-muted);
+  margin: 0;
+}
+
+/* Social Login Button */
+.q-auth-social-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Divider with text */
+.q-auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 14px 0;
+  text-align: center;
+  color: var(--q-fg-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+.q-auth-divider::before,
+.q-auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--q-border-default);
+}
+
+.q-auth-divider span {
+  padding: 0 10px;
+}
+
+/* Form Fields */
+.q-auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.q-auth-label {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--q-fg-primary);
+}
+
+.q-auth-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.q-auth-input {
+  width: 100%;
+  height: 36px;
+  padding: 6px 12px;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.875rem;
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background-color: var(--q-bg-surface);
+  color: var(--q-fg-primary);
+  box-sizing: border-box;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.q-auth-input:focus {
+  outline: none;
+  border-color: var(--q-color-primary);
+  box-shadow: 0 0 0 1px var(--q-color-primary);
+}
+
+.q-auth-input::placeholder {
+  color: var(--q-fg-muted);
+}
+
+.q-auth-password-hint {
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.75rem;
+  color: var(--q-fg-muted);
+  margin: 2px 0 0 0;
+  line-height: 1.3;
+}
+
+/* Checkbox and extras */
+.q-auth-extras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 0 12px 0;
+  font-size: 0.8125rem;
+}
+
+.q-auth-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--q-fg-secondary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  cursor: pointer;
+  user-select: none;
+}
+
+.q-auth-checkbox-label input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--q-color-primary);
+  width: 15px;
+  height: 15px;
+}
+
+.q-auth-link {
+  color: var(--q-accent);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.q-auth-link:hover {
+  text-decoration: underline;
+}
+
+/* Feedback messages using semantic tokens */
+.q-auth-alert {
+  padding: 8px 12px;
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  font-size: 0.8125rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.q-auth-alert-error {
+  background-color: var(--q-color-red-50);
+  color: var(--q-color-error);
+  border: 1px solid var(--q-color-error);
+}
+
+.q-auth-alert-success {
+  background-color: var(--q-color-green-50);
+  color: var(--q-color-success);
+  border: 1px solid var(--q-color-success);
+}
+
+/* Switch links on card */
+.q-auth-switch-link {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--q-fg-secondary);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+}
+
+.q-auth-switch-link button {
+  background: none;
+  border: none;
+  color: var(--q-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1023px) {
+  .q-auth-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .q-auth-marketing {
+    display: none;
+  }
+  .q-auth-form-panel {
+    min-height: calc(100vh - var(--q-header-height, 64) * 1px);
+    padding: 32px 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .q-auth-card {
+    padding: 32px 20px;
+    border-radius: calc(var(--q-radius-lg, 8) * 1px);
+  }
+  .q-auth-form-panel {
+    padding: 24px 12px;
+  }
+}

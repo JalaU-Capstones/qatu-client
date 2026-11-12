@@ -1,0 +1,43 @@
+# Version control
+.git
+.gitkeep
+
+# Dependencies
+node_modules
+
+# Build artifacts and coverage
+dist
+coverage
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Documentation
+.docs
+README.md
+*.md
+
+# CI / VCS platform configs and hooks
+.github
+.gitlab
+.gitlab-ci.yml
+.husky
+
+# Tests and testing configs
+spec
+jasmine.json
+spec/support
+*.spec.js
+
+# Scripts
+scripts
+
+# Local editor configs and OS files
+.vscode
+.idea
+.DS_Store

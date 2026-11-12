@@ -1,11 +1,304 @@
-/*
+/**
  * Qatu Marketplace - Custom Styles
  *
- * This file is reserved for project-specific styles that extend or override Bulma.
- * The color palette and design tokens will be defined in a future task.
+ * Load order (imported from src/main.js):
+ * 1. Bulma CSS (base framework)
+ * 2. tokens.css (design tokens from Figma)
+ * 3. semantic.css (semantic mapping + dark mode)
+ * 4. fonts.css (font definitions)
+ * 5. bulma-overrides.css (Bulma variable overrides)
+ * 6. main.css (this file - project-specific styles)
  *
- * Bulma is imported globally in src/main.js. Use this file only for overrides
- * and custom components not provided by Bulma.
+ * Do not import Bulma or tokens here. They are imported in src/main.js
+ * in the correct order.
  */
 
-/* Placeholder: no custom styles defined yet */
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Layout utilities */
+.q-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--q-page-margin, 24px);
+  padding-right: var(--q-page-margin, 24px);
+}
+
+.q-container-wide {
+  max-width: 1400px;
+}
+
+/* Visually hidden (accessible) */
+.q-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Shadow utilities */
+.q-shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.q-shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+.q-shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Transition utility */
+.q-transition {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.q-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.q-main {
+  flex: 1;
+}
+
+.q-section-container {
+  width: 100%;
+  max-width: calc(var(--q-geist-page-width, 1200) * 1px);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: calc(var(--q-geist-page-margin, 24) * 1px);
+  padding-right: calc(var(--q-geist-page-margin, 24) * 1px);
+  box-sizing: border-box;
+}
+
+/* ── Ambient background utility ────────────────────────────────
+ * Reusable decorative blob container. Wrap a section or page in
+ * `.q-ambient` and add 1-3 `.q-ambient__blob` children with a
+ * modifier (`--pink`, `--cyan`) and positional utility classes.
+ * The blobs are pointer-events: none and sit at z-index 0; the
+ * section content must be at z-index >= 1.
+ * ──────────────────────────────────────────────────────────── */
+.q-ambient {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.q-ambient > *:not(.q-ambient__blob) {
+  position: relative;
+  z-index: 1;
+}
+
+.q-ambient__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--q-ambient-blur, 80px));
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.q-ambient__blob--pink {
+  background: radial-gradient(circle, var(--q-ambient-pink), transparent 70%);
+}
+
+.q-ambient__blob--cyan {
+  background: radial-gradient(circle, var(--q-ambient-cyan), transparent 70%);
+}
+
+/* Positional utilities — pass size/position via inline style on the
+ * blob when the layout is page-specific. */
+.q-ambient__blob--top-left {
+  top: -200px;
+  left: -200px;
+  width: 600px;
+  height: 600px;
+}
+
+.q-ambient__blob--bottom-right {
+  bottom: -180px;
+  right: -180px;
+  width: 500px;
+  height: 500px;
+}
+
+@media (max-width: 1023px) {
+  .q-ambient__blob {
+    filter: blur(60px);
+    opacity: 0.3;
+  }
+}
+
+@media (max-width: 767px) {
+  .q-ambient__blob {
+    filter: blur(40px);
+    opacity: 0.2;
+  }
+}
+
+@media (max-width: 768px) {
+  .q-section-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ── Global Radial Background ───────────────────────────────────
+ * Fixed to the viewport so the gradient never cuts off on long pages.
+ * Uses semantic ambient tokens which switch automatically in dark mode.
+ * ──────────────────────────────────────────────────────────── */
+body {
+  background-color: var(--q-bg-page);
+  background-image:
+    radial-gradient(circle at 0% 0%, var(--q-ambient-pink) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, var(--q-ambient-cyan) 0%, transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* ── Global Button System ──────────────────────────────────────
+ * Standardizes all buttons across the platform. Overrides Bulma
+ * defaults and provides semantic variants.
+ * ──────────────────────────────────────────────────────────── */
+.q-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 24px;
+  font-family: var(--q-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.q-btn svg {
+  flex-shrink: 0;
+}
+
+.q-btn:focus-visible {
+  outline: 2px solid var(--q-color-focus);
+  outline-offset: 2px;
+}
+
+.q-btn:disabled,
+.q-btn.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Sizes */
+.q-btn--sm {
+  min-height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.q-btn--lg {
+  min-height: 52px;
+  padding: 0 32px;
+  font-size: 16px;
+}
+
+/* Variant: Primary (Pink Solid) */
+.q-btn--primary {
+  color: #ffffff;
+  background-color: var(--q-accent);
+  border-color: var(--q-accent);
+  box-shadow: 0 2px 4px rgba(236, 72, 153, 0.2);
+}
+
+.q-btn--primary:hover {
+  background-color: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Variant: Outline (Pink Outline) */
+.q-btn--outline {
+  color: var(--q-accent);
+  background-color: transparent;
+  border-color: var(--q-accent);
+}
+
+.q-btn--outline:hover {
+  color: var(--q-accent);
+  background-color: rgba(236, 72, 153, 0.05);
+  border-color: var(--q-accent-hover);
+}
+
+/* Variant: Neutral (Gray/Light or Dark) */
+.q-btn--neutral {
+  color: var(--q-fg-primary);
+  background-color: var(--q-bg-surface);
+  border-color: var(--q-border-default);
+}
+
+.q-btn--neutral:hover {
+  background-color: var(--q-bg-elevated);
+  border-color: var(--q-border-strong);
+}
+
+/* Variant: Ghost (No background, just text) */
+.q-btn--ghost {
+  color: var(--q-fg-secondary);
+  background-color: transparent;
+}
+
+.q-btn--ghost:hover {
+  color: var(--q-fg-primary);
+  background-color: var(--q-bg-surface);
+}
+
+/* Full width utility */
+.q-btn--block {
+  width: 100%;
+}
+
+/* ── Glassmorphism Utility ─────────────────────────────────────
+ * Standardized glass effect for floating cards (Auth, Summary, etc.)
+ * so the radial background shows through while keeping contrast.
+ * ──────────────────────────────────────────────────────────── */
+.q-glass-panel {
+  background-color: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--q-shadow-lg);
+}
+
+[data-theme='dark'] .q-glass-panel {
+  background-color: rgba(26, 26, 30, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

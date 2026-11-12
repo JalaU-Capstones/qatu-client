@@ -1,0 +1,188 @@
+import { ProductsApi } from '../../models/api/ProductsApi.js';
+import { formatPrice } from '../../utils/formatCurrency.js';
+
+/**
+ * ViewModel for the Featured products section of the home page.
+ * Holds the section copy, the loading state, the product list and the "Add to cart" interaction.
+ * Product data comes from the `ProductsApi` model (GET /v1/products) — this
+ * class never touches the DOM and holds no hardcoded catalog data. The field
+ * names consumed here follow the OpenAPI `Product` schema.
+ */
+export class FeaturedProductsViewModel {
+  /**
+   * @param {Object} [options]
+   * @param {string} [options.eyebrow]
+   * @param {string} [options.title]
+   * @param {string} [options.subtitle]
+   * @param {{ label: string, href: string }} [options.link]
+   * @param {string} [options.addToCartLabel]
+   * @param {string} [options.imagePlaceholderLabel]
+   * @param {string} [options.loadErrorMessage]
+   * @param {ProductsApi} [options.productsApi] Model used by `load()`.
+   * @param {Array<Object>} [options.products] Initial products, skips the need to call `load()`.
+   * @param {Function} [options.onAddToCart] Called with the product when "Add to cart" is pressed.
+   */
+  constructor(options = {}) {
+    this.eyebrow = options.eyebrow || 'Seleccionados para ti';
+    this.title = options.title || 'Destacados de la semana';
+    this.subtitle = options.subtitle || '';
+    this.link = options.link || { label: 'Ver catálogo →', href: '/products' };
+    this.addToCartLabel = options.addToCartLabel || 'Añadir';
+    this.imagePlaceholderLabel = options.imagePlaceholderLabel || 'Imagen del producto';
+    this.loadErrorMessage =
+      options.loadErrorMessage || 'No pudimos cargar los productos destacados.';
+    this.productsApi = options.productsApi || new ProductsApi();
+    this.products = Array.isArray(options.products) ? options.products : [];
+    /** @type {'idle' | 'loading' | 'ready' | 'error'} */
+    this.status = options.products ? 'ready' : 'idle';
+    this.errorMessage = '';
+    this.onAddToCart = options.onAddToCart || null;
+    this._listeners = new Set();
+  }
+
+  /**
+   * Loads the featured products from the model and notifies the view.
+   * A failure is stored in `errorMessage` so the view can show it.
+   * @returns {Promise<void>}
+   */
+  async load() {
+    this.status = 'loading';
+    this.errorMessage = '';
+
+    try {
+      const rawProducts = await this.productsApi.getFeaturedProducts();
+      this.products = Array.isArray(rawProducts) ? rawProducts : [];
+      this.status = 'ready';
+    } catch {
+      this.products = [];
+      this.status = 'error';
+      this.errorMessage = this.loadErrorMessage;
+    }
+
+    this._notify();
+  }
+
+  /**
+   * Replaces the product list.
+   * @param {Array<Object>} products
+   */
+  setProducts(products) {
+    this.products = Array.isArray(products) ? products : [];
+    this.status = 'ready';
+    this.errorMessage = '';
+    this._notify();
+  }
+
+  /**
+   * Formats a product price as shown in the design, e.g. "US$ 40.00".
+   * @param {{ price: number, currency?: string }} product
+   * @returns {string}
+   */
+  getPriceLabel(product) {
+    return formatPrice(product.price, product.currency);
+  }
+
+  /**
+   * Formats the visible rating, e.g. "4.9 (24)".
+   * @param {{ average_rating?: number, ratings_count?: number }} product
+   * @returns {string}
+   */
+  getRatingLabel(product) {
+    const rating = Number(product.average_rating || 0).toFixed(1);
+    return `${rating} (${product.ratings_count || 0})`;
+  }
+
+  /**
+   * Builds the rating sentence read by screen readers, e.g. "Calificación 4.9 de 5, 24 reseñas".
+   * @param {{ average_rating?: number, ratings_count?: number }} product
+   * @returns {string}
+   */
+  getRatingAccessibleLabel(product) {
+    const rating = Number(product.average_rating || 0).toFixed(1);
+    return `Calificación ${rating} de 5, ${product.ratings_count || 0} reseñas`;
+  }
+
+  /**
+   * Formats the seller line, e.g. "Tejidos Illimani · Bolivia". The list
+   * endpoint does not populate the seller, so this falls back to an empty
+   * string (the card only renders the line when non-empty).
+   * @param {{ seller?: { full_name?: string, username?: string }|string }} product
+   * @returns {string}
+   */
+  getOriginLabel(product) {
+    if (!product?.seller) return '';
+    if (typeof product.seller === 'string') return product.seller;
+    return product.seller.full_name || product.seller.username || '';
+  }
+
+  /**
+   * Resolves the product image url from the contract field names.
+   * @param {{ primary_image_path?: string, imageUrl?: string }} product
+   * @returns {string|null}
+   */
+  getImageUrl(product) {
+    return product?.imageUrl ?? product?.primary_image_path ?? null;
+  }
+
+  /**
+   * Returns an array of 5 booleans indicating which stars are filled
+   * for the given product's rating (e.g. 4.2 → [true, true, true, true, false]).
+   * @param {{ average_rating?: number }} product
+   * @returns {boolean[]}
+   */
+  getStarsFilled(product) {
+    const rating = Number(product.average_rating) || 0;
+    return Array.from({ length: 5 }, (_, i) => rating >= i + 0.5);
+  }
+
+  /**
+   * Returns true when the given product should display the "Nuevo" badge.
+   * Checks `product.isNew` first; falls back to checking the product's
+   * position in `this.products` (index < 2).
+   * @param {Object} product
+   * @returns {boolean}
+   */
+  isNewProduct(product) {
+    if (typeof product.isNew === 'boolean') return product.isNew;
+    const idx = this.products.findIndex((p) => p.id === product.id);
+    return idx >= 0 && idx < 2;
+  }
+
+  /**
+   * Triggers the "Add to cart" action for a product.
+   * Returns the promise from `onAddToCart` so the caller (ProductCardView)
+   * can drive the button state machine.
+   *
+   * @param {string} productId
+   * @returns {Promise<{ status: string, error?: Error } | { status: 'not-found' }>}
+   */
+  async addToCart(productId) {
+    const product = this.products.find((item) => item.id === productId);
+    if (!product) return { status: 'not-found' };
+    if (typeof this.onAddToCart === 'function') {
+      const result = await this.onAddToCart(product);
+      return result || { status: 'added' };
+    }
+    return { status: 'added' };
+  }
+
+  /**
+   * Subscribes to changes in ViewModel state.
+   * @param {Function} listener
+   * @returns {Function} Unsubscribe function
+   */
+  subscribe(listener) {
+    this._listeners.add(listener);
+    return () => this._listeners.delete(listener);
+  }
+
+  /**
+   * Notifies all listeners of state changes.
+   * Iterates over a copy because a listener may unsubscribe and subscribe again
+   * (the view re-renders itself), and a Set visits entries added while iterating.
+   * @private
+   */
+  _notify() {
+    [...this._listeners].forEach((listener) => listener(this));
+  }
+}

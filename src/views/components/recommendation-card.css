@@ -1,0 +1,161 @@
+/**
+ * Compact recommendation card used on the product detail page.
+ */
+
+.q-recommendation-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  list-style: none;
+  background-color: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-lg, 8) * 1px);
+  box-sizing: border-box;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.q-recommendation-card:hover {
+  border-color: var(--q-border-strong);
+  box-shadow: var(--q-shadow-sm);
+}
+
+.q-recommendation-card__media {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.q-recommendation-card__image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--q-geist-space-2x, 8) * 1px);
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: var(--q-bg-elevated);
+  border-bottom: 1px solid var(--q-border-default);
+  box-sizing: border-box;
+}
+
+.q-recommendation-card__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.q-recommendation-card__mark img {
+  display: block;
+}
+
+.q-recommendation-card__image-label {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  color: var(--q-fg-muted);
+}
+
+.q-recommendation-card__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.q-recommendation-card__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: calc(var(--q-geist-space-2x, 8) * 1px);
+  padding: calc(var(--q-geist-space-4x, 16) * 1px);
+  box-sizing: border-box;
+}
+
+.q-recommendation-card__seller {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  line-height: 1.4;
+  color: var(--q-fg-muted);
+}
+
+.q-recommendation-card__title {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-base, 16) * 1px);
+  font-weight: var(--q-font-weight-semibold, 600);
+  line-height: var(--q-leading-snug, 1.375);
+}
+
+.q-recommendation-card__title-link {
+  color: var(--q-fg-primary);
+  text-decoration: none;
+}
+
+.q-recommendation-card__title-link:hover {
+  color: var(--q-accent);
+  text-decoration: underline;
+}
+
+.q-recommendation-card__title-link:focus-visible {
+  outline: 2px solid var(--q-accent);
+  outline-offset: 2px;
+}
+
+.q-recommendation-card__rating {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  color: var(--q-fg-muted);
+}
+
+.q-recommendation-card__price {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-lg, 18) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  color: var(--q-fg-primary);
+}
+
+.q-recommendation-card__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  margin-top: auto;
+  padding: 0 calc(var(--q-geist-space-3x, 12) * 1px);
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  font-weight: var(--q-font-weight-medium, 500);
+  color: var(--q-accent);
+  text-decoration: none;
+  background-color: var(--q-bg-page);
+  border: 1px solid var(--q-accent);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  box-sizing: border-box;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.q-recommendation-card__link:hover {
+  color: var(--q-bg-page);
+  background-color: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
+}
+
+.q-recommendation-card__link:focus-visible {
+  outline: 2px solid var(--q-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .q-recommendation-card__link {
+    min-height: 40px;
+  }
+}

@@ -1,0 +1,64 @@
+/**
+ * Bulma overrides mapped to Qatu design tokens.
+ * Loaded after Bulma in main.js.
+ */
+
+:root {
+  /* Primary color (Bulma uses HSL) */
+  --bulma-primary-h: 210;
+  --bulma-primary-s: 100%;
+  --bulma-primary-l: 50%;
+
+  /* Link color */
+  --bulma-link-h: 210;
+  --bulma-link-s: 100%;
+  --bulma-link-l: 50%;
+
+  /* Radius */
+  --bulma-radius: 6px;
+  --bulma-radius-small: 4px;
+  --bulma-radius-large: 8px;
+
+  /* Font */
+  --bulma-family-primary: var(--q-font-sans);
+  --bulma-size-normal: 1rem;
+  --bulma-size-small: 0.875rem;
+  --bulma-size-medium: 1.125rem;
+  --bulma-size-large: 1.25rem;
+}
+
+/* Focus ring on all interactive elements */
+.button:focus-visible,
+.input:focus-visible,
+.select select:focus-visible,
+.textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--q-color-focus);
+  outline-offset: 2px;
+}
+
+/* Body defaults */
+body {
+  color: var(--q-fg-primary);
+  background-color: var(--q-bg-page);
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--q-fg-primary);
+  font-weight: 600;
+}
+
+/* Links */
+a {
+  color: var(--q-color-primary);
+}
+
+a:hover {
+  color: var(--q-color-primary-hover);
+}

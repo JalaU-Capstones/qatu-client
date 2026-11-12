@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Qatu Client — Docker Compose PROD override
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Serves the SPA via nginx:1.29-alpine (non-root UID 101) on container:8080.
+# Host port is CLIENT_PORT (default 8080; set to 80 in real production).
+# /v1/* is reverse-proxied to api:3000 via the shared qatu-net network.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  client:
+    build:
+      context: .
+      target: runtime
+      args:
+        VITE_API_BASE_URL: /v1
+    image: qatu-client:prod
+    restart: unless-stopped
+    ports:
+      # Maps host:${CLIENT_PORT} → container:8080 (non-root nginx).
+      # Default 8080 (no privilege required, works in CI).
+      # Production: set CLIENT_PORT=80 in .env; requires Docker daemon with
+      # port-bind capability (rootful Docker handles this by default).
+      - '${CLIENT_PORT:-8080}:8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
