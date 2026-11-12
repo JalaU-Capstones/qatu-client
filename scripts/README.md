@@ -2,7 +2,7 @@
 
 ## `visual-matrix.mjs`
 
-Automated cross-page visual verification for the Sprint Review. Runs 24 combinations (4 routes × 2 themes × 3 viewports) and saves screenshots.
+Automated cross-page visual verification for the Sprint Review. Runs 60 combinations (10 routes × 2 themes × 3 viewports) and saves screenshots.
 
 ### Usage
 
@@ -12,12 +12,21 @@ pnpm dev
 
 # Terminal 2 (backend also running on :3000)
 pnpm test:matrix
+
+# Only some routes (comma-separated names)
+MATRIX_ROUTES=seller-orders,orders pnpm test:matrix
 ```
 
 ### Output
 
-- Screenshots: `/tmp/qatu-matrix/{route}-{theme}-{viewport}.png` (24 files)
+- Screenshots: `/tmp/qatu-matrix/{route}-{theme}-{viewport}.png` (60 files)
 - Report: `/tmp/qatu-matrix/report.json`
+
+### Routes
+
+`home`, `login`, `register`, `catalog`, `product-detail`, `cart`, `search` (public) and `orders`, `profile`, `seller-orders` (authenticated).
+
+Authenticated routes run with a mocked session (`/auth/me`, `/profiles`, `/cart`, `/orders` are stubbed, no backend data needed). `seller-orders` is mocked with the **seller** role and three sample orders (pending, confirmed, delivered), because the route guard redirects anyone without the seller or admin role. The other authenticated routes keep the **buyer** role.
 
 ### What it validates per combination
 
@@ -31,13 +40,14 @@ pnpm test:matrix
 
 ### Exit codes
 
-- `0` — all 24 combinations passed
+- `0` — all combinations passed
 - `1` — at least one failure (details in stdout + `report.json`)
 
 ### Notes
 
 - Requires a running backend (`http://localhost:3000/health`) and Vite dev server (`http://localhost:5173`).
 - Override the base URL with `MATRIX_BASE_URL=http://other-host:port`.
+- `MATRIX_SKIP_AUTH_ROUTES=1` skips every authenticated route (including `seller-orders`).
 - Screenshots are `fullPage: true` — for mobile this can be very tall (e.g. 8000+ px on Home). That's intentional for review.
 
 ## `e2e-auth-cookies.mjs`

@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 9 routes × 2 themes × 3 viewports = 54 combinations.
+ * Visual matrix E2E — 10 routes × 2 themes × 3 viewports = 60 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -14,6 +14,8 @@
  * Environment:
  *   MATRIX_BASE_URL          Target base URL (default: http://localhost:5173)
  *   MATRIX_SKIP_AUTH_ROUTES  Set to "1" to skip routes that require authentication
+ *   MATRIX_ROUTES            Comma-separated route names to run (default: all),
+ *                            e.g. MATRIX_ROUTES=seller-orders,orders
  *
  * Requires: puppeteer (already a devDependency).
  */
@@ -41,9 +43,54 @@ const ROUTES = [
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
+  // Seller dashboard: needs the seller role (the route guard redirects everyone else).
+  { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
 ];
 
-const activeRoutes = SKIP_AUTH_ROUTES ? ROUTES.filter((r) => !r.authenticated) : ROUTES;
+/** Orders returned for `GET /v1/orders?view=seller` (long names exercise the mobile layout). */
+const SELLER_SAMPLE_ORDERS = [
+  {
+    id: 'b1111111-1111-4111-8111-111111111111',
+    order_number: 'ORD-00100001',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    status: 'pending',
+    currency: 'USD',
+    created_at: '2026-10-14T11:00:00.000Z',
+    items: [{ product_name: 'Poncho de alpaca tejido a mano', quantity: 2, subtotal: 120 }],
+  },
+  {
+    id: 'b2222222-2222-4222-8222-222222222222',
+    order_number: 'ORD-00100002',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    status: 'confirmed',
+    currency: 'USD',
+    created_at: '2026-10-13T09:30:00.000Z',
+    items: [
+      { product_name: 'Manta andina', quantity: 1, subtotal: 45.5 },
+      { product_name: 'Chullo de lana', quantity: 3, subtotal: 30 },
+    ],
+  },
+  {
+    id: 'b3333333-3333-4333-8333-333333333333',
+    order_number: 'ORD-00100003',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    status: 'delivered',
+    currency: 'USD',
+    created_at: '2026-10-10T16:45:00.000Z',
+    items: [{ product_name: 'Cuchillos de cocina de acero inoxidable', quantity: 1, subtotal: 79 }],
+  },
+];
+
+const ROUTE_FILTER = (process.env.MATRIX_ROUTES || '')
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
+
+const activeRoutes = ROUTES.filter(
+  (r) =>
+    (!SKIP_AUTH_ROUTES || !r.authenticated) &&
+    (ROUTE_FILTER.length === 0 || ROUTE_FILTER.includes(r.name))
+);
 
 const THEMES = ['light', 'dark'];
 
@@ -87,6 +134,10 @@ for (const route of activeRoutes) {
       });
 
       await page.setViewport({ width: vp.width, height: vp.height });
+
+      // Per-route mocked session: the role set and the orders the API would return.
+      const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
+      const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
 
       if (route.authenticated) {
         await page.setRequestInterception(true);
@@ -133,7 +184,7 @@ for (const route of activeRoutes) {
                     full_name: sampleProfile.full_name,
                   },
                   profile: sampleProfile,
-                  roles: [{ name: 'buyer' }],
+                  roles: sessionRoles,
                 },
                 meta: { timestamp: '2026-10-14T12:00:00.000Z' },
               };
@@ -144,12 +195,12 @@ for (const route of activeRoutes) {
               };
             } else if (url.includes('/v1/orders')) {
               body = {
-                data: [],
+                data: sessionOrders,
                 meta: {
                   page: 1,
                   per_page: 10,
-                  total: 0,
-                  total_pages: 0,
+                  total: sessionOrders.length,
+                  total_pages: sessionOrders.length ? 1 : 0,
                   timestamp: '2026-10-14T12:00:00.000Z',
                 },
               };
@@ -173,7 +224,7 @@ for (const route of activeRoutes) {
 
       // Set theme and optional authenticated session before navigation so first paint is themed
       await page.evaluateOnNewDocument(
-        (t, isAuth) => {
+        (t, isAuth, roles, ordersData) => {
           try {
             window.localStorage.setItem('qatu.theme', t);
             if (isAuth) {
@@ -197,7 +248,7 @@ for (const route of activeRoutes) {
                     full_name: profile.full_name,
                   },
                   profile,
-                  roles: [{ name: 'buyer' }],
+                  roles,
                   savedAt: new Date().toISOString(),
                 })
               );
@@ -221,7 +272,7 @@ for (const route of activeRoutes) {
                           full_name: profile.full_name,
                         },
                         profile,
-                        roles: [{ name: 'buyer' }],
+                        roles,
                       },
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
                     };
@@ -232,12 +283,12 @@ for (const route of activeRoutes) {
                     };
                   } else if (url.includes('/v1/orders')) {
                     body = {
-                      data: [],
+                      data: ordersData,
                       meta: {
                         page: 1,
                         per_page: 10,
-                        total: 0,
-                        total_pages: 0,
+                        total: ordersData.length,
+                        total_pages: ordersData.length ? 1 : 0,
                         timestamp: '2026-10-14T12:00:00.000Z',
                       },
                     };
@@ -261,7 +312,9 @@ for (const route of activeRoutes) {
           }
         },
         theme,
-        Boolean(route.authenticated)
+        Boolean(route.authenticated),
+        sessionRoles,
+        sessionOrders
       );
 
       try {
@@ -358,6 +411,17 @@ for (const route of activeRoutes) {
                 profileSection: check('.q-profile'),
                 summaryCard: check('.q-profile-summary-card'),
                 formCard: check('.q-profile-form-card'),
+                footer: check('.q-footer'),
+              };
+            case 'seller-orders':
+              return {
+                header: check('.q-header'),
+                sellerPage: check('.q-seller-orders-page'),
+                title: check('.q-seller-orders-page__title'),
+                kpis: check('.q-seller-orders-kpi'),
+                table: check('.q-seller-orders-table'),
+                row: check('.q-seller-orders-table tbody tr'),
+                statusSelector: check('.q-seller-orders-table tbody select'),
                 footer: check('.q-footer'),
               };
             default:
