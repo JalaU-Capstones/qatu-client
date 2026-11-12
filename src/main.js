@@ -26,6 +26,7 @@ import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
+import { getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
 import { cartService } from './services/CartService.js';
@@ -70,6 +71,7 @@ if (app) {
   authStore.loadFromStorage();
 
   const header = new HeaderView();
+  header.viewModel.setIsSeller(authStore.isSeller());
   header.viewModel.setUser(buildHeaderUser(authStore));
   header.viewModel.setCartCount(cartStore.getCount());
   header.mount(app);
@@ -87,7 +89,9 @@ if (app) {
   footer.mount(app);
 
   const bootstrapService = new AuthBootstrapService({ authApi, authStore });
-  void bootstrapService.bootstrap();
+  // Never rejects. Role-gated routes await it: in a new tab the roles only exist once
+  // `GET /auth/me` answers, and deciding earlier would bounce a legitimate seller.
+  const sessionReady = bootstrapService.bootstrap();
 
   let currentPageView = null;
   let activeAuth = null;
@@ -188,8 +192,23 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
-  const renderSellerOrders = () => {
+  const renderSellerOrders = async () => {
     clearCurrentView();
+    await sessionReady;
+    // The user may have navigated elsewhere (or this route resolved twice) while waiting.
+    if (currentPageView || router.currentPath !== '/seller/orders') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/orders');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
     currentPageView = new SellerOrdersPageView({
       onNavigate: (path) => router.navigate(path),
     });
@@ -347,6 +366,7 @@ if (app) {
   };
 
   authStore.subscribe((store) => {
+    header.viewModel.setIsSeller(store.isSeller());
     header.viewModel.setUser(buildHeaderUser(store));
     syncCartWithSession(store);
   });

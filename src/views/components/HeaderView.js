@@ -1,4 +1,3 @@
-import { authStore } from '../../store/authStore.js';
 import { HeaderViewModel } from '../../viewmodels/components/HeaderViewModel.js';
 import { NavbarView } from './NavbarView.js';
 
@@ -186,6 +185,45 @@ export class HeaderView {
   }
 
   /**
+   * Creates the "Mis ventas" dropdown link (seller dashboard).
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createSellerOrdersLink() {
+    const salesBtn = document.createElement('a');
+    salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
+    salesBtn.href = '/seller/orders';
+    salesBtn.dataset.route = '';
+    salesBtn.textContent = 'Mis ventas';
+    salesBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerSellerOrders();
+    });
+    return salesBtn;
+  }
+
+  /**
+   * Adds or removes the seller link when the roles change for an already rendered user
+   * (the dropdown is not rebuilt on every update).
+   * @param {HeaderViewModel} vm
+   * @private
+   */
+  _syncSellerLink(vm) {
+    const dropdown = this.element?.querySelector('.q-header-dropdown');
+    if (!dropdown) return;
+    const existing = dropdown.querySelector('.q-header-seller-orders-btn');
+    if (vm.isSeller && !existing) {
+      dropdown.insertBefore(
+        this._createSellerOrdersLink(),
+        dropdown.querySelector('.q-header-logout-btn')
+      );
+    } else if (!vm.isSeller && existing) {
+      existing.remove();
+    }
+  }
+
+  /**
    * Creates a circular user profile avatar element wrapped in a dropdown container.
    * @param {Object} user
    * @returns {HTMLElement} wrapper div containing the avatar button and dropdown
@@ -267,18 +305,8 @@ export class HeaderView {
     dropdown.appendChild(profileBtn);
     dropdown.appendChild(ordersBtn);
 
-    if (authStore.isSeller()) {
-      const salesBtn = document.createElement('a');
-      salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
-      salesBtn.href = '/seller/orders';
-      salesBtn.dataset.route = '';
-      salesBtn.textContent = 'Mis ventas';
-      salesBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.viewModel.triggerSellerOrders();
-      });
-      dropdown.appendChild(salesBtn);
+    if (this.viewModel.isSeller) {
+      dropdown.appendChild(this._createSellerOrdersLink());
     }
 
     const logoutBtn = document.createElement('button');
@@ -395,6 +423,8 @@ export class HeaderView {
         }
       }
     }
+
+    this._syncSellerLink(vm);
 
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');

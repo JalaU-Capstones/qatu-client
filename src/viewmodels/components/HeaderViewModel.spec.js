@@ -15,6 +15,32 @@ describe('HeaderViewModel', () => {
     expect(viewModel.user).toBeNull();
   });
 
+  it('is not a seller by default and setIsSeller notifies only on a real change', () => {
+    expect(viewModel.isSeller).toBe(false);
+
+    let notifications = 0;
+    viewModel.subscribe(() => {
+      notifications += 1;
+    });
+
+    viewModel.setIsSeller(true);
+    expect(viewModel.isSeller).toBe(true);
+    expect(notifications).toBe(1);
+
+    viewModel.setIsSeller(true);
+    expect(notifications).toBe(1);
+
+    viewModel.setIsSeller(false);
+    expect(viewModel.isSeller).toBe(false);
+    expect(notifications).toBe(2);
+  });
+
+  it('accepts isSeller as a constructor option and coerces it to boolean', () => {
+    expect(new HeaderViewModel({ isSeller: true }).isSeller).toBe(true);
+    expect(new HeaderViewModel({ isSeller: 'yes' }).isSeller).toBe(true);
+    expect(new HeaderViewModel({}).isSeller).toBe(false);
+  });
+
   it('should update cartCount and notify subscribers', () => {
     let notified = false;
     viewModel.subscribe(() => {

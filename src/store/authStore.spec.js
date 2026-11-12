@@ -247,6 +247,51 @@ describe('AuthStore', () => {
     });
   });
 
+  describe('roles (hasRole / isSeller)', () => {
+    const sessionWith = (...names) =>
+      store.setSession({ user: { id: 'u1' }, roles: names.map((name) => ({ name })) });
+
+    it('anonymous users have no roles and are not sellers', () => {
+      expect(store.hasRole('seller')).toBe(false);
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('a buyer is not a seller', () => {
+      sessionWith('buyer');
+      expect(store.hasRole('buyer')).toBe(true);
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('a seller and an admin can open the seller dashboard', () => {
+      sessionWith('seller');
+      expect(store.isSeller()).toBe(true);
+      sessionWith('buyer', 'admin');
+      expect(store.isSeller()).toBe(true);
+    });
+
+    it('hasRole ignores invalid input and malformed role entries', () => {
+      store.setSession({ user: { id: 'u1' }, roles: [null, {}, { name: 'buyer' }] });
+      expect(store.hasRole()).toBe(false);
+      expect(store.hasRole(42)).toBe(false);
+      expect(store.hasRole('')).toBe(false);
+      expect(store.hasRole('buyer')).toBe(true);
+    });
+
+    it('does not read a role from user.user_metadata (user-editable, never trusted)', () => {
+      store.setSession({
+        user: { id: 'u1', user_metadata: { role: 'admin' }, app_metadata: { role: 'admin' } },
+        roles: [{ name: 'buyer' }],
+      });
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('loses seller access on clearSession', () => {
+      sessionWith('seller');
+      store.clearSession();
+      expect(store.isSeller()).toBe(false);
+    });
+  });
+
   describe('singleton', () => {
     it('exports a singleton authStore instance', () => {
       expect(authStore instanceof AuthStore).toBe(true);
