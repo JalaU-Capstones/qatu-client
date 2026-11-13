@@ -14,6 +14,7 @@ export class HeaderViewModel {
    * @param {string} [options.loginText]
    * @param {string} [options.loginHref]
    * @param {Object|null} [options.user]
+   * @param {boolean} [options.isSeller] Show the seller dashboard link (seller or admin role).
    * @param {Function} [options.onLoginClick]
    * @param {Function} [options.onCartClick]
    * @param {Function} [options.onLogoClick]
@@ -28,12 +29,14 @@ export class HeaderViewModel {
     this.loginText = options.loginText || 'Iniciar sesión';
     this.loginHref = options.loginHref || '/login';
     this.user = options.user || null;
+    this.isSeller = Boolean(options.isSeller);
     this.theme = options.theme || 'system';
     this.onLoginClick = options.onLoginClick || null;
     this.onCartClick = options.onCartClick || null;
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
+    this.onSellerOrdersClick = options.onSellerOrdersClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.isDropdownOpen = false;
@@ -49,6 +52,19 @@ export class HeaderViewModel {
     this.user = user || null;
     if (!this.user) this.isDropdownOpen = false;
     this._notify();
+  }
+
+  /**
+   * Whether the signed-in user may open the seller dashboard (seller or admin role).
+   * UX only: the API enforces the real permission on every request.
+   * @param {boolean} value
+   */
+  setIsSeller(value) {
+    const next = Boolean(value);
+    if (this.isSeller !== next) {
+      this.isSeller = next;
+      this._notify();
+    }
   }
 
   /**
@@ -127,6 +143,15 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onOrdersClick === 'function') {
       this.onOrdersClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller orders dashboard. */
+  triggerSellerOrders() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerOrdersClick === 'function') {
+      this.onSellerOrdersClick();
     }
     this._notify();
   }

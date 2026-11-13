@@ -63,6 +63,20 @@ export class AuthStore {
     return this._roles;
   }
 
+  /**
+   * @param {string} roleName
+   * @returns {boolean}
+   */
+  hasRole(roleName) {
+    if (!roleName || typeof roleName !== 'string') return false;
+    return this._roles.some((role) => role?.name === roleName);
+  }
+
+  /** @returns {boolean} */
+  isSeller() {
+    return this.hasRole('seller') || this.hasRole('admin');
+  }
+
   /** @returns {string|null} */
   getSavedAt() {
     return this._savedAt;

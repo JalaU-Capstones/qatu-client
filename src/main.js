@@ -15,6 +15,7 @@ import './views/components/footer.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/pages/orders.css';
+import './views/pages/seller-orders.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -25,6 +26,7 @@ import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
+import { getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
 import { cartService } from './services/CartService.js';
@@ -48,6 +50,7 @@ import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
+import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
 
 const app = document.getElementById('app');
 
@@ -68,6 +71,7 @@ if (app) {
   authStore.loadFromStorage();
 
   const header = new HeaderView();
+  header.viewModel.setIsSeller(authStore.isSeller());
   header.viewModel.setUser(buildHeaderUser(authStore));
   header.viewModel.setCartCount(cartStore.getCount());
   header.mount(app);
@@ -85,7 +89,9 @@ if (app) {
   footer.mount(app);
 
   const bootstrapService = new AuthBootstrapService({ authApi, authStore });
-  void bootstrapService.bootstrap();
+  // Never rejects. Role-gated routes await it: in a new tab the roles only exist once
+  // `GET /auth/me` answers, and deciding earlier would bounce a legitimate seller.
+  const sessionReady = bootstrapService.bootstrap();
 
   let currentPageView = null;
   let activeAuth = null;
@@ -186,6 +192,29 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderSellerOrders = async () => {
+    clearCurrentView();
+    await sessionReady;
+    // The user may have navigated elsewhere (or this route resolved twice) while waiting.
+    if (currentPageView || router.currentPath !== '/seller/orders') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/orders');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
+    currentPageView = new SellerOrdersPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  };
+
   const renderProfile = () => {
     clearCurrentView();
     if (!authStore.isAuthenticated()) {
@@ -273,6 +302,7 @@ if (app) {
     renderOrderConfirmation(params.orderId)
   );
   router.addRoute('/orders', () => renderOrders());
+  router.addRoute('/seller/orders', () => renderSellerOrders());
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
@@ -291,6 +321,7 @@ if (app) {
   header.viewModel.onLogoClick = () => router.navigate('/');
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
+  header.viewModel.onSellerOrdersClick = () => router.navigate('/seller/orders');
   header.viewModel.onProfileClick = () => router.navigate('/profile');
 
   header.viewModel.onLogoutClick = async () => {
@@ -335,6 +366,7 @@ if (app) {
   };
 
   authStore.subscribe((store) => {
+    header.viewModel.setIsSeller(store.isSeller());
     header.viewModel.setUser(buildHeaderUser(store));
     syncCartWithSession(store);
   });

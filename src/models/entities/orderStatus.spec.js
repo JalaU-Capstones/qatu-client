@@ -1,4 +1,10 @@
-import { getOrderStatusLabel, ORDER_STATUS_LABELS, ORDER_STATUSES } from './orderStatus.js';
+import {
+  getOrderStatusLabel,
+  getSellerNextStatuses,
+  isTerminalOrderStatus,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUSES,
+} from './orderStatus.js';
 
 describe('orderStatus', () => {
   it('contains exactly the 5 contract statuses without refunded', () => {
@@ -19,5 +25,13 @@ describe('orderStatus', () => {
     expect(getOrderStatusLabel('unknown')).toBe('unknown');
     expect(getOrderStatusLabel('')).toBe('');
     expect(getOrderStatusLabel(null)).toBe('');
+  });
+
+  it('exposes seller transitions and terminal flags (ADR-017)', () => {
+    expect(getSellerNextStatuses('pending')).toEqual(['confirmed']);
+    expect(getSellerNextStatuses('confirmed')).toEqual(['shipped', 'cancelled']);
+    expect(getSellerNextStatuses('delivered')).toEqual([]);
+    expect(isTerminalOrderStatus('delivered')).toBe(true);
+    expect(isTerminalOrderStatus('pending')).toBe(false);
   });
 });

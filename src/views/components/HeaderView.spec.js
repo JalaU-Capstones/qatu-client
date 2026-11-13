@@ -247,6 +247,70 @@ describe('HeaderView', () => {
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
   });
 
+  describe('"Mis ventas" link (seller dashboard)', () => {
+    const SELLER_LINK = '.q-header-seller-orders-btn';
+
+    it('is hidden for a signed-in buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      expect(el.querySelector(SELLER_LINK)).toBeNull();
+    });
+
+    it('is shown for a seller or admin, between profile and logout', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      const link = el.querySelector(SELLER_LINK);
+      expect(link).not.toBeNull();
+      expect(link.textContent).toBe('Mis ventas');
+      expect(link.getAttribute('href')).toBe('/seller/orders');
+      expect(link.nextElementSibling).toBe(el.querySelector('.q-header-logout-btn'));
+    });
+
+    it('is not rendered for anonymous visitors, even if the flag is set', () => {
+      viewModel.setIsSeller(true);
+      const el = view.render();
+      expect(el.querySelector(SELLER_LINK)).toBeNull();
+      expect(el.querySelector('.q-header-dropdown')).toBeNull();
+    });
+
+    it('appears and disappears when the roles change for an already rendered user', () => {
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+      expect(el.querySelector(SELLER_LINK)).toBeNull();
+
+      viewModel.setIsSeller(true);
+      expect(el.querySelectorAll(SELLER_LINK).length).toBe(1);
+
+      viewModel.setIsSeller(false);
+      expect(el.querySelector(SELLER_LINK)).toBeNull();
+    });
+
+    it('does not duplicate the link on repeated updates', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      viewModel.setCartCount(1);
+      viewModel.setCartCount(2);
+      expect(el.querySelectorAll(SELLER_LINK).length).toBe(1);
+    });
+
+    it('clicking it calls viewModel.triggerSellerOrders() without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerSellerOrders');
+      const el = view.render();
+
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      el.querySelector(SELLER_LINK).dispatchEvent(event);
+
+      expect(viewModel.triggerSellerOrders).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+  });
+
   it('renders .q-header-theme-btn between cart and login', () => {
     const el = view.render();
     const actions = el.querySelector('.q-header-actions');
