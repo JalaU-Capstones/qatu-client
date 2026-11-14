@@ -149,5 +149,11 @@ environment variable. To make those URLs render:
   `/product-images/` to `http://host.docker.internal:54321/storage/v1/object/public`
   (dev/staging) or the Supabase Cloud hostname (real production).
 
+> [!IMPORTANT]
+> The nginx proxy blocks for `/avatars/` and `/product-images/` MUST use
+> `location ^~` (not plain `location`). The static-asset regex location
+> (`\.(?:png|webp|jpg|...)$`) would otherwise take priority for image URLs
+> and return nginx's 404 before the proxy runs.
+
 This keeps the Supabase hostname out of public URLs and makes the SPA origin
 the only visible origin.

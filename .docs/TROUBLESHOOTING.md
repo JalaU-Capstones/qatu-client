@@ -126,6 +126,24 @@ proxy blocks pointing to the Supabase Storage host, and that the `client`
 container has `extra_hosts: host.docker.internal:...` if Supabase runs on
 the Docker host.
 
+### Images return nginx's HTML 404 (`nginx/1.29.x`) instead of JSON
+
+Root cause: `nginx/default.conf` has a regex location for static assets
+(`location ~* \.(?:png|jpe?g|gif|webp|...)$`) that fires BEFORE the
+storage proxy prefix locations. In nginx, regex locations always win
+over prefix locations — the only exception is `^~`.
+
+Fix: the `/avatars/` and `/product-images/` location blocks MUST use the
+`^~` modifier:
+
+    location ^~ /avatars/ { ... }
+    location ^~ /product-images/ { ... }
+
+If you see a **555-byte** response body with `<title>404 Not Found</title>`
+and `nginx/1.29.x` in the footer, this is nginx's own 404 — the request
+never reached Supabase Storage. A real Supabase 404 returns JSON with
+`{"statusCode":"404","error":"not_found",...}` and a different size.
+
 ### Prod page is blank with `supabaseKey is required`
 
 Root cause: `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` were not
