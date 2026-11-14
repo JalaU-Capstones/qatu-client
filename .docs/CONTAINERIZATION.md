@@ -62,6 +62,27 @@ The client cares about **three key environment variables**:
 
 > **Important:** `VITE_API_BASE_URL` is baked at **build time** during `pnpm build` (or `docker compose build`). Changing this variable in `.env` requires rebuilding the image (`make build` or `docker compose build --no-cache`).
 
+### Vite build-time vars (`VITE_*`)
+
+Vite bakes every `import.meta.env.VITE_*` at **build time**. Two mechanisms
+apply:
+
+- **Dev (`pnpm dev` on host or in container):** Vite reads `.env` from the
+  working directory. `docker-compose.dev.yml` also passes the vars through
+  `environment:` so the containerized Vite process sees them.
+- **Prod build (nginx runtime stage):** `.env` is NOT copied into the Docker
+  build context (`.dockerignore` excludes it — secrets should never be
+  baked into images). The vars must be passed via `--build-arg`. The
+  `Dockerfile` declares `ARG VITE_SUPABASE_URL` and `ARG VITE_SUPABASE_ANON_KEY`,
+  and `docker-compose.prod.yml` forwards them from the host shell
+  (which reads `.env` automatically).
+
+**If a required `VITE_*` var is missing at build time, the SPA crashes with
+`supabaseKey is required` (or similar) at first load.**
+
+Never add backend-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`,
+`GOOGLE_CLIENT_SECRET`) as build args — those must never reach the bundle.
+
 ---
 
 ## Development Workflow

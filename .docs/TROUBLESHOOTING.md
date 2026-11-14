@@ -125,3 +125,23 @@ Check that `nginx/default.conf` has `/avatars/` and `/product-images/`
 proxy blocks pointing to the Supabase Storage host, and that the `client`
 container has `extra_hosts: host.docker.internal:...` if Supabase runs on
 the Docker host.
+
+### Prod page is blank with `supabaseKey is required`
+
+Root cause: `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` were not
+provided at build time. Vite baked `undefined` into the bundle, and
+`createClient(undefined, undefined)` throws.
+
+Fix:
+
+1. Confirm `client/.env` has both vars (get values from `npx supabase status`).
+2. Rebuild the prod image so the build args pick them up:
+   ```bash
+   VITE_SUPABASE_URL=http://localhost:54321 \
+   VITE_SUPABASE_ANON_KEY="$(grep '^SUPABASE_ANON_KEY=' ../api/.env | cut -d= -f2-)" \
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache client
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d client
+   ```
+3. Hard refresh the browser (Cmd+Shift+R / Ctrl+Shift+R).
+
+Verify in DevTools → Console that `supabaseKey is required` is gone.
