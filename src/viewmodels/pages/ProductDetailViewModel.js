@@ -247,7 +247,7 @@ export class ProductDetailViewModel {
     const images = Array.isArray(product.images) ? product.images : [];
     if (images.length > 0) {
       return images.map((image, index) => ({
-        path: typeof image?.image_path === 'string' ? image.image_path : null,
+        path: typeof image?.path === 'string' ? image.path : null,
         label: image?.label || `Vista ${index + 1}`,
       }));
     }

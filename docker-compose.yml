@@ -18,6 +18,10 @@ services:
       - qatu-net
     expose:
       - '8080'
+    extra_hosts:
+      # ADR-019 / ADR-016: allow client container to reach Supabase Storage on host via
+      # host.docker.internal. On Linux, 172.19.0.1 matches the gateway IP used by the API repo.
+      - 'host.docker.internal:172.19.0.1'
 
   lb:
     image: nginx:1.29-alpine

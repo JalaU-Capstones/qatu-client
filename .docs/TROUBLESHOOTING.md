@@ -103,3 +103,25 @@
 - **Logout doesn't clear the session**:
   - `main.js#onLogoutClick` calls `authApi.logout()` first (best-effort) then `authStore.clearSession()`. If the API call fails, a warning is logged and the local clear still runs. Check console for `[main] logout API call failed`.
   - Verify the backend `/auth/logout` returns `Set-Cookie: access_token=; Max-Age=0` etc. If it doesn't, the cookie remains valid despite local state being cleared.
+
+## Images (ADR-019 Phase 2)
+
+### Images return 404 in dev
+
+Check that:
+
+1. The API's `.env` has `PUBLIC_APP_URL=http://localhost:5173` (or leave it
+   empty if you want direct Supabase URLs).
+2. `vite.config.js` has `/avatars` and `/product-images` proxy blocks.
+3. Supabase CLI is running on `:54321` (`npx supabase status`).
+
+If the URL in the browser is `http://localhost:5173/product-images/...` and
+the response is 404, the Vite proxy isn't forwarding to Supabase — restart
+`pnpm dev`.
+
+### Images return 404 in prod
+
+Check that `nginx/default.conf` has `/avatars/` and `/product-images/`
+proxy blocks pointing to the Supabase Storage host, and that the `client`
+container has `extra_hosts: host.docker.internal:...` if Supabase runs on
+the Docker host.
