@@ -32,7 +32,7 @@ docker compose version        # Docker Compose version v2.x.x
 **Ports that must be free on the host:**
 
 - `5173` (client dev server, `CLIENT_DEV_PORT`, dev only)
-- `8080` (client prod nginx, `CLIENT_PORT`, prod default)
+- `8080` (edge load balancer `lb`, `CLIENT_PORT`, prod default)
 
 _(Note: Puppeteer E2E tests and visual regression tests are covered separately; see [Containerized E2E](#containerized-e2e).)_
 
@@ -50,15 +50,15 @@ The client cares about **three key environment variables**:
 
 1. `VITE_API_BASE_URL` — **Build-time variable** baked by Vite into the client bundle at build time (`import.meta.env.VITE_API_BASE_URL`). The value **MUST** be reachable from the user's **browser**, not just inside the Docker network.
 2. `CLIENT_DEV_PORT` — Host port mapped to container port `5173` in `docker-compose.dev.yml` (default: `5173`).
-3. `CLIENT_PORT` — Host port mapped to container port `8080` in `docker-compose.prod.yml` (default: `8080`; recommended for production: `80`).
+3. `CLIENT_PORT` — Host port mapped to `lb` container port `80` in `docker-compose.prod.yml` (default: `8080`; recommended for production: `80`).
 
 ### Deployment Modes for `VITE_API_BASE_URL`
 
-| Mode                        | When to use                      | `VITE_API_BASE_URL`        | Flow                                                            |
-| --------------------------- | -------------------------------- | -------------------------- | --------------------------------------------------------------- |
-| **A — Dev (Host Vite)**     | You run `pnpm dev` on host       | `http://localhost:3000/v1` | Browser → host:3000 (API) directly                              |
-| **B — Dev (Containerized)** | `make up-dev` with API container | `http://localhost:3000/v1` | Browser → host:3000 (API) directly                              |
-| **C — Prod (Nginx SPA)**    | `make up-prod` (Nginx runtime)   | `/v1`                      | Browser → same-origin `/v1` → Nginx → `api:3000` via `qatu-net` |
+| Mode                        | When to use                      | `VITE_API_BASE_URL`        | Flow                                                                      |
+| --------------------------- | -------------------------------- | -------------------------- | ------------------------------------------------------------------------- |
+| **A — Dev (Host Vite)**     | You run `pnpm dev` on host       | `http://localhost:3000/v1` | Browser → host:3000 (API) directly                                        |
+| **B — Dev (Containerized)** | `make up-dev` with API container | `http://localhost:3000/v1` | Browser → host:3000 (API) directly                                        |
+| **C — Prod (Nginx SPA)**    | \make up-prod` (Nginx runtime)   | `/v1`                      | Browser → `lb:80` (`front-end`) → `client:8080` → `api:3000` (`qatu-net`) |
 
 > **Important:** `VITE_API_BASE_URL` is baked at **build time** during `pnpm build` (or `docker compose build`). Changing this variable in `.env` requires rebuilding the image (`make build` or `docker compose build --no-cache`).
 
@@ -110,7 +110,7 @@ _(The client does not expose postgres or rabbitmq — those services belong to t
 
 ```bash
 make network            # Ensure qatu-net exists
-make up-prod            # Target: runtime stage, host:${CLIENT_PORT:-8080} → container:8080
+make up-prod            # Target: runtime stage, host:${CLIENT_PORT:-8080} → lb:80 → client:8080
 ```
 
 Verify production health:
@@ -129,6 +129,19 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/v1/products
 - **Restart policy:** `restart: unless-stopped`.
 - **No bind mounts:** Static production build copied from `build` stage into `/usr/share/nginx/html`.
 - **Build argument:** `VITE_API_BASE_URL=/v1` (baked at build time).
+
+### Edge Load Balancer & Network Topology (`front-end` + `qatu-net`)
+
+In production, traffic enters through a dedicated Nginx edge load balancer (`lb`) on the `front-end` network before reaching `client`:
+
+```text
+Browser ──► host:${CLIENT_PORT:-8080} ──► lb:80 [front-end]
+                                              │
+                                              ▼
+                                        client:8080 [front-end, qatu-net]
+                                          ├── /*     ──► Static SPA (/usr/share/nginx/html)
+                                          └── /v1/*  ──► api:3000 [qatu-net]
+```
 
 ### Integration with API (`qatu-net`)
 
@@ -230,10 +243,14 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec client sh
 ### Inspect the network and health
 
 ```bash
-# List all containers on qatu-net
+# List all containers on front-end (lb + client)
+docker network inspect front-end --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'
+
+# List all containers on qatu-net (client + api)
 docker network inspect qatu-net --format '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{"\n"}}{{end}}'
 
-# Check health endpoint from inside the container
+# Check health endpoints from inside the containers
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec lb wget -q -O - http://127.0.0.1:80/healthz
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec client wget -q -O - http://127.0.0.1:8080/healthz
 ```
 
@@ -251,13 +268,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec client wget
 
 ## Environment Variable Reference
 
-| Variable            | Default                    | Required in prod | Description                                                       |
-| ------------------- | -------------------------- | ---------------- | ----------------------------------------------------------------- |
-| `VITE_API_BASE_URL` | `http://localhost:3000/v1` | yes (`/v1`)      | Build-time base URL baked into the Vite bundle for API calls.     |
-| `CLIENT_DEV_PORT`   | `5173`                     | no               | Host port mapped to Vite dev server in `docker-compose.dev.yml`.  |
-| `CLIENT_PORT`       | `8080`                     | yes (or `80`)    | Host port mapped to Nginx container in `docker-compose.prod.yml`. |
-
----
+| Variable            | Default                    | Required in prod | Description                                                                  |
+| ------------------- | -------------------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | `http://localhost:3000/v1` | yes (`/v1`)      | Build-time base URL baked into the Vite bundle for API calls.                |
+| `CLIENT_DEV_PORT`   | `5173`                     | no               | Host port mapped to Vite dev server in `docker-compose.dev.yml`.             |
+| `CLIENT_PORT`       | `8080`                     | yes (or `80`)    | Host port mapped to `lb` container (port `80`) in `docker-compose.prod.yml`. |
 
 ## CI/CD: Publishing Images
 
@@ -467,7 +482,7 @@ cd ../api && make docker-down && cd -
 ## Reference
 
 - **Dockerfile:** `./Dockerfile` (four stages: deps → build → development → runtime)
-- **Nginx config:** `./nginx/default.conf` (SPA fallback, asset caching, /healthz, /v1 reverse proxy)
+- **Nginx config:** `./nginx/lb.conf` (edge load balancer on :80), `./nginx/default.conf` (SPA fallback, asset caching, /healthz, /v1 reverse proxy)
 - **Compose files:** `./docker-compose.yml`, `./docker-compose.dev.yml`, `./docker-compose.prod.yml`
 - **CI workflows:** `.github/workflows/publish-image.yml`, `.gitlab-ci.yml` (`publish:image` job)
 - **Design docs:** [SP-16: Containerization Strategy](../../Methodology/Spikes-and-PoC/SP-16-Containerization), [ADR-016: Containerization Architecture](../../Architecture/ADR/ADR-016-Containerization)
