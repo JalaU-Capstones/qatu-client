@@ -95,4 +95,31 @@ describe('OrderDetailComponent', () => {
     backBtn.click();
     expect(backSpy).toHaveBeenCalled();
   });
+
+  it('renders placeholder SVG when item image fails to load', () => {
+    const orderWithImage = {
+      ...sampleOrder,
+      items: [
+        {
+          id: 'item-broken',
+          product_name: 'Broken Item',
+          product_image_path: 'https://invalid.example/broken-product.png',
+          quantity: 1,
+          unit_price: 10,
+          subtotal: 10,
+        },
+      ],
+    };
+    const component = new OrderDetailComponent({ order: orderWithImage });
+    const el = component.render();
+
+    const img = el.querySelector('.q-order-detail__item-image img');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(el.querySelector('.q-order-detail__item-image img')).toBeNull();
+    const svg = el.querySelector('.q-order-detail__item-image svg');
+    expect(svg).not.toBeNull();
+  });
 });

@@ -111,6 +111,27 @@ describe('ProfileView', () => {
       expect(el.querySelector('.q-profile-avatar-img')).toBeNull();
       expect(el.querySelector('.q-profile-avatar-placeholder')).not.toBeNull();
     });
+
+    it('renders placeholder SVG when avatar image fails to load (onerror fallback)', async () => {
+      mockProfilesApi.getById.and.resolveTo({
+        data: {
+          ...sampleProfile,
+          avatar_path: 'https://invalid.example/broken-avatar.webp',
+        },
+        meta: {},
+      });
+
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+
+      const img = el.querySelector('.q-profile-avatar-img');
+      expect(img).not.toBeNull();
+
+      img.dispatchEvent(new Event('error'));
+
+      expect(el.querySelector('.q-profile-avatar-img')).toBeNull();
+      expect(el.querySelector('.q-profile-avatar-placeholder')).not.toBeNull();
+    });
   });
 
   describe('Scenario: Update profile & Upload avatar', () => {

@@ -107,6 +107,28 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('renders circular placeholder SVG when avatar image fails to load', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: {
+        username: 'camilam',
+        avatarUrl: 'https://invalid.example/avatar-broken.jpg',
+      },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const img = el.querySelector('.q-header-avatar-img');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    const avatar = el.querySelector('.q-header-user-avatar');
+    expect(avatar.querySelector('.q-header-avatar-img')).toBeNull();
+    expect(avatar.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+
+    loggedInView.destroy();
+  });
+
   it('should reactively transition from login button to avatar when user logs in', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();

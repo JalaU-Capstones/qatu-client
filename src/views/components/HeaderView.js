@@ -224,6 +224,31 @@ export class HeaderView {
   }
 
   /**
+   * Attaches an error fallback handler to an avatar image element.
+   * @param {HTMLImageElement} img
+   * @private
+   */
+  _attachAvatarErrorFallback(img) {
+    img.addEventListener(
+      'error',
+      () => {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+        const parent = img.parentElement;
+        if (parent) {
+          parent.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-avatar-placeholder">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      `;
+        }
+      },
+      { once: true }
+    );
+  }
+
+  /**
    * Creates a circular user profile avatar element wrapped in a dropdown container.
    * @param {Object} user
    * @returns {HTMLElement} wrapper div containing the avatar button and dropdown
@@ -245,6 +270,7 @@ export class HeaderView {
       img.src = avatarUrl;
       img.alt = user.username || user.full_name || 'Usuario';
       img.className = 'q-header-avatar-img';
+      this._attachAvatarErrorFallback(img);
       avatar.appendChild(img);
     } else {
       avatar.innerHTML = `
@@ -394,6 +420,7 @@ export class HeaderView {
             const existingImg = avatarBtn.querySelector('.q-header-avatar-img');
             if (avatarUrl) {
               if (existingImg) {
+                this._attachAvatarErrorFallback(existingImg);
                 existingImg.src = avatarUrl;
               } else {
                 avatarBtn.innerHTML = '';
@@ -401,6 +428,7 @@ export class HeaderView {
                 img.src = avatarUrl;
                 img.alt = vm.user.username || vm.user.full_name || 'Usuario';
                 img.className = 'q-header-avatar-img';
+                this._attachAvatarErrorFallback(img);
                 avatarBtn.appendChild(img);
               }
             } else if (existingImg) {

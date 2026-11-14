@@ -236,6 +236,14 @@ if (app) {
   };
 
   const renderAuth = (mode) => {
+    // ADR-012 / Discovery D1: authenticated users must not reach the auth
+    // form. `loadFromStorage()` is synchronous (runs before router.start()),
+    // so `isAuthenticated()` is reliable here — no race condition.
+    if (authStore.isAuthenticated()) {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
     if (activeAuth && activeAuth.mode !== mode) {
       activeAuth.setMode(mode);
       return;

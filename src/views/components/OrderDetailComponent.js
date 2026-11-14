@@ -1,5 +1,13 @@
 import { getOrderStatusLabel } from '../../models/entities/orderStatus.js';
 
+const ITEM_PLACEHOLDER_SVG = `
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+  </svg>
+`;
+
 /**
  * Component to display full details of a specific order.
  * Follows Qatu design tokens, accessible markup, and strict MVVM architecture.
@@ -240,15 +248,16 @@ export class OrderDetailComponent {
           img.src = item.product_image_path || item.product_image;
           img.alt = item.product_name || item.name || 'Producto';
           img.loading = 'lazy';
+          img.addEventListener(
+            'error',
+            () => {
+              imgDiv.innerHTML = ITEM_PLACEHOLDER_SVG;
+            },
+            { once: true }
+          );
           imgDiv.appendChild(img);
         } else {
-          imgDiv.innerHTML = `
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          `;
+          imgDiv.innerHTML = ITEM_PLACEHOLDER_SVG;
         }
 
         const infoDiv = document.createElement('div');

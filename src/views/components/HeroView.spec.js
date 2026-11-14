@@ -157,4 +157,20 @@ describe('HeroView', () => {
     viewModel.setSearchValue('artesanías');
     expect(input.value).toBe('artesanías');
   });
+
+  it('renders fallback styling when visual image fails to load', () => {
+    const customVM = new HeroViewModel({ visualImageUrl: 'https://invalid.example/broken.jpg' });
+    const customView = new HeroView(customVM);
+    const el = customView.render();
+    const img = el.querySelector('.q-hero__visual-img');
+    const visual = el.querySelector('.q-hero__visual');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(img.style.display).toBe('none');
+    expect(img.hasAttribute('src')).toBe(false);
+    expect(visual.classList.contains('q-hero__visual--fallback')).toBe(true);
+    customView.destroy();
+  });
 });
