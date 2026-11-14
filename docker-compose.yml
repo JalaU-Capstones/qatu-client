@@ -5,17 +5,52 @@
 #   Development:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 #   Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 #
-# Joins the `qatu-net` external network (created by the api repo's compose,
-# or via `make network`). The /v1 upstream is resolved via qatu-net DNS.
+# Network topology:
+#   - `front-end`: internal bridge connecting `lb` (edge) -> `client` (:8080).
+#   - `qatu-net`: external bridge connecting `client` -> `api` (:3000).
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
   client:
     image: qatu-client:latest
     networks:
+      - front-end
       - qatu-net
+    expose:
+      - '8080'
+
+  lb:
+    image: nginx:1.29-alpine
+    user: '101:101'
+    volumes:
+      - ./nginx/lb.conf:/etc/nginx/conf.d/default.conf:ro
+    tmpfs:
+      - /var/cache/nginx:uid=101,gid=101
+      - /var/run:uid=101,gid=101
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 80
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    expose:
+      - '80'
+    networks:
+      - front-end
+    depends_on:
+      client:
+        condition: service_started
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
 networks:
+  front-end:
+    driver: bridge
+    name: front-end
   qatu-net:
     external: true
     name: qatu-net
