@@ -26,6 +26,7 @@ import './views/pages/cart.css';
 import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
+import { CategoriesApi } from './models/api/CategoriesApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
@@ -83,6 +84,17 @@ if (app) {
   });
   header.viewModel.setTheme(themeStore.getResolved());
   header.viewModel.onThemeToggleClick = () => themeStore.cycle();
+
+  const categoriesApi = new CategoriesApi();
+  categoriesApi
+    .getCategories()
+    .then((res) => {
+      header.viewModel.setCategories(res.data || []);
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[main] failed to fetch categories for header:', err?.message || err);
+    });
 
   const mainEl = document.createElement('main');
   mainEl.className = 'q-main';
@@ -406,7 +418,11 @@ if (app) {
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
   header.viewModel.onSellerOrdersClick = () => router.navigate('/seller/orders');
+  header.viewModel.onSellerProductsClick = () => router.navigate('/seller/products');
   header.viewModel.onProfileClick = () => router.navigate('/profile');
+  header.viewModel.onSearch = (term) => router.navigate('/products?q=' + encodeURIComponent(term));
+  header.viewModel.onCategoryClick = (categoryId) =>
+    router.navigate('/products?category=' + encodeURIComponent(categoryId));
 
   header.viewModel.onLogoutClick = async () => {
     try {

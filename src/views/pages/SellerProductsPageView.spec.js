@@ -238,4 +238,52 @@ describe('SellerProductsPageView', () => {
     expect(errSpan).not.toBeNull();
     expect(errSpan.textContent).toBe('IMAGE_REQUIRED');
   });
+
+  it('10. renders pagination bar when meta.total_pages > 1', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [mockProduct({ id: 'p1' })],
+      meta: { page: 1, per_page: 20, total: 27, total_pages: 2 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const pagination = container.querySelector('.q-seller-products__pagination');
+    expect(pagination).not.toBeNull();
+    expect(pagination.querySelector('.q-seller-products__pagination-label').textContent).toBe(
+      'Mostrando 1\u201320 de 27'
+    );
+  });
+
+  it('11. has prev disabled and next enabled on page 1', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [mockProduct({ id: 'p1' })],
+      meta: { page: 1, per_page: 20, total: 27, total_pages: 2 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const prevBtn = container.querySelector('.q-seller-products__pagination-prev');
+    const nextBtn = container.querySelector('.q-seller-products__pagination-next');
+    expect(prevBtn.disabled).toBe(true);
+    expect(nextBtn.disabled).toBe(false);
+  });
+
+  it('12. clicking next calls viewModel.setPage with next page', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [mockProduct({ id: 'p1' })],
+      meta: { page: 1, per_page: 20, total: 27, total_pages: 2 },
+    });
+    spyOn(viewModel, 'setPage').and.callThrough();
+
+    view.mount(container);
+    await tick();
+
+    const nextBtn = container.querySelector('.q-seller-products__pagination-next');
+    nextBtn.click();
+    await tick();
+
+    expect(viewModel.setPage).toHaveBeenCalledWith(2);
+  });
 });

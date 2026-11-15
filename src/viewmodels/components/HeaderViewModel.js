@@ -37,8 +37,13 @@ export class HeaderViewModel {
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
     this.onSellerOrdersClick = options.onSellerOrdersClick || null;
+    this.onSellerProductsClick = options.onSellerProductsClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
+    this.categories = options.categories || [];
+    this.searchValue = '';
+    this.onSearch = options.onSearch || null;
+    this.onCategoryClick = options.onCategoryClick || null;
     this.isDropdownOpen = false;
     this._listeners = new Set();
   }
@@ -154,6 +159,34 @@ export class HeaderViewModel {
       this.onSellerOrdersClick();
     }
     this._notify();
+  }
+
+  /** Navigate to seller products dashboard. */
+  triggerSellerProducts() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerProductsClick === 'function') {
+      this.onSellerProductsClick();
+    }
+    this._notify();
+  }
+
+  setCategories(categories = []) {
+    this.categories = categories;
+    this._notify();
+  }
+
+  setSearchValue(value) {
+    this.searchValue = typeof value === 'string' ? value : '';
+  }
+
+  triggerSearch() {
+    const term = this.searchValue.trim();
+    if (!term) return;
+    if (typeof this.onSearch === 'function') this.onSearch(term);
+  }
+
+  triggerCategory(categoryId) {
+    if (typeof this.onCategoryClick === 'function') this.onCategoryClick(categoryId);
   }
 
   /**

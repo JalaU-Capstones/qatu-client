@@ -19,6 +19,7 @@ export class SellerProductsViewModel {
     this.errorMessage = '';
     this.publishingId = null; // productId currently being published
     this.publishErrors = {}; // { [productId]: string }
+    this.currentPage = 1;
   }
 
   subscribe(listener) {
@@ -32,19 +33,20 @@ export class SellerProductsViewModel {
     }
   }
 
-  async load({ page = 1, status = this.filterStatus } = {}) {
+  async load({ page = this.currentPage, status = this.filterStatus } = {}) {
     this.isLoading = true;
     this.errorMessage = '';
     this._notify();
     try {
       const response = await this.productsApi.getSellerProducts({
         page,
-        limit: 20,
+        limit: this.meta?.per_page || 20,
         status: status || undefined,
       });
       this.products = response.data || [];
       this.meta = response.meta || this.meta;
       this.filterStatus = status || null;
+      this.currentPage = page;
     } catch {
       this.errorMessage = 'No pudimos cargar tus productos. Intenta de nuevo.';
     } finally {
@@ -56,6 +58,29 @@ export class SellerProductsViewModel {
   async setFilter(status) {
     this.filterStatus = status;
     await this.load({ page: 1, status });
+  }
+
+  async setPage(page) {
+    const totalPages = this.meta?.total_pages || 0;
+    if (page < 1 || (totalPages > 0 && page > totalPages)) return;
+    await this.load({ page });
+  }
+
+  get hasPrevPage() {
+    return this.currentPage > 1;
+  }
+
+  get hasNextPage() {
+    const totalPages = this.meta?.total_pages || 0;
+    return this.currentPage < totalPages;
+  }
+
+  get pageRangeLabel() {
+    const total = this.meta?.total || 0;
+    const perPage = this.meta?.per_page || 20;
+    const start = total === 0 ? 0 : (this.currentPage - 1) * perPage + 1;
+    const end = Math.min(this.currentPage * perPage, total);
+    return `Mostrando ${start}\u2013${end} de ${total}`;
   }
 
   async publishProduct(productId) {

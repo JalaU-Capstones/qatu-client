@@ -153,4 +153,49 @@ describe('SellerProductsViewModel', () => {
     ).toBe(false);
     expect(vm.canPublish(null)).toBe(false);
   });
+
+  it('10. setPage(2) calls load with page 2 and updates currentPage', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [mockProduct({ id: 'p2' })],
+      meta: { page: 2, per_page: 20, total: 27, total_pages: 2 },
+    });
+    // Set total_pages so guard allows page 2
+    vm.meta = { page: 1, per_page: 20, total: 27, total_pages: 2 };
+
+    await vm.setPage(2);
+
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith(
+      jasmine.objectContaining({ page: 2 })
+    );
+    expect(vm.currentPage).toBe(2);
+  });
+
+  it('11. setPage(0) is a no-op and does not change currentPage', async () => {
+    vm.meta = { page: 1, per_page: 20, total: 27, total_pages: 2 };
+    vm.currentPage = 1;
+
+    await vm.setPage(0);
+
+    expect(productsApi.getSellerProducts).not.toHaveBeenCalled();
+    expect(vm.currentPage).toBe(1);
+  });
+
+  it('12. setPage(totalPages + 1) is a no-op', async () => {
+    vm.meta = { page: 1, per_page: 20, total: 27, total_pages: 2 };
+    vm.currentPage = 1;
+
+    await vm.setPage(3);
+
+    expect(productsApi.getSellerProducts).not.toHaveBeenCalled();
+    expect(vm.currentPage).toBe(1);
+  });
+
+  it('13. hasPrevPage, hasNextPage, pageRangeLabel return correct values on page 1 of 2', () => {
+    vm.currentPage = 1;
+    vm.meta = { page: 1, per_page: 20, total: 27, total_pages: 2 };
+
+    expect(vm.hasPrevPage).toBe(false);
+    expect(vm.hasNextPage).toBe(true);
+    expect(vm.pageRangeLabel).toBe('Mostrando 1\u201320 de 27');
+  });
 });

@@ -1,3 +1,4 @@
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
 
 /**
@@ -7,9 +8,12 @@ import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js'
 export class FooterView {
   /**
    * @param {FooterViewModel} [viewModel]
+   * @param {Object} [options]
+   * @param {Object} [options.authStore]
    */
-  constructor(viewModel = new FooterViewModel()) {
+  constructor(viewModel = new FooterViewModel(), { authStore = defaultAuthStore } = {}) {
     this.viewModel = viewModel;
+    this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
   }
@@ -71,10 +75,14 @@ export class FooterView {
       section.links.forEach((link) => {
         const item = document.createElement('li');
         const anchor = document.createElement('a');
-        anchor.href = link.href;
+        let href = link.href;
+        if (link.label.toLowerCase().includes('vender') || link.href === '/vender') {
+          href = this.authStore?.isSeller() ? '/seller/products' : '/seller/apply';
+        }
+        anchor.href = href;
         anchor.textContent = link.label;
         // Mark internal links so the router can intercept navigation
-        if (!link.href.startsWith('http')) {
+        if (!href.startsWith('http')) {
           anchor.dataset.route = '';
         }
         anchor.addEventListener('click', (e) => {

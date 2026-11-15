@@ -24,6 +24,7 @@ export class SellerProductsPageView {
     this._kpisContainer = null;
     this._filtersContainer = null;
     this._contentContainer = null;
+    this._paginationContainer = null;
   }
 
   mount(container) {
@@ -46,6 +47,7 @@ export class SellerProductsPageView {
     this._kpisContainer = null;
     this._filtersContainer = null;
     this._contentContainer = null;
+    this._paginationContainer = null;
   }
 
   _buildShell() {
@@ -102,7 +104,17 @@ export class SellerProductsPageView {
     this._contentContainer.className = 'q-seller-products__content';
     this._contentContainer.dataset.role = 'content';
 
-    container.append(header, this._kpisContainer, this._filtersContainer, this._contentContainer);
+    // Pagination container
+    this._paginationContainer = document.createElement('div');
+    this._paginationContainer.dataset.role = 'pagination';
+
+    container.append(
+      header,
+      this._kpisContainer,
+      this._filtersContainer,
+      this._contentContainer,
+      this._paginationContainer
+    );
     section.appendChild(container);
     return section;
   }
@@ -112,6 +124,7 @@ export class SellerProductsPageView {
     this._renderKpis();
     this._renderFilters();
     this._renderContent();
+    this._renderPagination();
   }
 
   _renderKpis() {
@@ -230,6 +243,46 @@ export class SellerProductsPageView {
     }
 
     this._contentContainer.appendChild(grid);
+  }
+
+  _renderPagination() {
+    if (!this._paginationContainer) return;
+    this._paginationContainer.replaceChildren();
+
+    const vm = this.viewModel;
+    // Only show when not loading, have products, and more than 1 page
+    if (vm.isLoading || vm.products.length === 0 || (vm.meta?.total_pages || 0) <= 1) {
+      return;
+    }
+
+    const nav = document.createElement('nav');
+    nav.className = 'q-seller-products__pagination';
+    nav.setAttribute('aria-label', 'Paginación de productos');
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__pagination-prev';
+    prevBtn.textContent = '← Anterior';
+    prevBtn.disabled = !vm.hasPrevPage;
+    prevBtn.addEventListener('click', () => {
+      vm.setPage(vm.currentPage - 1);
+    });
+
+    const rangeLabel = document.createElement('span');
+    rangeLabel.className = 'q-seller-products__pagination-label';
+    rangeLabel.textContent = vm.pageRangeLabel;
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__pagination-next';
+    nextBtn.textContent = 'Siguiente →';
+    nextBtn.disabled = !vm.hasNextPage;
+    nextBtn.addEventListener('click', () => {
+      vm.setPage(vm.currentPage + 1);
+    });
+
+    nav.append(prevBtn, rangeLabel, nextBtn);
+    this._paginationContainer.appendChild(nav);
   }
 
   _renderProductCard(product) {
