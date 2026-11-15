@@ -16,6 +16,7 @@ import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/pages/orders.css';
 import './views/pages/seller-orders.css';
+import './views/pages/seller-products.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -38,6 +39,7 @@ import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
+import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -51,6 +53,7 @@ import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
 import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
+import { SellerProductsPageView } from './views/pages/SellerProductsPageView.js';
 
 const app = document.getElementById('app');
 
@@ -215,6 +218,77 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderSellerProducts = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/seller/products') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/products');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
+    currentPageView = new SellerProductsPageView({
+      viewModel: new SellerProductsViewModel(),
+      onNavigate: (path) => router.navigate(path),
+      onCreate: () => router.navigate('/seller/products/new'),
+      onViewProduct: (slug) => router.navigate(`/products/${slug}`),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderSellerProductNew = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/seller/products/new') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/products/new');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
+    const section = document.createElement('section');
+    section.className = 'q-seller-products';
+    const container = document.createElement('div');
+    container.className = 'q-section-container';
+
+    const panel = document.createElement('div');
+    panel.className = 'q-seller-products__empty q-glass-panel';
+    const title = document.createElement('h1');
+    title.className = 'q-seller-products__title';
+    title.textContent = 'Crear producto';
+    const subtitle = document.createElement('p');
+    subtitle.className = 'q-seller-products__subtitle';
+    subtitle.textContent = 'Próximamente';
+
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'q-btn q-btn--outline q-btn--sm';
+    backBtn.textContent = 'Volver a Mis Productos';
+    backBtn.addEventListener('click', () => router.navigate('/seller/products'));
+
+    panel.append(title, subtitle, backBtn);
+    container.appendChild(panel);
+    section.appendChild(container);
+    mainEl.appendChild(section);
+
+    currentPageView = {
+      destroy: () => section.remove(),
+    };
+  };
+
   const renderProfile = () => {
     clearCurrentView();
     if (!authStore.isAuthenticated()) {
@@ -311,6 +385,8 @@ if (app) {
   );
   router.addRoute('/orders', () => renderOrders());
   router.addRoute('/seller/orders', () => renderSellerOrders());
+  router.addRoute('/seller/products', () => renderSellerProducts());
+  router.addRoute('/seller/products/new', () => renderSellerProductNew());
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));

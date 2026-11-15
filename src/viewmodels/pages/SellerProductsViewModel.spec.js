@@ -1,0 +1,156 @@
+import { SellerProductsViewModel } from './SellerProductsViewModel.js';
+
+function mockProduct(overrides = {}) {
+  return {
+    id: 'prod-1',
+    name: 'Sample Product',
+    price: 49.99,
+    currency: 'USD',
+    stock: 10,
+    state: 'draft',
+    primary_image_path: 'https://example.com/img.png',
+    ...overrides,
+  };
+}
+
+describe('SellerProductsViewModel', () => {
+  let productsApi;
+  let vm;
+
+  beforeEach(() => {
+    productsApi = {
+      getSellerProducts: jasmine.createSpy('getSellerProducts').and.resolveTo({
+        data: [mockProduct()],
+        meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+      }),
+      publishProduct: jasmine.createSpy('publishProduct').and.resolveTo({
+        data: mockProduct({ state: 'published' }),
+      }),
+    };
+    vm = new SellerProductsViewModel({ productsApi });
+  });
+
+  it('1. loads products successfully and updates state', async () => {
+    await vm.load();
+
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      status: undefined,
+    });
+    expect(vm.products.length).toBe(1);
+    expect(vm.meta.total).toBe(1);
+    expect(vm.isLoading).toBe(false);
+    expect(vm.errorMessage).toBe('');
+  });
+
+  it('2. sets error message when load fails', async () => {
+    productsApi.getSellerProducts.and.rejectWith(new Error('Network Error'));
+
+    await vm.load();
+
+    expect(vm.isLoading).toBe(false);
+    expect(vm.errorMessage).toBe('No pudimos cargar tus productos. Intenta de nuevo.');
+    expect(vm.products).toEqual([]);
+  });
+
+  it('3. filters by draft status', async () => {
+    await vm.setFilter('draft');
+
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      status: 'draft',
+    });
+    expect(vm.filterStatus).toBe('draft');
+  });
+
+  it('4. filters by published status', async () => {
+    await vm.setFilter('published');
+
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      status: 'published',
+    });
+    expect(vm.filterStatus).toBe('published');
+  });
+
+  it('5. publishes product successfully and updates state in-place', async () => {
+    const p1 = mockProduct({ id: 'p1', state: 'draft' });
+    vm.products = [p1];
+
+    const result = await vm.publishProduct('p1');
+
+    expect(productsApi.publishProduct).toHaveBeenCalledWith('p1');
+    expect(result).toEqual({ status: 'success' });
+    expect(vm.products[0].state).toBe('published');
+    expect(vm.publishingId).toBeNull();
+  });
+
+  it('6. handles publish error (e.g. 422 IMAGE_REQUIRED)', async () => {
+    const p1 = mockProduct({ id: 'p1', state: 'draft' });
+    vm.products = [p1];
+    productsApi.publishProduct.and.rejectWith(new Error('IMAGE_REQUIRED'));
+
+    const result = await vm.publishProduct('p1');
+
+    expect(result.status).toBe('error');
+    expect(vm.publishErrors['p1']).toBe('IMAGE_REQUIRED');
+    expect(vm.products[0].state).toBe('draft');
+    expect(vm.publishingId).toBeNull();
+  });
+
+  it('7. guards against double-click publishing while in flight', async () => {
+    let resolvePublish;
+    productsApi.publishProduct.and.returnValue(
+      new Promise((resolve) => {
+        resolvePublish = resolve;
+      })
+    );
+    vm.products = [mockProduct({ id: 'p1', state: 'draft' })];
+
+    const p1Promise = vm.publishProduct('p1');
+    expect(vm.publishingId).toBe('p1');
+
+    // Second call while first is in-flight
+    const p2Result = await vm.publishProduct('p1');
+    expect(p2Result).toBeUndefined();
+    expect(productsApi.publishProduct.calls.count()).toBe(1);
+
+    resolvePublish({ data: mockProduct({ id: 'p1', state: 'published' }) });
+    await p1Promise;
+    expect(vm.publishingId).toBeNull();
+  });
+
+  it('8. calculates kpis correctly', () => {
+    vm.products = [
+      mockProduct({ id: '1', state: 'published', primary_image_path: 'https://img.com/1.png' }),
+      mockProduct({ id: '2', state: 'published', primary_image_path: null }),
+      mockProduct({ id: '3', state: 'draft', primary_image_path: 'https://img.com/3.png' }),
+      mockProduct({ id: '4', state: 'draft', primary_image_path: null }),
+    ];
+
+    expect(vm.kpis).toEqual({
+      total: 4,
+      published: 2,
+      drafts: 2,
+      withImage: 2,
+    });
+  });
+
+  it('9. evaluates canPublish helper accurately', () => {
+    expect(
+      vm.canPublish(mockProduct({ state: 'draft', primary_image_path: 'https://img.com/1.png' }))
+    ).toBe(true);
+
+    expect(vm.canPublish(mockProduct({ state: 'draft', primary_image_path: null }))).toBe(false);
+    expect(vm.canPublish(mockProduct({ state: 'draft', primary_image_path: '' }))).toBe(false);
+    expect(
+      vm.canPublish(
+        mockProduct({ state: 'published', primary_image_path: 'https://img.com/1.png' })
+      )
+    ).toBe(false);
+    expect(vm.canPublish(null)).toBe(false);
+  });
+});
