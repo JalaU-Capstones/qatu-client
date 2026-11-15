@@ -17,6 +17,7 @@ import './views/pages/catalog.css';
 import './views/pages/orders.css';
 import './views/pages/seller-orders.css';
 import './views/pages/seller-products.css';
+import './views/pages/seller-product-form.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -27,6 +28,7 @@ import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
+import { ProductsApi } from './models/api/ProductsApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
@@ -40,6 +42,7 @@ import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
+import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
 import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
@@ -54,6 +57,7 @@ import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
 import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
+import { SellerProductFormView } from './views/pages/SellerProductFormView.js';
 import { SellerProductsPageView } from './views/pages/SellerProductsPageView.js';
 
 const app = document.getElementById('app');
@@ -85,15 +89,19 @@ if (app) {
   header.viewModel.setTheme(themeStore.getResolved());
   header.viewModel.onThemeToggleClick = () => themeStore.cycle();
 
+  let categories = [];
   const categoriesApi = new CategoriesApi();
-  categoriesApi
+  const categoriesReady = categoriesApi
     .getCategories()
     .then((res) => {
-      header.viewModel.setCategories(res.data || []);
+      categories = res.data || [];
+      header.viewModel.setCategories(categories);
+      return categories;
     })
     .catch((err) => {
       // eslint-disable-next-line no-console
       console.warn('[main] failed to fetch categories for header:', err?.message || err);
+      return [];
     });
 
   const mainEl = document.createElement('main');
@@ -271,34 +279,21 @@ if (app) {
       return;
     }
 
-    const section = document.createElement('section');
-    section.className = 'q-seller-products';
-    const container = document.createElement('div');
-    container.className = 'q-section-container';
+    if (categories.length === 0) {
+      await categoriesReady;
+    }
 
-    const panel = document.createElement('div');
-    panel.className = 'q-seller-products__empty q-glass-panel';
-    const title = document.createElement('h1');
-    title.className = 'q-seller-products__title';
-    title.textContent = 'Crear producto';
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-seller-products__subtitle';
-    subtitle.textContent = 'Próximamente';
-
-    const backBtn = document.createElement('button');
-    backBtn.type = 'button';
-    backBtn.className = 'q-btn q-btn--outline q-btn--sm';
-    backBtn.textContent = 'Volver a Mis Productos';
-    backBtn.addEventListener('click', () => router.navigate('/seller/products'));
-
-    panel.append(title, subtitle, backBtn);
-    container.appendChild(panel);
-    section.appendChild(container);
-    mainEl.appendChild(section);
-
-    currentPageView = {
-      destroy: () => section.remove(),
-    };
+    const viewModel = new SellerProductFormViewModel({
+      productsApi: new ProductsApi(),
+      categories,
+    });
+    const view = new SellerProductFormView({
+      viewModel,
+      categories,
+      onNavigate: (path) => router.navigate(path),
+    });
+    view.mount(mainEl);
+    currentPageView = view;
   };
 
   const renderProfile = () => {
