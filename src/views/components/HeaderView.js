@@ -288,7 +288,7 @@ export class HeaderView {
   }
 
   /**
-   * Creates the "Mis Órdenes" dropdown link (seller dashboard).
+   * Creates the "Mis Ventas" dropdown link (seller sales dashboard).
    * @returns {HTMLElement}
    * @private
    */
@@ -297,7 +297,7 @@ export class HeaderView {
     salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
     salesBtn.href = '/seller/orders';
     salesBtn.dataset.route = '';
-    salesBtn.textContent = 'Mis Órdenes';
+    salesBtn.textContent = 'Mis Ventas';
     salesBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();

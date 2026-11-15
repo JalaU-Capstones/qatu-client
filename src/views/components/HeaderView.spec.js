@@ -280,20 +280,41 @@ describe('HeaderView', () => {
       expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
     });
 
-    it('is shown for a seller or admin, with Mis Productos and Mis Órdenes', () => {
+    it('is shown for a seller or admin, with Mis Productos and Mis Ventas', () => {
       viewModel.setIsSeller(true);
       viewModel.setUser({ username: 'sam' });
       const el = view.render();
 
       const ordersLink = el.querySelector(SELLER_ORDERS_LINK);
       expect(ordersLink).not.toBeNull();
-      expect(ordersLink.textContent).toBe('Mis Órdenes');
+      expect(ordersLink.textContent).toBe('Mis Ventas');
       expect(ordersLink.getAttribute('href')).toBe('/seller/orders');
 
       const productsLink = el.querySelector(SELLER_PRODUCTS_LINK);
       expect(productsLink).not.toBeNull();
       expect(productsLink.textContent).toBe('Mis Productos');
       expect(productsLink.getAttribute('href')).toBe('/seller/products');
+    });
+
+    it('seller dropdown distinguishes buyer orders from seller sales', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      const dropdown = el.querySelector('.q-header-dropdown');
+      expect(dropdown).not.toBeNull();
+
+      const ordersLink = dropdown.querySelector('.q-header-orders-btn');
+      const salesLink = dropdown.querySelector('.q-header-seller-orders-btn');
+      const productsLink = dropdown.querySelector('.q-header-seller-products-btn');
+
+      expect(ordersLink).not.toBeNull();
+      expect(salesLink).not.toBeNull();
+      expect(productsLink).not.toBeNull();
+
+      expect(ordersLink.textContent).toBe('Mis Órdenes');
+      expect(salesLink.textContent).toBe('Mis Ventas');
+      expect(productsLink.textContent).toBe('Mis Productos');
     });
 
     it('is not rendered for anonymous visitors, even if the flag is set', () => {
