@@ -728,3 +728,22 @@
     width: auto;
   }
 }
+
+.q-order-shipping-address {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-style: normal;
+  color: var(--q-fg-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.q-order-shipping-address__name {
+  font-weight: 600;
+  color: var(--q-fg-primary);
+}
+
+.q-order-shipping-address__phone {
+  color: var(--q-fg-muted);
+}

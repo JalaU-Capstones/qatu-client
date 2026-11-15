@@ -1,4 +1,5 @@
 import { getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+import { formatShippingAddress } from '../utils/formatShippingAddress.js';
 
 const ITEM_PLACEHOLDER_SVG = `
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -336,27 +337,31 @@ export class OrderDetailComponent {
     summaryCard.appendChild(summaryRows);
     sidebar.appendChild(summaryCard);
 
-    // Shipping Address (if available)
-    if (order.shipping_address) {
-      const shippingCard = document.createElement('div');
-      shippingCard.className = 'q-order-detail__info-card';
-      shippingCard.setAttribute('data-testid', 'order-shipping-card');
+    // Shipping Address
+    const shippingCard = document.createElement('div');
+    shippingCard.className = 'q-order-detail__info-card';
+    shippingCard.setAttribute('data-testid', 'order-shipping-card');
 
-      const shippingTitle = document.createElement('h4');
-      shippingTitle.className = 'q-order-detail__info-title';
-      shippingTitle.textContent = 'Dirección de entrega';
+    const shippingTitle = document.createElement('h4');
+    shippingTitle.className = 'q-order-detail__info-title';
+    shippingTitle.textContent = 'Dirección de entrega';
+    shippingCard.appendChild(shippingTitle);
 
-      const shippingDesc = document.createElement('p');
-      shippingDesc.className = 'q-order-detail__info-text';
-      shippingDesc.textContent =
-        typeof order.shipping_address === 'object'
-          ? JSON.stringify(order.shipping_address)
-          : String(order.shipping_address);
-
-      shippingCard.appendChild(shippingTitle);
-      shippingCard.appendChild(shippingDesc);
-      sidebar.appendChild(shippingCard);
+    const addressEl = document.createElement('address');
+    addressEl.className = 'q-order-shipping-address';
+    const lines = formatShippingAddress(order.shipping_address);
+    if (lines.length === 0) {
+      addressEl.textContent = 'Dirección no disponible';
+    } else {
+      lines.forEach(({ line, className }) => {
+        const span = document.createElement('span');
+        span.className = `q-order-shipping-address__line q-order-shipping-address__${className}`;
+        span.textContent = line;
+        addressEl.appendChild(span);
+      });
     }
+    shippingCard.appendChild(addressEl);
+    sidebar.appendChild(shippingCard);
 
     // Buyer Notes (if available)
     if (order.notes) {

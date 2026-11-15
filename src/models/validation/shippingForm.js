@@ -5,9 +5,12 @@ export const SHIPPING_LIMITS = Object.freeze({
   street: { min: 3, max: 200 },
   city: { min: 2, max: 100 },
   state: { max: 100 },
+  postalCode: { max: 20 },
+  postal_code: { max: 20 },
 });
 
 const PHONE_PATTERN = /^[0-9+()\-\s]{6,20}$/;
+const POSTAL_CODE_PATTERN = /^[A-Za-z0-9\s-]*$/;
 
 export const COUNTRIES = Object.freeze([
   { code: 'BO', name: 'Bolivia' },
@@ -39,6 +42,7 @@ export const SHIPPING_FIELDS = Object.freeze([
   'city',
   'country',
   'state',
+  'postalCode',
 ]);
 
 export function createEmptyShippingForm({ fullName = '' } = {}) {
@@ -49,6 +53,7 @@ export function createEmptyShippingForm({ fullName = '' } = {}) {
     city: '',
     country: '',
     state: '',
+    postalCode: '',
     paymentMethod: DEFAULT_PAYMENT_METHOD,
   };
 }
@@ -91,6 +96,19 @@ export function validateShippingForm(form = {}) {
     errors.state = `No puede superar ${SHIPPING_LIMITS.state.max} caracteres.`;
   }
 
+  const postalCode = clean(form.postalCode ?? form.postal_code);
+  if (postalCode) {
+    if (postalCode.length > SHIPPING_LIMITS.postalCode.max) {
+      const msg = `El código postal no puede superar ${SHIPPING_LIMITS.postalCode.max} caracteres.`;
+      errors.postalCode = msg;
+      if ('postal_code' in form) errors.postal_code = msg;
+    } else if (!POSTAL_CODE_PATTERN.test(postalCode)) {
+      const msg = 'Ingresa un código postal válido.';
+      errors.postalCode = msg;
+      if ('postal_code' in form) errors.postal_code = msg;
+    }
+  }
+
   return { isValid: Object.keys(errors).length === 0, errors };
 }
 
@@ -104,6 +122,8 @@ export function toCreateOrderInput(form = {}) {
     country: clean(form.country).toUpperCase(),
   };
   if (clean(form.state)) shippingAddress.state = clean(form.state);
+  const postal = clean(form.postalCode ?? form.postal_code);
+  if (postal) shippingAddress.postal_code = postal;
 
   return { shippingAddress, paymentMethod: form.paymentMethod || DEFAULT_PAYMENT_METHOD };
 }
@@ -118,6 +138,7 @@ export function apiFieldToFormField(field) {
     city: 'city',
     state: 'state',
     country: 'country',
+    postal_code: 'postalCode',
     payment_method: 'paymentMethod',
   };
   return Object.hasOwn(map, name) ? map[name] : null;
