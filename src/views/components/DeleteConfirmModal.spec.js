@@ -75,7 +75,7 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    const deleteBtn = document.querySelector('.q-btn--primary');
+    const deleteBtn = document.querySelector('.q-btn--danger');
     deleteBtn.click();
     await tick();
 
@@ -96,7 +96,7 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    document.querySelector('.q-btn--primary').click();
+    document.querySelector('.q-btn--danger').click();
     const result = await openPromise;
 
     expect(result).toEqual({ confirmed: true });
@@ -112,7 +112,7 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    document.querySelector('.q-btn--primary').click();
+    document.querySelector('.q-btn--danger').click();
     await tick(20);
 
     // Modal still open
@@ -177,7 +177,7 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    document.querySelector('.q-btn--primary').click();
+    document.querySelector('.q-btn--danger').click();
     await tick();
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
@@ -202,7 +202,7 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    const deleteBtn = document.querySelector('.q-btn--primary');
+    const deleteBtn = document.querySelector('.q-btn--danger');
     deleteBtn.click();
     await tick();
     deleteBtn.click(); // second click — button is disabled; listener also guards
@@ -226,13 +226,31 @@ describe('DeleteConfirmModal', () => {
     const openPromise = modal.open();
     await tick();
 
-    document.querySelector('.q-btn--primary').click();
+    document.querySelector('.q-btn--danger').click();
     await tick();
 
     const cancelBtn = document.querySelector('.q-btn--outline');
     expect(cancelBtn.disabled).toBe(true);
 
     resolveConfirm({ status: 'success' });
+    await openPromise;
+  });
+
+  // ─── 11. Design-system modifier ───────────────────────────────────────────
+
+  it('11. confirm button carries the .q-btn--danger class (not inline style)', async () => {
+    modal = new DeleteConfirmModal({ productId: 'p1', productName: 'Prod A', onConfirm });
+    const openPromise = modal.open();
+    await tick();
+
+    const confirmBtn = document.querySelector('.q-btn--danger');
+    expect(confirmBtn).not.toBeNull();
+    expect(confirmBtn.textContent).toContain('Eliminar');
+    expect(confirmBtn.classList.contains('q-btn--danger')).toBe(true);
+    // No inline red override
+    expect(confirmBtn.style.backgroundColor).toBe('');
+
+    document.querySelector('.q-btn--outline').click();
     await openPromise;
   });
 });

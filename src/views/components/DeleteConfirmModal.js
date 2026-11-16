@@ -7,8 +7,7 @@ export class DeleteConfirmModal {
    * Design decisions:
    * - closeOnBackdropClick: false (data-loss risk mid-flight)
    * - closeOnEsc: true when idle; ignored while onConfirm is in-flight
-   * - No .q-btn--danger in the design system (deferred to Fase E).
-   *   The destructive button uses .q-btn--primary with an inline red color.
+   * - Uses .q-btn--danger for the destructive button (token: --q-color-red-56)
    *
    * @param {Object} options
    * @param {string} options.productId
@@ -139,11 +138,7 @@ export class DeleteConfirmModal {
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    // No .q-btn--danger in the design system; use --primary + inline red.
-    // .q-btn--danger will be added in Fase E (design-system update).
-    deleteBtn.className = 'q-btn q-btn--primary';
-    deleteBtn.style.backgroundColor = '#dc3545';
-    deleteBtn.style.borderColor = '#dc3545';
+    deleteBtn.className = 'q-btn q-btn--danger';
     deleteBtn.textContent = this._isDeleting ? 'Eliminando…' : 'Eliminar';
     deleteBtn.disabled = this._isDeleting;
     deleteBtn.addEventListener('click', async () => {
