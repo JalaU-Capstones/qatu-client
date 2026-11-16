@@ -34,6 +34,10 @@ export class SellerProductFormViewModel {
     this.isCreating = false;
     this.isPublishing = false;
     this.publishedSuccess = false;
+    // Delete-image state
+    this.deletingImageId = null; // id of the image currently being deleted (in-flight guard)
+    this.imageErrors = {}; // { [imageId]: string } — per-image error messages
+    this.publishBlockedReason = ''; // non-empty when publishing is blocked (e.g. no images)
   }
 
   subscribe(listener) {
@@ -275,6 +279,39 @@ export class SellerProductFormViewModel {
       return { status: 'error', error: err };
     } finally {
       this.isPublishing = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Deletes a single product image by id.
+   *
+   * Guards against double-clicks via `deletingImageId`.
+   * On success, removes the image from `this.images` and, if the wizard
+   * is on step 3 and no images remain, reverts to step 2 with a warning.
+   * On error, stores the message in `this.imageErrors[imageId]`.
+   *
+   * @param {string} imageId
+   * @returns {Promise<{ status: 'success'|'error'|'busy', error?: Error }>}
+   */
+  async deleteImage(imageId) {
+    if (this.deletingImageId) return { status: 'busy' };
+    this.deletingImageId = imageId;
+    delete this.imageErrors[imageId];
+    this._notify();
+    try {
+      await this.productsApi.deleteProductImage(this.productId, imageId);
+      this.images = this.images.filter((img) => img.id !== imageId);
+      if (this.images.length === 0 && this.step === 3) {
+        this.step = 2;
+        this.publishBlockedReason = 'Sube al menos una imagen antes de publicar.';
+      }
+      return { status: 'success' };
+    } catch (err) {
+      this.imageErrors[imageId] = err.message || 'Error al eliminar imagen.';
+      return { status: 'error', error: err };
+    } finally {
+      this.deletingImageId = null;
       this._notify();
     }
   }

@@ -298,18 +298,7 @@ export class SellerProductFormView {
     grid.className = 'q-seller-product-form__upload-grid';
 
     for (const img of this.viewModel.images) {
-      const thumb = document.createElement('div');
-      thumb.className = 'q-seller-product-form__thumb';
-
-      const imgEl = document.createElement('img');
-      imgEl.src = img.path;
-      imgEl.alt = img.alt_text || 'Imagen de producto';
-      imgEl.loading = 'lazy';
-      imgEl.addEventListener('error', () => {
-        imgEl.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      });
-
-      thumb.appendChild(imgEl);
+      const thumb = this._makeImageThumbWithDelete(img);
       grid.appendChild(thumb);
     }
     panel.appendChild(grid);
@@ -464,18 +453,7 @@ export class SellerProductFormView {
     imagesGrid.className = 'q-seller-product-form__upload-grid';
 
     for (const img of this.viewModel.images) {
-      const thumb = document.createElement('div');
-      thumb.className = 'q-seller-product-form__thumb';
-
-      const imgEl = document.createElement('img');
-      imgEl.src = img.path;
-      imgEl.alt = img.alt_text || 'Imagen de producto';
-      imgEl.loading = 'lazy';
-      imgEl.addEventListener('error', () => {
-        imgEl.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      });
-
-      thumb.appendChild(imgEl);
+      const thumb = this._makeImageThumbWithDelete(img);
       imagesGrid.appendChild(thumb);
     }
 
@@ -656,5 +634,101 @@ export class SellerProductFormView {
     }
 
     return wrap;
+  }
+
+  /**
+   * Builds a thumbnail container with the image preview and an inline
+   * "¿Eliminar?" confirm affordance (no modal-on-modal).
+   *
+   * State machine for each thumb:
+   *   idle        → shows "×" button
+   *   confirming  → shows inline "¿Eliminar? [Sí] [No]"
+   *   deleting    → shows "Eliminando…" (buttons disabled)
+   *   error       → idle view restored + error text below
+   *
+   * @param {{ id: string, path: string, alt_text?: string }} img
+   * @returns {HTMLElement}
+   * @private
+   */
+  _makeImageThumbWithDelete(img) {
+    const thumb = document.createElement('div');
+    thumb.className = 'q-seller-product-form__thumb';
+
+    const imgEl = document.createElement('img');
+    imgEl.src = img.path;
+    imgEl.alt = img.alt_text || 'Imagen de producto';
+    imgEl.loading = 'lazy';
+    imgEl.addEventListener('error', () => {
+      imgEl.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
+    });
+    thumb.appendChild(imgEl);
+
+    // Error text (shown below thumb when imageErrors[id] is set)
+    if (this.viewModel.imageErrors && this.viewModel.imageErrors[img.id]) {
+      const errEl = document.createElement('p');
+      errEl.className = 'q-seller-product-form__image-error';
+      errEl.textContent = this.viewModel.imageErrors[img.id];
+      thumb.appendChild(errEl);
+    }
+
+    // While this exact image is being deleted, show spinner text only
+    if (this.viewModel.deletingImageId === img.id) {
+      const spinner = document.createElement('span');
+      spinner.className = 'q-seller-product-form__image-deleting';
+      spinner.textContent = 'Eliminando…';
+      thumb.appendChild(spinner);
+      return thumb;
+    }
+
+    // "×" delete button (idle state)
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'q-seller-product-form__image-remove';
+    removeBtn.setAttribute('aria-label', 'Eliminar imagen');
+    removeBtn.textContent = '×';
+    // Disable if any other deletion is in flight
+    removeBtn.disabled = Boolean(this.viewModel.deletingImageId);
+
+    // Inline confirm container (hidden until "×" is clicked)
+    const confirmEl = document.createElement('div');
+    confirmEl.className = 'q-seller-product-form__image-confirm';
+    confirmEl.style.display = 'none';
+
+    const confirmLabel = document.createElement('span');
+    confirmLabel.textContent = '¿Eliminar?';
+
+    const yesBtn = document.createElement('button');
+    yesBtn.type = 'button';
+    yesBtn.textContent = 'Sí';
+
+    const noBtn = document.createElement('button');
+    noBtn.type = 'button';
+    noBtn.textContent = 'No';
+
+    confirmEl.append(confirmLabel, yesBtn, noBtn);
+
+    // "×" click → show confirm, hide "×"
+    removeBtn.addEventListener('click', () => {
+      removeBtn.style.display = 'none';
+      confirmEl.style.display = '';
+    });
+
+    // "No" → hide confirm, show "×"
+    noBtn.addEventListener('click', () => {
+      confirmEl.style.display = 'none';
+      removeBtn.style.display = '';
+    });
+
+    // "Sí" → start deletion
+    yesBtn.addEventListener('click', async () => {
+      yesBtn.disabled = true;
+      noBtn.disabled = true;
+      confirmLabel.textContent = 'Eliminando…';
+      await this.viewModel.deleteImage(img.id);
+      // VM notifies → view re-renders; nothing else needed here
+    });
+
+    thumb.append(removeBtn, confirmEl);
+    return thumb;
   }
 }

@@ -24,6 +24,7 @@ describe('SellerProductFormViewModel', () => {
         data: { id: 'prod-123', state: 'published' },
         meta: {},
       }),
+      deleteProductImage: jasmine.createSpy('deleteProductImage').and.resolveTo(undefined),
     };
     categories = [
       { id: 'cat-1', name: 'Electrónica', slug: 'electronica' },
@@ -247,5 +248,91 @@ describe('SellerProductFormViewModel', () => {
 
     expect(res.status).toBe('error');
     expect(vm.generalError).toContain('estado');
+  });
+
+  // ─── deleteImage ─────────────────────────────────────────────────────────
+
+  it('18. deleteImage happy path: removes image from list, deletingImageId reset to null', async () => {
+    vm.productId = 'prod-123';
+    vm.images = [
+      { id: 'i1', path: 'https://example.com/1.png' },
+      { id: 'i2', path: 'https://example.com/2.png' },
+    ];
+    vm.step = 2;
+
+    const result = await vm.deleteImage('i1');
+
+    expect(result).toEqual({ status: 'success' });
+    expect(vm.images.length).toBe(1);
+    expect(vm.images[0].id).toBe('i2');
+    expect(vm.deletingImageId).toBeNull();
+    expect(productsApi.deleteProductImage).toHaveBeenCalledWith('prod-123', 'i1');
+  });
+
+  it('19. deleteImage last image while on step 3 reverts step to 2 and sets publishBlockedReason', async () => {
+    vm.productId = 'prod-123';
+    vm.images = [{ id: 'i1', path: 'https://example.com/1.png' }];
+    // Force step 3 without setStep guard
+    vm.step = 3;
+
+    const result = await vm.deleteImage('i1');
+
+    expect(result).toEqual({ status: 'success' });
+    expect(vm.images.length).toBe(0);
+    expect(vm.step).toBe(2);
+    expect(vm.publishBlockedReason).toContain('imagen');
+  });
+
+  it('20. deleteImage error: sets imageErrors entry, images unchanged, deletingImageId reset', async () => {
+    const err = new Error('CANNOT_DELETE_LAST_IMAGE');
+    err.statusCode = 409;
+    productsApi.deleteProductImage.and.rejectWith(err);
+
+    vm.productId = 'prod-123';
+    vm.images = [{ id: 'i1', path: 'https://example.com/1.png' }];
+    vm.step = 3;
+
+    const result = await vm.deleteImage('i1');
+
+    expect(result.status).toBe('error');
+    expect(vm.imageErrors['i1']).toContain('CANNOT_DELETE_LAST_IMAGE');
+    expect(vm.images.length).toBe(1);
+    expect(vm.deletingImageId).toBeNull();
+  });
+
+  it('21. deleteImage guard: second call while deletingImageId is set returns { status: "busy" } and API not called twice', async () => {
+    // Slow promise we can hold open
+    let resolveDelete;
+    productsApi.deleteProductImage.and.returnValue(new Promise((r) => (resolveDelete = r)));
+
+    vm.productId = 'prod-123';
+    vm.images = [
+      { id: 'i1', path: 'https://example.com/1.png' },
+      { id: 'i2', path: 'https://example.com/2.png' },
+    ];
+
+    const firstCall = vm.deleteImage('i1');
+    const secondResult = await vm.deleteImage('i2'); // should be blocked
+
+    expect(secondResult).toEqual({ status: 'busy' });
+    expect(productsApi.deleteProductImage).toHaveBeenCalledTimes(1);
+
+    resolveDelete(undefined);
+    await firstCall;
+  });
+
+  it('22. deleteImage notifies subscribers on success and in finally', async () => {
+    const spy = jasmine.createSpy('notify');
+    vm.subscribe(spy);
+
+    vm.productId = 'prod-123';
+    vm.images = [{ id: 'i1', path: 'https://example.com/1.png' }];
+
+    spy.calls.reset();
+    await vm.deleteImage('i1');
+
+    // At minimum: notify on start (deletingImageId set) + notify in finally
+    expect(spy).toHaveBeenCalled();
+    expect(spy.calls.count()).toBeGreaterThanOrEqual(2);
   });
 });
