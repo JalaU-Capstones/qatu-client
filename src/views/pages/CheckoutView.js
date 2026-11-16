@@ -239,6 +239,15 @@ export class CheckoutView {
         autocomplete: 'address-level1',
         maxLength: SHIPPING_LIMITS.state.max,
         wide: true,
+      }),
+      this._field({
+        name: 'postalCode',
+        label: 'Código postal',
+        placeholder: 'Ej. 760001',
+        autocomplete: 'postal-code',
+        maxLength: SHIPPING_LIMITS.postalCode.max,
+        wide: true,
+        optional: true,
       })
     );
 
@@ -317,6 +326,7 @@ export class CheckoutView {
     autocomplete = 'off',
     maxLength,
     wide = false,
+    optional = false,
   }) {
     const vm = this.viewModel;
     const id = `q-checkout-${name}`;
@@ -328,17 +338,28 @@ export class CheckoutView {
     const labelEl = document.createElement('label');
     labelEl.className = 'q-checkout__label';
     labelEl.htmlFor = id;
-    labelEl.textContent = label;
+    if (optional) {
+      labelEl.textContent = label;
+      const opt = document.createElement('span');
+      opt.className = 'q-form-optional';
+      opt.textContent = ' (opcional)';
+      labelEl.appendChild(opt);
+    } else {
+      labelEl.textContent = label;
+    }
 
     const input = document.createElement('input');
     input.id = id;
-    input.name = name;
+    input.name = name === 'postalCode' ? 'postal_code' : name;
     input.type = type;
     input.className = `q-checkout__input${error ? ' is-invalid' : ''}`;
-    input.value = vm.form[name] ?? '';
+    input.value = vm.form[name] ?? vm.form.postal_code ?? '';
     input.placeholder = placeholder;
     input.autocomplete = autocomplete;
     input.maxLength = maxLength;
+    if (name === 'postalCode' || name === 'postal_code') {
+      input.dataset.field = 'postal_code';
+    }
     if (error) {
       input.setAttribute('aria-invalid', 'true');
       input.setAttribute('aria-describedby', `${id}-error`);

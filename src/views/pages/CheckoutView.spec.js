@@ -111,6 +111,7 @@ describe('CheckoutView', () => {
         'Ciudad',
         'País',
         'Departamento / Estado / Provincia',
+        'Código postal (opcional)',
       ]);
       expect(container.querySelector('#q-checkout-street').placeholder).toBe('Av. Arce #123');
     });

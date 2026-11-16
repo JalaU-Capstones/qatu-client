@@ -257,3 +257,8 @@ a.q-hero__floating-card:focus-visible {
     display: none;
   }
 }
+
+.q-hero__visual--fallback {
+  background: linear-gradient(135deg, var(--q-accent-light, #fce7f3), var(--q-bg-surface, #ffffff));
+  min-height: 320px;
+}

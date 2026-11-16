@@ -31,6 +31,7 @@ describe('shippingForm', () => {
         city: '',
         country: '',
         state: '',
+        postalCode: '',
         paymentMethod: DEFAULT_PAYMENT_METHOD,
       });
       expect(DEFAULT_PAYMENT_METHOD).toBe('simulated');
@@ -48,6 +49,27 @@ describe('shippingForm', () => {
 
     it('treats the state as optional', () => {
       expect(validateShippingForm(validForm({ state: '' })).isValid).toBe(true);
+    });
+
+    it('treats postal_code as optional when empty', () => {
+      expect(validateShippingForm(validForm({ postal_code: '' })).isValid).toBe(true);
+      expect(validateShippingForm(validForm({ postalCode: '' })).isValid).toBe(true);
+      expect(validateShippingForm(validForm({ postal_code: null })).isValid).toBe(true);
+    });
+
+    it('accepts postal_code with valid pattern', () => {
+      expect(validateShippingForm(validForm({ postal_code: '760001' })).isValid).toBe(true);
+      expect(validateShippingForm(validForm({ postalCode: 'CP 1425-A' })).isValid).toBe(true);
+    });
+
+    it('rejects postal_code with invalid characters or too long', () => {
+      const invalidChars = validateShippingForm(validForm({ postal_code: '!!!' }));
+      expect(invalidChars.isValid).toBe(false);
+      expect(invalidChars.errors.postalCode || invalidChars.errors.postal_code).toBeDefined();
+
+      const tooLong = validateShippingForm(validForm({ postal_code: 'x'.repeat(25) }));
+      expect(tooLong.isValid).toBe(false);
+      expect(tooLong.errors.postalCode || tooLong.errors.postal_code).toContain('20');
     });
 
     it('requires name, phone, street and city', () => {
@@ -128,6 +150,14 @@ describe('shippingForm', () => {
       expect('state' in shippingAddress).toBe(false);
     });
 
+    it('includes postal_code when provided and trims it', () => {
+      const { shippingAddress } = toCreateOrderInput(validForm({ postal_code: '  760001  ' }));
+      expect(shippingAddress.postal_code).toBe('760001');
+
+      const { shippingAddress: addr2 } = toCreateOrderInput(validForm({ postalCode: 'CP1234' }));
+      expect(addr2.postal_code).toBe('CP1234');
+    });
+
     it('sends the chosen payment method and falls back to the default', () => {
       expect(
         toCreateOrderInput(validForm({ paymentMethod: 'cash_on_delivery' })).paymentMethod
@@ -140,6 +170,7 @@ describe('shippingForm', () => {
     it('maps API field names back to form fields', () => {
       expect(apiFieldToFormField('shipping_address.full_name')).toBe('fullName');
       expect(apiFieldToFormField('shipping_address.street')).toBe('street');
+      expect(apiFieldToFormField('shipping_address.postal_code')).toBe('postalCode');
       expect(apiFieldToFormField('payment_method')).toBe('paymentMethod');
     });
 
@@ -151,7 +182,15 @@ describe('shippingForm', () => {
   });
 
   it('exposes the on-screen focus order, the payment methods and unique ISO country codes', () => {
-    expect(SHIPPING_FIELDS).toEqual(['fullName', 'phone', 'street', 'city', 'country', 'state']);
+    expect(SHIPPING_FIELDS).toEqual([
+      'fullName',
+      'phone',
+      'street',
+      'city',
+      'country',
+      'state',
+      'postalCode',
+    ]);
     expect(PAYMENT_METHODS.map((method) => method.value)).toEqual([
       'simulated',
       'cash_on_delivery',

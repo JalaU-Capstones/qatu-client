@@ -55,6 +55,7 @@ export class HeaderView {
     const navWrapper = document.createElement('div');
     navWrapper.className = 'q-header-nav';
     navWrapper.appendChild(this.navbarView.render());
+    this._replaceCategoriasWithDropdown();
 
     // 3. Right Actions
     const actionsWrapper = document.createElement('div');
@@ -113,6 +114,7 @@ export class HeaderView {
 
     container.appendChild(brandLink);
     container.appendChild(navWrapper);
+    container.appendChild(this._createSearchBar());
     container.appendChild(actionsWrapper);
     header.appendChild(container);
 
@@ -184,8 +186,109 @@ export class HeaderView {
     return loginBtn;
   }
 
+  _createSearchBar() {
+    const form = document.createElement('form');
+    form.className = 'q-header-search';
+    form.setAttribute('role', 'search');
+    form.setAttribute('aria-label', "Buscar en Q'atu");
+
+    const input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'q-header-search__input';
+    input.placeholder = 'Buscar productos, tiendas y categorías';
+    input.setAttribute('aria-label', 'Buscar productos, tiendas y categorías');
+    if (this.viewModel.searchValue) {
+      input.value = this.viewModel.searchValue;
+    }
+
+    input.addEventListener('input', () => {
+      this.viewModel.setSearchValue(input.value);
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = (input.value || '').trim();
+      if (!val) return;
+      this.viewModel.setSearchValue(input.value);
+      this.viewModel.triggerSearch();
+    });
+
+    form.appendChild(input);
+    return form;
+  }
+
+  _replaceCategoriasWithDropdown() {
+    const nav = this.navbarView.element;
+    if (!nav) return;
+    const catLink = nav.querySelector('[data-link-id="nav-categorias"]');
+    if (catLink && catLink.parentElement) {
+      const dropdown = this._createCatDropdown();
+      catLink.parentElement.replaceChild(dropdown, catLink);
+    }
+  }
+
+  _createCatDropdown() {
+    const container = document.createElement('div');
+    container.className = 'q-header-cat-dropdown';
+
+    const triggerBtn = document.createElement('button');
+    triggerBtn.type = 'button';
+    triggerBtn.className = 'q-navbar-link q-header-nav__link q-header-cat-dropdown__trigger';
+    triggerBtn.innerHTML = `
+      Categorías
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-cat-dropdown__chevron">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    `;
+
+    const menu = document.createElement('div');
+    menu.className = 'q-header-cat-dropdown__menu';
+    menu.setAttribute('hidden', '');
+
+    this._renderCatDropdownItems(menu);
+
+    triggerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (menu.hasAttribute('hidden')) {
+        menu.removeAttribute('hidden');
+      } else {
+        menu.setAttribute('hidden', '');
+      }
+    });
+
+    container.appendChild(triggerBtn);
+    container.appendChild(menu);
+    return container;
+  }
+
+  _renderCatDropdownItems(menu) {
+    menu.replaceChildren();
+    if (!this.viewModel.categories || this.viewModel.categories.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'q-header-cat-dropdown__empty';
+      empty.textContent = 'Cargando…';
+      menu.appendChild(empty);
+      return;
+    }
+
+    for (const cat of this.viewModel.categories) {
+      const a = document.createElement('a');
+      a.href = `/products?category=${encodeURIComponent(cat.id)}`;
+      a.dataset.route = '';
+      a.textContent = cat.name;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        menu.setAttribute('hidden', '');
+        this.viewModel.triggerCategory(cat.id);
+      });
+      menu.appendChild(a);
+    }
+  }
+
   /**
-   * Creates the "Mis ventas" dropdown link (seller dashboard).
+   * Creates the "Mis Ventas" dropdown link (seller sales dashboard).
    * @returns {HTMLElement}
    * @private
    */
@@ -194,7 +297,7 @@ export class HeaderView {
     salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
     salesBtn.href = '/seller/orders';
     salesBtn.dataset.route = '';
-    salesBtn.textContent = 'Mis ventas';
+    salesBtn.textContent = 'Mis Ventas';
     salesBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -204,7 +307,26 @@ export class HeaderView {
   }
 
   /**
-   * Adds or removes the seller link when the roles change for an already rendered user
+   * Creates the "Mis Productos" dropdown link (seller dashboard).
+   * @returns {HTMLElement}
+   * @private
+   */
+  _createSellerProductsLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-seller-products-btn';
+    link.href = '/seller/products';
+    link.dataset.route = '';
+    link.textContent = 'Mis Productos';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerSellerProducts();
+    });
+    return link;
+  }
+
+  /**
+   * Adds or removes the seller links when the roles change for an already rendered user
    * (the dropdown is not rebuilt on every update).
    * @param {HeaderViewModel} vm
    * @private
@@ -212,15 +334,46 @@ export class HeaderView {
   _syncSellerLink(vm) {
     const dropdown = this.element?.querySelector('.q-header-dropdown');
     if (!dropdown) return;
-    const existing = dropdown.querySelector('.q-header-seller-orders-btn');
-    if (vm.isSeller && !existing) {
-      dropdown.insertBefore(
-        this._createSellerOrdersLink(),
-        dropdown.querySelector('.q-header-logout-btn')
-      );
-    } else if (!vm.isSeller && existing) {
-      existing.remove();
+    const existingProducts = dropdown.querySelector('.q-header-seller-products-btn');
+    const existingOrders = dropdown.querySelector('.q-header-seller-orders-btn');
+    const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
+
+    if (vm.isSeller) {
+      if (!existingProducts) {
+        dropdown.insertBefore(this._createSellerProductsLink(), existingOrders || logoutBtn);
+      }
+      if (!existingOrders) {
+        dropdown.insertBefore(this._createSellerOrdersLink(), logoutBtn);
+      }
+    } else {
+      if (existingProducts) existingProducts.remove();
+      if (existingOrders) existingOrders.remove();
     }
+  }
+
+  /**
+   * Attaches an error fallback handler to an avatar image element.
+   * @param {HTMLImageElement} img
+   * @private
+   */
+  _attachAvatarErrorFallback(img) {
+    img.addEventListener(
+      'error',
+      () => {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+        const parent = img.parentElement;
+        if (parent) {
+          parent.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-avatar-placeholder">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      `;
+        }
+      },
+      { once: true }
+    );
   }
 
   /**
@@ -245,6 +398,7 @@ export class HeaderView {
       img.src = avatarUrl;
       img.alt = user.username || user.full_name || 'Usuario';
       img.className = 'q-header-avatar-img';
+      this._attachAvatarErrorFallback(img);
       avatar.appendChild(img);
     } else {
       avatar.innerHTML = `
@@ -306,6 +460,7 @@ export class HeaderView {
     dropdown.appendChild(ordersBtn);
 
     if (this.viewModel.isSeller) {
+      dropdown.appendChild(this._createSellerProductsLink());
       dropdown.appendChild(this._createSellerOrdersLink());
     }
 
@@ -394,6 +549,7 @@ export class HeaderView {
             const existingImg = avatarBtn.querySelector('.q-header-avatar-img');
             if (avatarUrl) {
               if (existingImg) {
+                this._attachAvatarErrorFallback(existingImg);
                 existingImg.src = avatarUrl;
               } else {
                 avatarBtn.innerHTML = '';
@@ -401,6 +557,7 @@ export class HeaderView {
                 img.src = avatarUrl;
                 img.alt = vm.user.username || vm.user.full_name || 'Usuario';
                 img.className = 'q-header-avatar-img';
+                this._attachAvatarErrorFallback(img);
                 avatarBtn.appendChild(img);
               }
             } else if (existingImg) {
@@ -426,6 +583,11 @@ export class HeaderView {
 
     this._syncSellerLink(vm);
 
+    const catMenu = this.element.querySelector('.q-header-cat-dropdown__menu');
+    if (catMenu) {
+      this._renderCatDropdownItems(catMenu);
+    }
+
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');
     if (dropdown) {
@@ -445,6 +607,16 @@ export class HeaderView {
   _handleDocumentClick(event) {
     if (this.viewModel.isDropdownOpen && this.element && !this.element.contains(event.target)) {
       this.viewModel.closeDropdown();
+    }
+    const catDropdown = this.element?.querySelector('.q-header-cat-dropdown');
+    const catMenu = this.element?.querySelector('.q-header-cat-dropdown__menu');
+    if (
+      catMenu &&
+      !catMenu.hasAttribute('hidden') &&
+      catDropdown &&
+      !catDropdown.contains(event.target)
+    ) {
+      catMenu.setAttribute('hidden', '');
     }
   }
 

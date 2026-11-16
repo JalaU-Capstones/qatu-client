@@ -196,6 +196,136 @@ export class ProductsApi {
   }
 
   /**
+   * GET /v1/seller/products — paginated list of the authenticated seller's
+   * products (includes drafts).
+   *
+   * @param {{ page?: number, limit?: number, status?: 'draft'|'published' }} [query]
+   * @returns {Promise<{ data: Array<Object>, meta: Object }>}
+   */
+  async getSellerProducts(query = {}) {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.status) params.set('status', query.status);
+    const qs = params.toString();
+    const path = qs ? `/seller/products?${qs}` : '/seller/products';
+
+    const res = await this._fetch(path, { method: 'GET', withAuth: true });
+    return this._parseListResponse(res, 'seller products');
+  }
+
+  /**
+   * POST /v1/products — create a product in `draft` state.
+   *
+   * @param {{
+   *   name: string,
+   *   price: number,
+   *   category_id: string,
+   *   slug?: string,
+   *   description?: string,
+   *   currency?: string,
+   *   stock?: number,
+   *   attributes?: Object,
+   * }} payload
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   */
+  async createProduct(payload) {
+    const res = await this._fetch('/products', {
+      method: 'POST',
+      withAuth: true,
+      body: JSON.stringify(payload),
+    });
+    const body = await this._handleJson(res);
+    return body;
+  }
+
+  /**
+   * PATCH /v1/products/:id/publish — transition draft → published.
+   * Requires at least one image (backend returns 422 IMAGE_REQUIRED).
+   *
+   * @param {string} productId
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   */
+  async publishProduct(productId) {
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}/publish`, {
+      method: 'PATCH',
+      withAuth: true,
+    });
+    const body = await this._handleJson(res);
+    return body;
+  }
+
+  /**
+   * POST /v1/products/:id/images — upload one image (multipart/form-data).
+   * Max 5 images per product, max 5 MiB per image.
+   *
+   * @param {string} productId
+   * @param {File|Blob} file
+   * @param {{ alt_text?: string, position?: number }} [options]
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   */
+  async uploadProductImage(productId, file, options = {}) {
+    if (!file) {
+      const err = new Error('File is required');
+      err.code = 'VALIDATION_ERROR';
+      throw err;
+    }
+    const form = new FormData();
+    const filename = typeof file.name === 'string' ? file.name : 'upload';
+    form.append('image', file, filename);
+    if (typeof options.alt_text === 'string' && options.alt_text.trim() !== '') {
+      form.append('alt_text', options.alt_text.trim());
+    }
+    if (options.position !== undefined && options.position !== null) {
+      form.append('position', String(options.position));
+    }
+
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}/images`, {
+      method: 'POST',
+      withAuth: true,
+      body: form,
+      // apiFetch detects FormData and omits Content-Type (browser sets boundary)
+    });
+    const body = await this._handleJson(res);
+    return body;
+  }
+
+  /**
+   * GET /v1/products/:id/images — public list of uploaded images.
+   *
+   * @param {string} productId
+   * @returns {Promise<{ data: Array<Object>, meta: Object }>}
+   */
+  async listProductImages(productId) {
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}/images`, {
+      method: 'GET',
+    });
+    return this._parseListResponse(res, 'product images');
+  }
+
+  /**
+   * Handles a JSON response: returns the parsed body on 2xx, throws an Error
+   * with `code` and `statusCode` extracted from `body.error` on non-2xx.
+   *
+   * @param {Response} res
+   * @returns {Promise<Object>}
+   * @private
+   */
+  async _handleJson(res) {
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      const err = new Error(
+        (body && body.error && body.error.message) || `Request failed (${res.status})`
+      );
+      err.code = (body && body.error && body.error.code) || 'REQUEST_FAILED';
+      err.statusCode = res.status;
+      err.details = (body && body.error && body.error.details) || undefined;
+      throw err;
+    }
+    return body;
+  }
+
+  /**
    * Parses the JSON body of a list endpoint response, throwing in OpenAPI
    * error style for non-2xx statuses.
    *

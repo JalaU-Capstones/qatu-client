@@ -154,6 +154,25 @@ export class HeroView {
     visualImg.src = this.viewModel.visualImageUrl;
     visualImg.alt = '';
     visualImg.loading = 'lazy';
+    visualImg.addEventListener(
+      'error',
+      () => {
+        // Fall back to a plain color block, not a broken-image icon.
+        // Removing the src attribute and swapping the element for a styled
+        // <div> is the simplest robust approach.
+        visualImg.removeAttribute('src');
+        visualImg.alt = '';
+        visualImg.style.display = 'none';
+        // Optionally add a CSS class to the parent that renders a gradient
+        // background (already defined in hero.css as .q-hero__visual background).
+        const parent = visualImg.parentElement;
+        if (parent && !parent.dataset.fallback) {
+          parent.dataset.fallback = 'true';
+          parent.classList.add('q-hero__visual--fallback');
+        }
+      },
+      { once: true }
+    );
 
     const badge = document.createElement('div');
     badge.className = 'q-hero__badge';

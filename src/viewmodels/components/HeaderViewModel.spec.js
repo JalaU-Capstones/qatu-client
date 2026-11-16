@@ -212,4 +212,46 @@ describe('HeaderViewModel', () => {
     vm.triggerThemeToggle();
     expect(clicked).toBe(true);
   });
+
+  it('setCategories updates this.categories and notifies subscribers', () => {
+    let notified = false;
+    viewModel.subscribe(() => {
+      notified = true;
+    });
+
+    viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+    expect(viewModel.categories).toEqual([{ id: 1, name: 'Electrónica' }]);
+    expect(notified).toBe(true);
+  });
+
+  it('triggerSearch() with empty searchValue is a no-op', () => {
+    const onSearch = jasmine.createSpy('onSearch');
+    const vm = new HeaderViewModel({ onSearch });
+
+    vm.setSearchValue('');
+    vm.triggerSearch();
+    vm.setSearchValue('   ');
+    vm.triggerSearch();
+
+    expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  it('triggerSearch() with "abc" calls onSearch("abc")', () => {
+    const onSearch = jasmine.createSpy('onSearch');
+    const vm = new HeaderViewModel({ onSearch });
+
+    vm.setSearchValue('abc');
+    vm.triggerSearch();
+
+    expect(onSearch).toHaveBeenCalledWith('abc');
+  });
+
+  it('triggerCategory(42) calls onCategoryClick(42)', () => {
+    const onCategoryClick = jasmine.createSpy('onCategoryClick');
+    const vm = new HeaderViewModel({ onCategoryClick });
+
+    vm.triggerCategory(42);
+
+    expect(onCategoryClick).toHaveBeenCalledWith(42);
+  });
 });

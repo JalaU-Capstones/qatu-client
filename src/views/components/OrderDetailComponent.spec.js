@@ -95,4 +95,70 @@ describe('OrderDetailComponent', () => {
     backBtn.click();
     expect(backSpy).toHaveBeenCalled();
   });
+
+  it('renders placeholder SVG when item image fails to load', () => {
+    const orderWithImage = {
+      ...sampleOrder,
+      items: [
+        {
+          id: 'item-broken',
+          product_name: 'Broken Item',
+          product_image_path: 'https://invalid.example/broken-product.png',
+          quantity: 1,
+          unit_price: 10,
+          subtotal: 10,
+        },
+      ],
+    };
+    const component = new OrderDetailComponent({ order: orderWithImage });
+    const el = component.render();
+
+    const img = el.querySelector('.q-order-detail__item-image img');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(el.querySelector('.q-order-detail__item-image img')).toBeNull();
+    const svg = el.querySelector('.q-order-detail__item-image svg');
+    expect(svg).not.toBeNull();
+  });
+
+  it('renders structured shipping address as formatted lines, without raw JSON', () => {
+    const orderWithStructuredAddress = {
+      ...sampleOrder,
+      shipping_address: {
+        full_name: 'Geeky Gaming',
+        street: 'CL 04 #03-11',
+        city: 'Buga',
+        state: 'Valle de Cauca',
+        postal_code: '760001',
+        country: 'CO',
+        phone: '+3137323311',
+      },
+    };
+    const component = new OrderDetailComponent({ order: orderWithStructuredAddress });
+    const el = component.render();
+
+    const shippingCard = el.querySelector('[data-testid="order-shipping-card"]');
+    expect(shippingCard).not.toBeNull();
+    const lines = shippingCard.querySelectorAll('.q-order-shipping-address__line');
+    expect(lines.length).toBe(5);
+    expect(shippingCard.textContent).not.toContain('{');
+    expect(shippingCard.textContent).not.toContain('"city"');
+    expect(shippingCard.textContent).toContain('Geeky Gaming');
+    expect(shippingCard.textContent).toContain('CL 04 #03-11');
+    expect(shippingCard.textContent).toContain('Buga, Valle de Cauca, 760001');
+    expect(shippingCard.textContent).toContain('CO');
+    expect(shippingCard.textContent).toContain('Tel. +3137323311');
+  });
+
+  it('renders "Dirección no disponible" when shipping_address is null', () => {
+    const orderWithoutAddress = { ...sampleOrder, shipping_address: null };
+    const component = new OrderDetailComponent({ order: orderWithoutAddress });
+    const el = component.render();
+
+    const shippingCard = el.querySelector('[data-testid="order-shipping-card"]');
+    expect(shippingCard).not.toBeNull();
+    expect(shippingCard.textContent).toContain('Dirección no disponible');
+  });
 });

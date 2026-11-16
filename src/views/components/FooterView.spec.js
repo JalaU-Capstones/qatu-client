@@ -71,4 +71,30 @@ describe('FooterView', () => {
     view.mount(container);
     expect(container.querySelector('.q-footer')).not.toBeNull();
   });
+
+  it('non-seller -> footer "Vender" link href is /seller/apply', () => {
+    const mockAuth = { isSeller: () => false };
+    const footerView = new FooterView(viewModel, { authStore: mockAuth });
+    const el = footerView.render();
+
+    const venderLink = Array.from(el.querySelectorAll('.q-footer-links a')).find((a) =>
+      a.textContent.toLowerCase().includes('vender')
+    );
+    expect(venderLink).not.toBeNull();
+    expect(venderLink.getAttribute('href')).toBe('/seller/apply');
+    footerView.destroy();
+  });
+
+  it('seller -> footer "Vender" link href is /seller/products', () => {
+    const mockAuth = { isSeller: () => true };
+    const footerView = new FooterView(viewModel, { authStore: mockAuth });
+    const el = footerView.render();
+
+    const venderLink = Array.from(el.querySelectorAll('.q-footer-links a')).find((a) =>
+      a.textContent.toLowerCase().includes('vender')
+    );
+    expect(venderLink).not.toBeNull();
+    expect(venderLink.getAttribute('href')).toBe('/seller/products');
+    footerView.destroy();
+  });
 });

@@ -99,9 +99,16 @@ export class CheckoutViewModel {
 
   // Does not notify: re-rendering on every keystroke would steal the input focus.
   setField(name, value) {
-    if (!Object.hasOwn(this.form, name)) return;
+    if (!Object.hasOwn(this.form, name)) {
+      if (name === 'postal_code' && Object.hasOwn(this.form, 'postalCode')) name = 'postalCode';
+      else if (name === 'postalCode' && Object.hasOwn(this.form, 'postal_code'))
+        name = 'postal_code';
+      else return;
+    }
     this.form[name] = value;
     if (this.errors[name]) delete this.errors[name];
+    if (name === 'postalCode' && this.errors.postal_code) delete this.errors.postal_code;
+    if (name === 'postal_code' && this.errors.postalCode) delete this.errors.postalCode;
   }
 
   async submit() {

@@ -16,6 +16,8 @@ import './views/components/auth.css';
 import './views/pages/catalog.css';
 import './views/pages/orders.css';
 import './views/pages/seller-orders.css';
+import './views/pages/seller-products.css';
+import './views/pages/seller-product-form.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -25,6 +27,8 @@ import './views/pages/cart.css';
 import './views/pages/checkout.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
+import { CategoriesApi } from './models/api/CategoriesApi.js';
+import { ProductsApi } from './models/api/ProductsApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
@@ -38,6 +42,8 @@ import { themeStore } from './store/themeStore.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
+import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
+import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -51,6 +57,8 @@ import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
 import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
+import { SellerProductFormView } from './views/pages/SellerProductFormView.js';
+import { SellerProductsPageView } from './views/pages/SellerProductsPageView.js';
 
 const app = document.getElementById('app');
 
@@ -80,6 +88,21 @@ if (app) {
   });
   header.viewModel.setTheme(themeStore.getResolved());
   header.viewModel.onThemeToggleClick = () => themeStore.cycle();
+
+  let categories = [];
+  const categoriesApi = new CategoriesApi();
+  const categoriesReady = categoriesApi
+    .getCategories()
+    .then((res) => {
+      categories = res.data || [];
+      header.viewModel.setCategories(categories);
+      return categories;
+    })
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[main] failed to fetch categories for header:', err?.message || err);
+      return [];
+    });
 
   const mainEl = document.createElement('main');
   mainEl.className = 'q-main';
@@ -215,6 +238,64 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderSellerProducts = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/seller/products') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/products');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
+    currentPageView = new SellerProductsPageView({
+      viewModel: new SellerProductsViewModel(),
+      onNavigate: (path) => router.navigate(path),
+      onCreate: () => router.navigate('/seller/products/new'),
+      onViewProduct: (slug) => router.navigate(`/products/${slug}`),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderSellerProductNew = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/seller/products/new') return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/seller/products/new');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
+    if (categories.length === 0) {
+      await categoriesReady;
+    }
+
+    const viewModel = new SellerProductFormViewModel({
+      productsApi: new ProductsApi(),
+      categories,
+    });
+    const view = new SellerProductFormView({
+      viewModel,
+      categories,
+      onNavigate: (path) => router.navigate(path),
+    });
+    view.mount(mainEl);
+    currentPageView = view;
+  };
+
   const renderProfile = () => {
     clearCurrentView();
     if (!authStore.isAuthenticated()) {
@@ -236,6 +317,14 @@ if (app) {
   };
 
   const renderAuth = (mode) => {
+    // ADR-012 / Discovery D1: authenticated users must not reach the auth
+    // form. `loadFromStorage()` is synchronous (runs before router.start()),
+    // so `isAuthenticated()` is reliable here — no race condition.
+    if (authStore.isAuthenticated()) {
+      router.navigate('/', { replace: true });
+      return;
+    }
+
     if (activeAuth && activeAuth.mode !== mode) {
       activeAuth.setMode(mode);
       return;
@@ -303,6 +392,8 @@ if (app) {
   );
   router.addRoute('/orders', () => renderOrders());
   router.addRoute('/seller/orders', () => renderSellerOrders());
+  router.addRoute('/seller/products', () => renderSellerProducts());
+  router.addRoute('/seller/products/new', () => renderSellerProductNew());
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
@@ -322,7 +413,11 @@ if (app) {
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
   header.viewModel.onSellerOrdersClick = () => router.navigate('/seller/orders');
+  header.viewModel.onSellerProductsClick = () => router.navigate('/seller/products');
   header.viewModel.onProfileClick = () => router.navigate('/profile');
+  header.viewModel.onSearch = (term) => router.navigate('/products?q=' + encodeURIComponent(term));
+  header.viewModel.onCategoryClick = (categoryId) =>
+    router.navigate('/products?category=' + encodeURIComponent(categoryId));
 
   header.viewModel.onLogoutClick = async () => {
     try {

@@ -107,6 +107,28 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('renders circular placeholder SVG when avatar image fails to load', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: {
+        username: 'camilam',
+        avatarUrl: 'https://invalid.example/avatar-broken.jpg',
+      },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const img = el.querySelector('.q-header-avatar-img');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    const avatar = el.querySelector('.q-header-user-avatar');
+    expect(avatar.querySelector('.q-header-avatar-img')).toBeNull();
+    expect(avatar.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+
+    loggedInView.destroy();
+  });
+
   it('should reactively transition from login button to avatar when user logs in', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
@@ -247,44 +269,75 @@ describe('HeaderView', () => {
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
   });
 
-  describe('"Mis ventas" link (seller dashboard)', () => {
-    const SELLER_LINK = '.q-header-seller-orders-btn';
+  describe('Seller links (dashboard)', () => {
+    const SELLER_ORDERS_LINK = '.q-header-seller-orders-btn';
+    const SELLER_PRODUCTS_LINK = '.q-header-seller-products-btn';
 
     it('is hidden for a signed-in buyer', () => {
       viewModel.setUser({ username: 'ana' });
       const el = view.render();
-      expect(el.querySelector(SELLER_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
     });
 
-    it('is shown for a seller or admin, between profile and logout', () => {
+    it('is shown for a seller or admin, with Mis Productos and Mis Ventas', () => {
       viewModel.setIsSeller(true);
       viewModel.setUser({ username: 'sam' });
       const el = view.render();
 
-      const link = el.querySelector(SELLER_LINK);
-      expect(link).not.toBeNull();
-      expect(link.textContent).toBe('Mis ventas');
-      expect(link.getAttribute('href')).toBe('/seller/orders');
-      expect(link.nextElementSibling).toBe(el.querySelector('.q-header-logout-btn'));
+      const ordersLink = el.querySelector(SELLER_ORDERS_LINK);
+      expect(ordersLink).not.toBeNull();
+      expect(ordersLink.textContent).toBe('Mis Ventas');
+      expect(ordersLink.getAttribute('href')).toBe('/seller/orders');
+
+      const productsLink = el.querySelector(SELLER_PRODUCTS_LINK);
+      expect(productsLink).not.toBeNull();
+      expect(productsLink.textContent).toBe('Mis Productos');
+      expect(productsLink.getAttribute('href')).toBe('/seller/products');
+    });
+
+    it('seller dropdown distinguishes buyer orders from seller sales', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      const dropdown = el.querySelector('.q-header-dropdown');
+      expect(dropdown).not.toBeNull();
+
+      const ordersLink = dropdown.querySelector('.q-header-orders-btn');
+      const salesLink = dropdown.querySelector('.q-header-seller-orders-btn');
+      const productsLink = dropdown.querySelector('.q-header-seller-products-btn');
+
+      expect(ordersLink).not.toBeNull();
+      expect(salesLink).not.toBeNull();
+      expect(productsLink).not.toBeNull();
+
+      expect(ordersLink.textContent).toBe('Mis Órdenes');
+      expect(salesLink.textContent).toBe('Mis Ventas');
+      expect(productsLink.textContent).toBe('Mis Productos');
     });
 
     it('is not rendered for anonymous visitors, even if the flag is set', () => {
       viewModel.setIsSeller(true);
       const el = view.render();
-      expect(el.querySelector(SELLER_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
       expect(el.querySelector('.q-header-dropdown')).toBeNull();
     });
 
     it('appears and disappears when the roles change for an already rendered user', () => {
       viewModel.setUser({ username: 'sam' });
       const el = view.render();
-      expect(el.querySelector(SELLER_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
 
       viewModel.setIsSeller(true);
-      expect(el.querySelectorAll(SELLER_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_ORDERS_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_PRODUCTS_LINK).length).toBe(1);
 
       viewModel.setIsSeller(false);
-      expect(el.querySelector(SELLER_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
     });
 
     it('does not duplicate the link on repeated updates', () => {
@@ -294,7 +347,8 @@ describe('HeaderView', () => {
 
       viewModel.setCartCount(1);
       viewModel.setCartCount(2);
-      expect(el.querySelectorAll(SELLER_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_ORDERS_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_PRODUCTS_LINK).length).toBe(1);
     });
 
     it('clicking it calls viewModel.triggerSellerOrders() without a page reload', () => {
@@ -304,9 +358,22 @@ describe('HeaderView', () => {
       const el = view.render();
 
       const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      el.querySelector(SELLER_LINK).dispatchEvent(event);
+      el.querySelector(SELLER_ORDERS_LINK).dispatchEvent(event);
 
       expect(viewModel.triggerSellerOrders).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('clicking Mis Productos calls viewModel.triggerSellerProducts() without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerSellerProducts');
+      const el = view.render();
+
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      el.querySelector(SELLER_PRODUCTS_LINK).dispatchEvent(event);
+
+      expect(viewModel.triggerSellerProducts).toHaveBeenCalled();
       expect(event.defaultPrevented).toBe(true);
     });
   });
@@ -353,5 +420,62 @@ describe('HeaderView', () => {
     viewModel.setTheme('system');
     svg = themeBtn.querySelector('svg.q-header-theme-icon');
     expect(svg.getAttribute('data-icon')).toBe('system');
+  });
+
+  describe('Categorías dropdown and search bar', () => {
+    it('with viewModel.categories = [{id:1,name:"Electrónica"}], the dropdown trigger exists and menu contains "Electrónica"', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
+
+      const trigger = el.querySelector('.q-header-cat-dropdown__trigger');
+      expect(trigger).not.toBeNull();
+      expect(trigger.textContent).toContain('Categorías');
+
+      const menu = el.querySelector('.q-header-cat-dropdown__menu');
+      expect(menu).not.toBeNull();
+      expect(menu.textContent).toContain('Electrónica');
+    });
+
+    it('clicking the trigger toggles the menu (hidden attribute)', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
+
+      const trigger = el.querySelector('.q-header-cat-dropdown__trigger');
+      const menu = el.querySelector('.q-header-cat-dropdown__menu');
+      expect(menu.hasAttribute('hidden')).toBe(true);
+
+      trigger.click();
+      expect(menu.hasAttribute('hidden')).toBe(false);
+
+      trigger.click();
+      expect(menu.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('search form: submitting with text calls viewModel.triggerSearch', () => {
+      spyOn(viewModel, 'triggerSearch');
+      const el = view.render();
+
+      const input = el.querySelector('.q-header-search__input');
+      const form = el.querySelector('.q-header-search');
+      input.value = 'zapatos';
+
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+      expect(viewModel.triggerSearch).toHaveBeenCalled();
+      expect(viewModel.searchValue).toBe('zapatos');
+    });
+
+    it('search: empty submit does nothing', () => {
+      spyOn(viewModel, 'triggerSearch');
+      const el = view.render();
+
+      const input = el.querySelector('.q-header-search__input');
+      const form = el.querySelector('.q-header-search');
+      input.value = '   ';
+
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+      expect(viewModel.triggerSearch).not.toHaveBeenCalled();
+    });
   });
 });

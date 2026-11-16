@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 10 routes × 2 themes × 3 viewports = 60 combinations.
+ * Visual matrix E2E — 12 routes × 2 themes × 3 viewports = 72 combinations.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -45,6 +45,18 @@ const ROUTES = [
   { name: 'profile', path: '/profile', authenticated: true },
   // Seller dashboard: needs the seller role (the route guard redirects everyone else).
   { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
+  {
+    name: 'seller-products',
+    path: '/seller/products',
+    authenticated: true,
+    roles: ['seller'],
+  },
+  {
+    name: 'seller-product-new',
+    path: '/seller/products/new',
+    authenticated: true,
+    roles: ['seller'],
+  },
 ];
 
 /** Orders returned for `GET /v1/orders?view=seller` (long names exercise the mobile layout). */
@@ -78,6 +90,76 @@ const SELLER_SAMPLE_ORDERS = [
     currency: 'USD',
     created_at: '2026-10-10T16:45:00.000Z',
     items: [{ product_name: 'Cuchillos de cocina de acero inoxidable', quantity: 1, subtotal: 79 }],
+  },
+];
+
+/** Categories for `GET /v1/categories` (header dropdown + wizard step 1). */
+const SAMPLE_CATEGORIES = [
+  { id: 'cat-electronics', name: 'Electrónica', slug: 'electronics' },
+  { id: 'cat-clothing', name: 'Ropa y Moda', slug: 'clothing' },
+  { id: 'cat-home', name: 'Hogar y Jardín', slug: 'home-and-garden' },
+  { id: 'cat-sports', name: 'Deportes', slug: 'sports' },
+  { id: 'cat-books', name: 'Libros', slug: 'books' },
+];
+
+/** Products returned for `GET /v1/seller/products`. */
+const SAMPLE_SELLER_PRODUCTS = [
+  {
+    id: 'p-draft-with-img',
+    seller_id: 'seller-1',
+    category_id: 'cat-electronics',
+    name: 'Borrador con imagen (listo para publicar)',
+    slug: 'borrador-con-imagen',
+    description: 'Producto que ya tiene una imagen subida.',
+    price: 29.99,
+    currency: 'USD',
+    stock: 10,
+    attributes: { color: 'azul' },
+    primary_image_path: 'http://localhost:8080/product-images/p-draft-with-img/thumb.webp',
+    state: 'draft',
+    average_rating: 0,
+    ratings_count: 0,
+    published_at: null,
+    created_at: '2026-11-14T12:00:00.000Z',
+    updated_at: '2026-11-14T12:00:00.000Z',
+  },
+  {
+    id: 'p-draft-no-img',
+    seller_id: 'seller-1',
+    category_id: 'cat-books',
+    name: 'Borrador sin imagen (publicar deshabilitado)',
+    slug: 'borrador-sin-imagen',
+    description: 'Producto sin imágenes todavía.',
+    price: 15.5,
+    currency: 'USD',
+    stock: 5,
+    attributes: {},
+    primary_image_path: null,
+    state: 'draft',
+    average_rating: 0,
+    ratings_count: 0,
+    published_at: null,
+    created_at: '2026-11-14T11:00:00.000Z',
+    updated_at: '2026-11-14T11:00:00.000Z',
+  },
+  {
+    id: 'p-published',
+    seller_id: 'seller-1',
+    category_id: 'cat-home',
+    name: 'Producto publicado (visible en la tienda)',
+    slug: 'producto-publicado',
+    description: 'Ya está en el catálogo público.',
+    price: 99.99,
+    currency: 'USD',
+    stock: 3,
+    attributes: { material: 'cerámica' },
+    primary_image_path: 'http://localhost:8080/product-images/p-published/thumb.webp',
+    state: 'published',
+    average_rating: 4.5,
+    ratings_count: 12,
+    published_at: '2026-11-10T09:00:00.000Z',
+    created_at: '2026-11-09T08:00:00.000Z',
+    updated_at: '2026-11-10T09:00:00.000Z',
   },
 ];
 
@@ -138,93 +220,122 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
+      const sessionSellerProducts = route.name === 'seller-products' ? SAMPLE_SELLER_PRODUCTS : [];
 
-      if (route.authenticated) {
-        await page.setRequestInterception(true);
-        page.on('request', (req) => {
-          const url = req.url();
-          const corsHeaders = {
-            'Access-Control-Allow-Origin': req.headers().origin || BASE,
-            'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Authorization',
-          };
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+        const url = req.url();
+        const corsHeaders = {
+          'Access-Control-Allow-Origin': req.headers().origin || BASE,
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Authorization',
+        };
 
-          if (
-            url.includes('/v1/auth/me') ||
+        if (url.includes('/product-images/') || url.includes('picsum.photos')) {
+          if (req.method() === 'OPTIONS') {
+            return req.respond({ status: 204, headers: corsHeaders });
+          }
+          return req.respond({
+            status: 200,
+            contentType: 'image/svg+xml',
+            headers: corsHeaders,
+            body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="#e2e8f0"/></svg>',
+          });
+        }
+
+        if (
+          route.authenticated &&
+          (url.includes('/v1/auth/me') ||
             url.includes('/v1/profiles/') ||
             url.includes('/v1/cart') ||
-            url.includes('/v1/orders')
-          ) {
-            if (req.method() === 'OPTIONS') {
-              return req.respond({
-                status: 204,
-                headers: corsHeaders,
-              });
-            }
-
-            const sampleProfile = {
-              id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-              username: 'camila_m',
-              full_name: 'Camila Morales',
-              avatar_path: null,
-              bio: 'Coleccionista de artesanía y textiles andinos.',
-              locale: 'es-PE',
-              created_at: '2026-10-01T00:00:00.000Z',
-              updated_at: '2026-10-01T00:00:00.000Z',
-            };
-
-            let body;
-            if (url.includes('/v1/auth/me')) {
-              body = {
-                data: {
-                  user: {
-                    id: sampleProfile.id,
-                    username: sampleProfile.username,
-                    full_name: sampleProfile.full_name,
-                  },
-                  profile: sampleProfile,
-                  roles: sessionRoles,
-                },
-                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
-              };
-            } else if (url.includes('/v1/cart')) {
-              body = {
-                data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
-                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
-              };
-            } else if (url.includes('/v1/orders')) {
-              body = {
-                data: sessionOrders,
-                meta: {
-                  page: 1,
-                  per_page: 10,
-                  total: sessionOrders.length,
-                  total_pages: sessionOrders.length ? 1 : 0,
-                  timestamp: '2026-10-14T12:00:00.000Z',
-                },
-              };
-            } else {
-              body = {
-                data: sampleProfile,
-                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
-              };
-            }
-
+            url.includes('/v1/orders') ||
+            url.includes('/v1/seller/products') ||
+            url.includes('/v1/categories'))
+        ) {
+          if (req.method() === 'OPTIONS') {
             return req.respond({
-              status: 200,
-              contentType: 'application/json',
+              status: 204,
               headers: corsHeaders,
-              body: JSON.stringify(body),
             });
           }
-          return req.continue();
-        });
-      }
+
+          const sampleProfile = {
+            id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            username: 'camila_m',
+            full_name: 'Camila Morales',
+            avatar_path: null,
+            bio: 'Coleccionista de artesanía y textiles andinos.',
+            locale: 'es-PE',
+            created_at: '2026-10-01T00:00:00.000Z',
+            updated_at: '2026-10-01T00:00:00.000Z',
+          };
+
+          let body;
+          if (url.includes('/v1/auth/me')) {
+            body = {
+              data: {
+                user: {
+                  id: sampleProfile.id,
+                  username: sampleProfile.username,
+                  full_name: sampleProfile.full_name,
+                },
+                profile: sampleProfile,
+                roles: sessionRoles,
+              },
+              meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+            };
+          } else if (url.includes('/v1/cart')) {
+            body = {
+              data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
+              meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+            };
+          } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
+            body = {
+              data: sessionSellerProducts,
+              meta: {
+                page: 1,
+                per_page: 20,
+                total: sessionSellerProducts.length,
+                total_pages: sessionSellerProducts.length ? 1 : 0,
+              },
+            };
+          } else if (url.includes('/v1/categories') && req.method() === 'GET') {
+            body = {
+              data: SAMPLE_CATEGORIES,
+              meta: { timestamp: '2026-11-14T12:00:00.000Z' },
+            };
+          } else if (url.includes('/v1/orders')) {
+            body = {
+              data: sessionOrders,
+              meta: {
+                page: 1,
+                per_page: 10,
+                total: sessionOrders.length,
+                total_pages: sessionOrders.length ? 1 : 0,
+                timestamp: '2026-10-14T12:00:00.000Z',
+              },
+            };
+          } else {
+            body = {
+              data: sampleProfile,
+              meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+            };
+          }
+
+          return req.respond({
+            status: 200,
+            contentType: 'application/json',
+            headers: corsHeaders,
+            body: JSON.stringify(body),
+          });
+        }
+        return req.continue();
+      });
 
       // Set theme and optional authenticated session before navigation so first paint is themed
       await page.evaluateOnNewDocument(
-        (t, isAuth, roles, ordersData) => {
+        (t, isAuth, roles, ordersData, sellerProductsData, categoriesData) => {
           try {
             window.localStorage.setItem('qatu.theme', t);
             if (isAuth) {
@@ -260,6 +371,8 @@ for (const route of activeRoutes) {
                   url.includes('/v1/auth/me') ||
                   url.includes('/v1/profiles/') ||
                   url.includes('/v1/cart') ||
+                  url.includes('/v1/seller/products') ||
+                  url.includes('/v1/categories') ||
                   url.includes('/v1/orders')
                 ) {
                   let body;
@@ -280,6 +393,21 @@ for (const route of activeRoutes) {
                     body = {
                       data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
+                    body = {
+                      data: sellerProductsData,
+                      meta: {
+                        page: 1,
+                        per_page: 20,
+                        total: sellerProductsData.length,
+                        total_pages: sellerProductsData.length ? 1 : 0,
+                      },
+                    };
+                  } else if (url.includes('/v1/categories')) {
+                    body = {
+                      data: categoriesData,
+                      meta: { timestamp: '2026-11-14T12:00:00.000Z' },
                     };
                   } else if (url.includes('/v1/orders')) {
                     body = {
@@ -314,7 +442,9 @@ for (const route of activeRoutes) {
         theme,
         Boolean(route.authenticated),
         sessionRoles,
-        sessionOrders
+        sessionOrders,
+        sessionSellerProducts,
+        SAMPLE_CATEGORIES
       );
 
       try {
@@ -422,6 +552,29 @@ for (const route of activeRoutes) {
                 table: check('.q-seller-orders-table'),
                 row: check('.q-seller-orders-table tbody tr'),
                 statusSelector: check('.q-seller-orders-table tbody select'),
+                footer: check('.q-footer'),
+              };
+            case 'seller-products':
+              return {
+                header: check('.q-header'),
+                sellerPage: check('.q-seller-products'),
+                title: check('.q-seller-products__title'),
+                kpis: check('.q-seller-products__kpi'),
+                filterTabs: check('.q-seller-products__filter'),
+                grid: check('.q-seller-products__grid'),
+                cards: check('.q-seller-products__card'),
+                footer: check('.q-footer'),
+              };
+            case 'seller-product-new':
+              return {
+                header: check('.q-header'),
+                formPage: check('.q-seller-product-form'),
+                stepper: check('.q-seller-product-form__stepper'),
+                stepOneActive: check('.q-seller-product-form__step.is-active'),
+                nameInput: check('input[name="name"]'),
+                priceInput: check('input[name="price"]'),
+                categorySelect: check('select[name="categoryId"]'),
+                submitBtn: check('.q-seller-product-form__footer .q-btn--primary'),
                 footer: check('.q-footer'),
               };
             default:

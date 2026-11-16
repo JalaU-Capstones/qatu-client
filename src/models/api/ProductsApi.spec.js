@@ -515,4 +515,198 @@ describe('ProductsApi', () => {
       expect(similar).toEqual([]);
     });
   });
+
+  // ─── Seller Products & Images (US-16) ──────────────────────────────────────
+
+  describe('seller products and images', () => {
+    afterEach(() => {
+      document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    });
+
+    it('getSellerProducts calls apiFetch with /seller/products and withAuth: true', async () => {
+      const mockProducts = [{ id: 'sp1', name: 'Seller Prod' }];
+      fetchSpy.and.returnValue(Promise.resolve(listResponse(mockProducts)));
+
+      const result = await api.getSellerProducts();
+
+      expect(fetchSpy).toHaveBeenCalledWith('/seller/products', {
+        method: 'GET',
+        withAuth: true,
+      });
+      expect(result.data).toEqual(mockProducts);
+      expect(result.meta).toEqual({ page: 1, per_page: 20, total: 1, total_pages: 1 });
+    });
+
+    it('getSellerProducts appends page, limit, and status query parameters', async () => {
+      await api.getSellerProducts({ page: 2, limit: 10, status: 'draft' });
+
+      expect(fetchSpy).toHaveBeenCalledWith('/seller/products?page=2&limit=10&status=draft', {
+        method: 'GET',
+        withAuth: true,
+      });
+    });
+
+    it('createProduct sends POST with JSON body and CSRF header via apiFetch', async () => {
+      document.cookie = 'csrf_token=test-csrf-token; path=/';
+      const windowFetchSpy = spyOn(window, 'fetch').and.resolveTo(
+        detailResponse({ id: 'new-prod', name: 'New Product' })
+      );
+      const realApi = new ProductsApi();
+      const payload = {
+        name: 'New Product',
+        price: 15.5,
+        category_id: 'cat-123',
+        slug: 'new-product',
+      };
+
+      const result = await realApi.createProduct(payload);
+
+      expect(windowFetchSpy).toHaveBeenCalledWith(
+        jasmine.stringMatching(/\/products$/),
+        jasmine.objectContaining({
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: jasmine.objectContaining({
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': 'test-csrf-token',
+          }),
+        })
+      );
+      expect(result.data).toEqual(
+        jasmine.objectContaining({ id: 'new-prod', name: 'New Product' })
+      );
+    });
+
+    it('createProduct propagates SLUG_ALREADY_EXISTS as err.code and err.statusCode', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'SLUG_ALREADY_EXISTS',
+                message: 'A product with this slug already exists',
+                details: [{ field: 'slug', message: 'Slug already taken' }],
+              },
+            }),
+            { status: 409, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.createProduct({ name: 'Dup', price: 10, category_id: 'c1' });
+        fail('Expected createProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('SLUG_ALREADY_EXISTS');
+        expect(err.statusCode).toBe(409);
+        expect(err.message).toBe('A product with this slug already exists');
+        expect(err.details).toEqual([{ field: 'slug', message: 'Slug already taken' }]);
+      }
+    });
+
+    it('publishProduct sends PATCH to /products/:id/publish with no body', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(detailResponse({ id: 'prod-1', status: 'published' }))
+      );
+
+      const result = await api.publishProduct('prod-1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/prod-1/publish', {
+        method: 'PATCH',
+        withAuth: true,
+      });
+      expect(result.data).toEqual(jasmine.objectContaining({ id: 'prod-1', status: 'published' }));
+    });
+
+    it('publishProduct propagates IMAGE_REQUIRED (422) error', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'IMAGE_REQUIRED',
+                message: 'At least one product image is required to publish',
+              },
+            }),
+            { status: 422, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.publishProduct('prod-no-image');
+        fail('Expected publishProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('IMAGE_REQUIRED');
+        expect(err.statusCode).toBe(422);
+        expect(err.message).toBe('At least one product image is required to publish');
+      }
+    });
+
+    it('uploadProductImage sends POST with FormData body and no explicit Content-Type', async () => {
+      const windowFetchSpy = spyOn(window, 'fetch').and.resolveTo(
+        detailResponse({ id: 'img-1', path: 'product-images/p1/img-1.png' })
+      );
+      const realApi = new ProductsApi();
+      const file = new File(['dummy-content'], 'test.png', { type: 'image/png' });
+
+      const result = await realApi.uploadProductImage('prod-1', file);
+
+      const [, init] = windowFetchSpy.calls.first().args;
+      expect(init.method).toBe('POST');
+      expect(init.body instanceof FormData).toBe(true);
+      expect(init.body.has('image')).toBe(true);
+      expect(init.headers['Content-Type']).toBeUndefined();
+      expect(result.data).toEqual(jasmine.objectContaining({ id: 'img-1' }));
+    });
+
+    it('uploadProductImage appends alt_text and position to FormData when provided', async () => {
+      let capturedBody;
+      fetchSpy.and.callFake((path, opts) => {
+        capturedBody = opts.body;
+        return Promise.resolve(detailResponse({ id: 'img-1' }));
+      });
+      const file = new File(['content'], 'photo.jpg', { type: 'image/jpeg' });
+
+      await api.uploadProductImage('prod-1', file, { alt_text: 'front', position: 0 });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/products/prod-1/images',
+        jasmine.objectContaining({
+          method: 'POST',
+          withAuth: true,
+        })
+      );
+      expect(capturedBody instanceof FormData).toBe(true);
+      expect(capturedBody.get('alt_text')).toBe('front');
+      expect(capturedBody.get('position')).toBe('0');
+      expect(capturedBody.get('image')).toBeTruthy();
+    });
+
+    it('uploadProductImage throws VALIDATION_ERROR when file is null or undefined', async () => {
+      try {
+        await api.uploadProductImage('prod-1', null);
+        fail('Expected uploadProductImage to throw');
+      } catch (err) {
+        expect(err.code).toBe('VALIDATION_ERROR');
+        expect(err.message).toBe('File is required');
+      }
+    });
+
+    it('listProductImages sends GET to /products/:id/images and returns data and meta', async () => {
+      const mockImages = [
+        { id: 'img-1', path: 'product-images/p1/img-1.png', is_primary: true },
+        { id: 'img-2', path: 'product-images/p1/img-2.png', is_primary: false },
+      ];
+      fetchSpy.and.returnValue(Promise.resolve(listResponse(mockImages)));
+
+      const result = await api.listProductImages('prod-1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/prod-1/images', {
+        method: 'GET',
+      });
+      expect(result.data).toEqual(mockImages);
+      expect(result.meta).toEqual({ page: 1, per_page: 20, total: 1, total_pages: 1 });
+    });
+  });
 });

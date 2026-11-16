@@ -2,7 +2,7 @@ import { ProductDetailViewModel } from './ProductDetailViewModel.js';
 
 /**
  * Contract-shaped product fixture (GET /v1/products/{id}):
- * `average_rating`, `ratings_count`, `seller.full_name`, `images[].image_path`,
+ * `average_rating`, `ratings_count`, `seller.full_name`, `images[].path`,
  * `attributes` as a map.
  */
 const createProduct = (overrides = {}) => ({
@@ -19,9 +19,9 @@ const createProduct = (overrides = {}) => ({
   ratings_count: 24,
   primary_image_path: 'https://cdn.qatu.test/p1-main.jpg',
   images: [
-    { image_path: 'https://cdn.qatu.test/p1-1.jpg', position: 1, label: 'Vista frontal' },
-    { image_path: 'https://cdn.qatu.test/p1-2.jpg', position: 2, label: 'Detalle' },
-    { image_path: 'https://cdn.qatu.test/p1-3.jpg', position: 3, label: 'Reverso' },
+    { path: 'https://cdn.qatu.test/p1-1.jpg', position: 1, label: 'Vista frontal' },
+    { path: 'https://cdn.qatu.test/p1-2.jpg', position: 2, label: 'Detalle' },
+    { path: 'https://cdn.qatu.test/p1-3.jpg', position: 3, label: 'Reverso' },
   ],
   attributes: {
     Material: 'Lana de oveja',
