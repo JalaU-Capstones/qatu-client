@@ -709,4 +709,356 @@ describe('ProductsApi', () => {
       expect(result.meta).toEqual({ page: 1, per_page: 20, total: 1, total_pages: 1 });
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // Sprint 7 (C1): unpublishProduct, updateProduct, deleteProduct,
+  //                deleteProductImage
+  // ─────────────────────────────────────────────────────────────
+
+  describe('unpublishProduct', () => {
+    it('sends PATCH to /products/:id/unpublish with withAuth and no body', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(detailResponse({ id: 'prod-1', state: 'unpublished' }))
+      );
+
+      await api.unpublishProduct('prod-1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/prod-1/unpublish', {
+        method: 'PATCH',
+        withAuth: true,
+      });
+    });
+
+    it('passes withAuth: true', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(detailResponse({ id: 'prod-1', state: 'unpublished' }))
+      );
+
+      await api.unpublishProduct('prod-1');
+
+      const opts = fetchSpy.calls.mostRecent().args[1];
+      expect(opts.withAuth).toBe(true);
+    });
+
+    it('returns the parsed { data, meta } envelope on 200', async () => {
+      const mockProduct = { id: 'prod-1', state: 'unpublished', name: 'Poncho' };
+      fetchSpy.and.returnValue(Promise.resolve(detailResponse(mockProduct)));
+
+      const result = await api.unpublishProduct('prod-1');
+
+      expect(result.data).toEqual(jasmine.objectContaining({ id: 'prod-1', state: 'unpublished' }));
+      expect(result.meta).toBeDefined();
+    });
+
+    it('URL-encodes the productId', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(detailResponse({ id: 'prod/with/slashes', state: 'unpublished' }))
+      );
+
+      await api.unpublishProduct('prod/with/slashes');
+
+      const url = fetchSpy.calls.mostRecent().args[0];
+      expect(url).toBe('/products/prod%2Fwith%2Fslashes/unpublish');
+    });
+
+    it('throws with correct code and statusCode on 409 INVALID_STATE_TRANSITION', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'INVALID_STATE_TRANSITION',
+                message: 'Cannot unpublish a product in its current state',
+              },
+            }),
+            { status: 409, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.unpublishProduct('prod-1');
+        fail('Expected unpublishProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('INVALID_STATE_TRANSITION');
+        expect(err.statusCode).toBe(409);
+        expect(err.message).toContain('Cannot unpublish');
+      }
+    });
+
+    it('throws with code FORBIDDEN on 403', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Access denied' } }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+
+      try {
+        await api.unpublishProduct('prod-other');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.code).toBe('FORBIDDEN');
+        expect(err.statusCode).toBe(403);
+      }
+    });
+  });
+
+  describe('updateProduct', () => {
+    it('sends PATCH to /products/:id with the fields payload and Content-Type header', async () => {
+      const fields = { name: 'Updated Name', price: 59.99 };
+      fetchSpy.and.returnValue(
+        Promise.resolve(detailResponse({ id: 'prod-1', name: 'Updated Name', price: 59.99 }))
+      );
+
+      await api.updateProduct('prod-1', fields);
+
+      const [url, opts] = fetchSpy.calls.mostRecent().args;
+      expect(url).toBe('/products/prod-1');
+      expect(opts.method).toBe('PATCH');
+      expect(opts.withAuth).toBe(true);
+      expect(opts.headers['Content-Type']).toBe('application/json');
+      expect(opts.body).toBe(JSON.stringify(fields));
+    });
+
+    it('passes withAuth: true', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(detailResponse({ id: 'prod-1', name: 'X' })));
+
+      await api.updateProduct('prod-1', { name: 'X' });
+
+      expect(fetchSpy.calls.mostRecent().args[1].withAuth).toBe(true);
+    });
+
+    it('JSON-stringifies the fields in the request body', async () => {
+      const fields = { name: 'Aguayo', price: 29, stock: 5 };
+      fetchSpy.and.returnValue(Promise.resolve(detailResponse({ id: 'prod-1' })));
+
+      await api.updateProduct('prod-1', fields);
+
+      expect(fetchSpy.calls.mostRecent().args[1].body).toBe(JSON.stringify(fields));
+    });
+
+    it('returns the parsed { data, meta } envelope on 200', async () => {
+      const mockProduct = { id: 'prod-1', name: 'New Name', price: 99 };
+      fetchSpy.and.returnValue(Promise.resolve(detailResponse(mockProduct)));
+
+      const result = await api.updateProduct('prod-1', { name: 'New Name', price: 99 });
+
+      expect(result.data).toEqual(jasmine.objectContaining({ id: 'prod-1', name: 'New Name' }));
+      expect(result.meta).toBeDefined();
+    });
+
+    it('throws VALIDATION_ERROR (400) without calling _fetch when fields is empty {}', async () => {
+      try {
+        await api.updateProduct('prod-1', {});
+        fail('Expected updateProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('VALIDATION_ERROR');
+        expect(err.statusCode).toBe(400);
+        expect(err.message).toBe('At least one field is required');
+        expect(fetchSpy.calls.count()).toBe(0);
+      }
+    });
+
+    it('throws VALIDATION_ERROR without calling _fetch when fields is null', async () => {
+      try {
+        await api.updateProduct('prod-1', null);
+        fail('Expected updateProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('VALIDATION_ERROR');
+        expect(fetchSpy.calls.count()).toBe(0);
+      }
+    });
+
+    it('throws with correct code and statusCode on 400 from backend', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: { code: 'VALIDATION_ERROR', message: 'Invalid field: slug' },
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.updateProduct('prod-1', { name: 'X', slug: 'bad-field' });
+        fail('Expected updateProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('VALIDATION_ERROR');
+        expect(err.statusCode).toBe(400);
+      }
+    });
+
+    it('URL-encodes the productId', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(detailResponse({ id: 'prod/1' })));
+
+      await api.updateProduct('prod/1', { name: 'X' });
+
+      expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/prod%2F1');
+    });
+  });
+
+  describe('deleteProduct', () => {
+    it('sends DELETE to /products/:id with withAuth', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProduct('prod-1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/prod-1', {
+        method: 'DELETE',
+        withAuth: true,
+      });
+    });
+
+    it('passes withAuth: true', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProduct('prod-1');
+
+      expect(fetchSpy.calls.mostRecent().args[1].withAuth).toBe(true);
+    });
+
+    it('returns undefined on 204 No Content without attempting to parse body', async () => {
+      // The body stream is null/empty; if _handleJson tried res.json() it would throw
+      const jsonSpy = jasmine.createSpy('json').and.rejectWith(new SyntaxError('no body'));
+      fetchSpy.and.returnValue(Promise.resolve({ ok: true, status: 204, json: jsonSpy }));
+
+      const result = await api.deleteProduct('prod-1');
+
+      expect(result).toBeUndefined();
+      expect(jsonSpy).not.toHaveBeenCalled();
+    });
+
+    it('URL-encodes the productId', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProduct('prod/1');
+
+      expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/prod%2F1');
+    });
+
+    it('throws with correct code and statusCode on 404', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { code: 'PRODUCT_NOT_FOUND', message: 'Not found' } }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.deleteProduct('prod-missing');
+        fail('Expected deleteProduct to throw');
+      } catch (err) {
+        expect(err.code).toBe('PRODUCT_NOT_FOUND');
+        expect(err.statusCode).toBe(404);
+      }
+    });
+
+    it('throws with code FORBIDDEN on 403', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Not your product' } }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.deleteProduct('prod-other');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.code).toBe('FORBIDDEN');
+        expect(err.statusCode).toBe(403);
+      }
+    });
+  });
+
+  describe('deleteProductImage', () => {
+    it('sends DELETE to /products/:id/images/:imageId with withAuth', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProductImage('prod-1', 'img-1');
+
+      expect(fetchSpy).toHaveBeenCalledWith('/products/prod-1/images/img-1', {
+        method: 'DELETE',
+        withAuth: true,
+      });
+    });
+
+    it('passes withAuth: true', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProductImage('prod-1', 'img-1');
+
+      expect(fetchSpy.calls.mostRecent().args[1].withAuth).toBe(true);
+    });
+
+    it('returns undefined on 204 No Content without attempting to parse body', async () => {
+      const jsonSpy = jasmine.createSpy('json').and.rejectWith(new SyntaxError('no body'));
+      fetchSpy.and.returnValue(Promise.resolve({ ok: true, status: 204, json: jsonSpy }));
+
+      const result = await api.deleteProductImage('prod-1', 'img-1');
+
+      expect(result).toBeUndefined();
+      expect(jsonSpy).not.toHaveBeenCalled();
+    });
+
+    it('URL-encodes both productId and imageId', async () => {
+      fetchSpy.and.returnValue(Promise.resolve(new Response(null, { status: 204 })));
+
+      await api.deleteProductImage('prod/1', 'img/2');
+
+      expect(fetchSpy.calls.mostRecent().args[0]).toBe('/products/prod%2F1/images/img%2F2');
+    });
+
+    it('throws with correct code and statusCode on 409 INVALID_STATE_TRANSITION', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 'INVALID_STATE_TRANSITION',
+                message: 'Cannot delete image of a published product',
+              },
+            }),
+            { status: 409, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.deleteProductImage('prod-1', 'img-1');
+        fail('Expected deleteProductImage to throw');
+      } catch (err) {
+        expect(err.code).toBe('INVALID_STATE_TRANSITION');
+        expect(err.statusCode).toBe(409);
+      }
+    });
+
+    it('throws with code FORBIDDEN on 403', async () => {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Not your image' } }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      );
+
+      try {
+        await api.deleteProductImage('prod-other', 'img-other');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.code).toBe('FORBIDDEN');
+        expect(err.statusCode).toBe(403);
+      }
+    });
+  });
 });
