@@ -25,6 +25,7 @@ import './views/components/recommendation-card.css';
 import './views/pages/product-detail.css';
 import './views/pages/cart.css';
 import './views/pages/checkout.css';
+import './views/styles/modal.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
@@ -44,6 +45,7 @@ import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewMode
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
 import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
+import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -259,6 +261,19 @@ if (app) {
       onNavigate: (path) => router.navigate(path),
       onCreate: () => router.navigate('/seller/products/new'),
       onViewProduct: (slug) => router.navigate(`/products/${slug}`),
+      onEditProduct: (productId) => {
+        const vm = currentPageView?.viewModel;
+        const modal = new EditProductModal({
+          productId,
+          productsApi: new ProductsApi(),
+          categoriesApi: new CategoriesApi(),
+          onSaved: (updatedProduct) => {
+            if (vm) vm.applyProductUpdate(updatedProduct);
+          },
+        });
+        void modal.open();
+      },
+      onDeleteProduct: null, // C4 will wire this
     });
     currentPageView.mount(mainEl);
   };

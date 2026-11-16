@@ -370,4 +370,30 @@ describe('SellerProductsViewModel', () => {
     });
     expect(vm.filterStatus).toBe('unpublished');
   });
+
+  it('24. applyProductUpdate replaces the product in-place and notifies', () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    const original = mockProduct({ id: 'p1', name: 'Old', state: 'draft' });
+    vm.products = [original];
+
+    const updated = { ...mockProduct({ id: 'p1', name: 'New', state: 'published' }) };
+    vm.applyProductUpdate(updated);
+
+    expect(vm.products[0].name).toBe('New');
+    expect(vm.products[0]).not.toBe(original);
+    expect(notifySpy).toHaveBeenCalled();
+  });
+
+  it('25. applyProductUpdate is a no-op when product not in current page list', () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    vm.products = [mockProduct({ id: 'p1' })];
+
+    vm.applyProductUpdate({ id: 'p2', name: 'Ghost' });
+
+    expect(vm.products.length).toBe(1);
+    expect(vm.products[0].id).toBe('p1');
+    expect(notifySpy).not.toHaveBeenCalled();
+  });
 });

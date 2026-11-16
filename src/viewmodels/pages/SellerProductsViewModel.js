@@ -157,6 +157,23 @@ export class SellerProductsViewModel {
     }
   }
 
+  /**
+   * Applies an externally-produced ProductDetailDTO to the in-memory list.
+   * Used after the edit modal resolves with a saved product.
+   *
+   * If the product is not in the current page (e.g. seller changed page while
+   * the modal was open), this is a no-op — the next load() will reconcile.
+   *
+   * @param {Object} product - ProductDetailDTO (must have an `id` field)
+   */
+  applyProductUpdate(product) {
+    if (!product || !product.id) return;
+    const idx = this.products.findIndex((p) => p.id === product.id);
+    if (idx === -1) return;
+    this.products[idx] = { ...product };
+    this._notify();
+  }
+
   // Derived getters used by the view
   get kpis() {
     const list = this.products;
