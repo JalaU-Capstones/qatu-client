@@ -27,6 +27,9 @@
  * @property {Function} [onAddToCart]     Called with productId
  * @property {Function} [onToggleFavorite]
  * @property {string} [detailHref]        When set, the title links to the product detail page.
+ * @property {boolean} [hideCartButton=false] When true the "Añadir" button is not rendered
+ *   (absent from DOM, not disabled). Used by parent views to suppress the button when the
+ *   logged-in user is the product's seller (C5 — UX polish; backend still rejects via 422).
  */
 
 export class ProductCardView {
@@ -40,6 +43,7 @@ export class ProductCardView {
     this.onAddToCart = options.onAddToCart || null;
     this.onToggleFavorite = options.onToggleFavorite || null;
     this.detailHref = options.detailHref || null;
+    this.hideCartButton = Boolean(options.hideCartButton);
     this.element = null;
     this._status = 'idle'; // 'idle' | 'loading' | 'success' | 'error' | 'disabled'
     this._errorMessage = '';
@@ -176,7 +180,11 @@ export class ProductCardView {
     info.appendChild(title);
     info.appendChild(rating);
     info.appendChild(price);
-    info.appendChild(action);
+    // hideCartButton: true → seller viewing own product (C5); button absent from DOM,
+    // not disabled. Backend still rejects self-purchase via 422 CANNOT_BUY_OWN_PRODUCT.
+    if (!this.hideCartButton) {
+      info.appendChild(action);
+    }
     card.appendChild(info);
 
     this.element = card;

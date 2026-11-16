@@ -3,6 +3,7 @@ import { ProductDetailView } from './ProductDetailView.js';
 const createProduct = (overrides = {}) => ({
   id: 'p1',
   name: 'Aguayo tradicional',
+  seller_id: 'seller-10',
   seller: 'Tejidos Illimani',
   country: 'Bolivia',
   rating: 4.8,
@@ -314,5 +315,99 @@ describe('ProductDetailView', () => {
 
     expect(container.querySelector('.q-product-detail__seller-name').textContent).toBe('Vendedor');
     expect(container.querySelector('.q-product-detail__seller-location')).toBeNull();
+  });
+
+  // ─── authStore / own product (C5) ────────────────────────────────────────
+
+  function makeAuthStore(user = null) {
+    const authListeners = new Set();
+    return {
+      getUser: () => user,
+      subscribe: jasmine.createSpy('subscribe').and.callFake((fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      }),
+      _fire() {
+        authListeners.forEach((fn) => fn());
+      },
+    };
+  }
+
+  it('C5-1: guest viewing any product → "Agregar al carrito" and "Comprar ahora" present', () => {
+    const authStore = makeAuthStore(null);
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
+    expect(container.querySelector('.q-product-detail__buy-now')).not.toBeNull();
+    expect(container.querySelector('.q-product-detail__feedback')).toBeNull();
+    v.destroy();
+  });
+
+  it('C5-2: seller viewing OWN product → buttons absent, notice present', () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    expect(container.querySelector('.q-product-detail__add')).toBeNull();
+    expect(container.querySelector('.q-product-detail__buy-now')).toBeNull();
+    const notice = container.querySelector('.q-product-detail__feedback');
+    expect(notice).not.toBeNull();
+    expect(notice.textContent).toBe('Este es tu producto. No puedes comprarlo.');
+    v.destroy();
+  });
+
+  it("C5-3: seller viewing ANOTHER seller's product → buttons present", () => {
+    viewModel.product = createProduct({ seller_id: 'seller-99' });
+    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
+    expect(container.querySelector('.q-product-detail__buy-now')).not.toBeNull();
+    v.destroy();
+  });
+
+  it('C5-4: authStore change after render → re-renders notice when user becomes the seller', () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    let currentUser = null;
+    const authListeners = new Set();
+    const authStore = {
+      getUser: () => currentUser,
+      subscribe: (fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      },
+    };
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    // Initially guest → buttons show
+    expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
+
+    // Login as the product's seller
+    currentUser = { id: 'seller-10', username: 'yo' };
+    authListeners.forEach((fn) => fn());
+
+    // Buttons gone, notice shown
+    expect(container.querySelector('.q-product-detail__add')).toBeNull();
+    expect(container.querySelector('.q-product-detail__feedback').textContent).toBe(
+      'Este es tu producto. No puedes comprarlo.'
+    );
+    v.destroy();
+  });
+
+  it('C5-5: destroy() unsubscribes from authStore', () => {
+    const authStore = makeAuthStore(null);
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    expect(authStore.subscribe).toHaveBeenCalled();
+    const unsubSpy = jasmine.createSpy('unsub');
+    v._authUnsubscribe = unsubSpy;
+    v.destroy();
+
+    expect(unsubSpy).toHaveBeenCalled();
   });
 });

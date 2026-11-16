@@ -1,4 +1,5 @@
 import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
+import { authStore as realAuthStore } from '../../store/authStore.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 
@@ -23,13 +24,15 @@ export class CatalogView {
    * @param {CatalogViewModel} [viewModel]
    * @param {Object} [options]
    * @param {Function} [options.onAddToCart]
+   * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor(
     viewModel = new CatalogViewModel(),
-    { onAddToCart = () => Promise.resolve({ status: 'added' }) } = {}
+    { onAddToCart = () => Promise.resolve({ status: 'added' }), authStore = realAuthStore } = {}
   ) {
     this.viewModel = viewModel;
     this.onAddToCart = onAddToCart;
+    this.authStore = authStore;
     this._section = null;
     this._grid = null;
     this._pagination = null;
@@ -37,6 +40,7 @@ export class CatalogView {
     this._renderedCategories = null;
     this._renderedFilters = null;
     this._unsubscribe = null;
+    this._authUnsubscribe = null;
   }
 
   /**
@@ -87,6 +91,10 @@ export class CatalogView {
 
     this._unsubscribe = this.viewModel.subscribe((vm) => {
       this._update(vm);
+    });
+
+    this._authUnsubscribe = this.authStore.subscribe(() => {
+      this._update(this.viewModel);
     });
 
     this._update(this.viewModel);
@@ -346,7 +354,11 @@ export class CatalogView {
       empty.textContent = 'No hay productos disponibles';
       this._grid.appendChild(empty);
     } else {
+      const user = this.authStore.getUser();
       vm.products.forEach((product) => {
+        const isOwn = Boolean(
+          user && user.id && product.seller_id && user.id === product.seller_id
+        );
         const cardView = new ProductCardView(
           {
             id: product.id,
@@ -372,6 +384,7 @@ export class CatalogView {
             variant: 'default',
             onAddToCart: () => this.onAddToCart(product, 1),
             detailHref: `/products/${product.slug || product.id}`,
+            hideCartButton: isOwn,
           }
         );
         this._grid.appendChild(cardView.render());
@@ -562,6 +575,8 @@ export class CatalogView {
       this._unsubscribe();
       this._unsubscribe = null;
     }
+    this._authUnsubscribe?.();
+    this._authUnsubscribe = null;
     if (this._section && this._section.parentNode) {
       this._section.parentNode.removeChild(this._section);
       this._section = null;

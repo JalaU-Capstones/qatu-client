@@ -357,4 +357,38 @@ describe('ProductCardView', () => {
       resolvePromise({ status: 'added' });
     });
   });
+
+  // ─── hideCartButton option (C5) ──────────────────────────────────────────
+
+  describe('hideCartButton option', () => {
+    it('hideCartButton: true → no "Añadir" button in DOM', () => {
+      const cardView = new ProductCardView(
+        { id: 'p1', name: 'Mi Producto' },
+        { hideCartButton: true }
+      );
+      const el = cardView.render();
+      expect(el.querySelector('[aria-label^="Añadir"]')).toBeNull();
+      expect(el.querySelector('button.q-product-card-action')).toBeNull();
+    });
+
+    it('hideCartButton: false (default) → "Añadir" button present (regression)', () => {
+      const cardView = new ProductCardView(
+        { id: 'p1', name: 'Otro Producto' },
+        { hideCartButton: false }
+      );
+      const el = cardView.render();
+      expect(el.querySelector('button.q-product-card-action')).not.toBeNull();
+    });
+
+    it('hideCartButton: true + onAddToCart provided → still no button (option wins)', () => {
+      const onAddToCart = jasmine.createSpy('onAddToCart');
+      const cardView = new ProductCardView(
+        { id: 'p1', name: 'Mi Producto' },
+        { hideCartButton: true, onAddToCart }
+      );
+      const el = cardView.render();
+      expect(el.querySelector('button.q-product-card-action')).toBeNull();
+      expect(onAddToCart).not.toHaveBeenCalled();
+    });
+  });
 });
