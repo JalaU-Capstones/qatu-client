@@ -8,17 +8,23 @@ export class SellerProductsPageView {
    * @param {Function} [options.onNavigate]
    * @param {Function} [options.onCreate]
    * @param {Function} [options.onViewProduct]
+   * @param {Function} [options.onEditProduct]
+   * @param {Function} [options.onDeleteProduct]
    */
   constructor({
     viewModel = new SellerProductsViewModel(),
     onNavigate = null,
     onCreate = null,
     onViewProduct = null,
+    onEditProduct = null,
+    onDeleteProduct = null,
   } = {}) {
     this.viewModel = viewModel;
     this.onNavigate = onNavigate;
     this.onCreate = onCreate;
     this.onViewProduct = onViewProduct;
+    this.onEditProduct = onEditProduct;
+    this.onDeleteProduct = onDeleteProduct;
     this.element = null;
     this._unsubscribe = null;
     this._kpisContainer = null;
@@ -136,6 +142,7 @@ export class SellerProductsPageView {
       { key: 'total', label: 'Total', value: kpis.total },
       { key: 'published', label: 'Publicados', value: kpis.published },
       { key: 'drafts', label: 'Borradores', value: kpis.drafts },
+      { key: 'unpublished', label: 'No publicados', value: kpis.unpublished },
       { key: 'withImage', label: 'Con imagen', value: kpis.withImage },
     ];
 
@@ -165,6 +172,7 @@ export class SellerProductsPageView {
       { label: 'Todos', status: null },
       { label: 'Borradores', status: 'draft' },
       { label: 'Publicados', status: 'published' },
+      { label: 'No publicados', status: 'unpublished' },
     ];
 
     for (const tab of tabs) {
@@ -332,9 +340,14 @@ export class SellerProductsPageView {
     title.className = 'q-seller-products__name';
     title.textContent = product.name || 'Sin título';
 
+    const stateLabels = {
+      published: 'Publicado',
+      draft: 'Borrador',
+      unpublished: 'No publicado',
+    };
     const badge = document.createElement('span');
     badge.className = `q-seller-products__badge q-seller-products__badge--${product.state}`;
-    badge.textContent = product.state === 'published' ? 'Publicado' : 'Borrador';
+    badge.textContent = stateLabels[product.state] || product.state;
 
     headerRow.append(title, badge);
     info.appendChild(headerRow);
@@ -357,34 +370,58 @@ export class SellerProductsPageView {
     const actions = document.createElement('div');
     actions.className = 'q-seller-products__actions';
 
-    if (product.state === 'draft') {
+    // Primary state-transition button
+    if (product.state === 'published') {
+      // "Despublicar" — direct action, no confirmation
+      const unpublishBtn = document.createElement('button');
+      unpublishBtn.type = 'button';
+      unpublishBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__unpublish-btn';
+      const isUnpublishing = this.viewModel.publishingId === product.id;
+      unpublishBtn.textContent = isUnpublishing ? 'Despublicando…' : 'Despublicar';
+      unpublishBtn.disabled = isUnpublishing;
+      unpublishBtn.addEventListener('click', () => this.viewModel.unpublishProduct(product.id));
+      actions.appendChild(unpublishBtn);
+    } else if (product.state === 'draft' || product.state === 'unpublished') {
+      // "Publicar" (covers draft → published and unpublished → published re-publish)
       const publishBtn = document.createElement('button');
       publishBtn.type = 'button';
       publishBtn.className = 'q-btn q-btn--primary q-btn--sm q-seller-products__publish-btn';
       const isPublishing = this.viewModel.publishingId === product.id;
       const canPublish = this.viewModel.canPublish(product);
-
       publishBtn.textContent = isPublishing ? 'Publicando…' : 'Publicar';
-
       if (!canPublish || isPublishing) {
         publishBtn.disabled = true;
         if (!canPublish) {
           publishBtn.title = this.viewModel.publishTooltip;
         }
       }
-
-      publishBtn.addEventListener('click', () => {
-        this.viewModel.publishProduct(product.id);
-      });
+      publishBtn.addEventListener('click', () => this.viewModel.publishProduct(product.id));
       actions.appendChild(publishBtn);
+    }
 
-      if (this.viewModel.publishErrors[product.id]) {
-        const errorSpan = document.createElement('span');
-        errorSpan.className = 'q-seller-products__publish-error';
-        errorSpan.textContent = this.viewModel.publishErrors[product.id];
-        actions.appendChild(errorSpan);
-      }
-    } else if (product.state === 'published') {
+    // Secondary actions (always present for active states)
+    if (product.state !== 'archived') {
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__edit-btn';
+      editBtn.textContent = 'Editar';
+      editBtn.addEventListener('click', () => {
+        if (typeof this.onEditProduct === 'function') this.onEditProduct(product.id);
+      });
+      actions.appendChild(editBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'q-btn q-btn--ghost q-btn--sm q-seller-products__delete-btn';
+      deleteBtn.textContent = 'Eliminar';
+      deleteBtn.addEventListener('click', () => {
+        if (typeof this.onDeleteProduct === 'function') this.onDeleteProduct(product.id);
+      });
+      actions.appendChild(deleteBtn);
+    }
+
+    // Existing "Ver" link for published products (keep as-is, place after primary action)
+    if (product.state === 'published') {
       const viewBtn = document.createElement('button');
       viewBtn.type = 'button';
       viewBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn';
@@ -397,6 +434,14 @@ export class SellerProductsPageView {
         }
       });
       actions.appendChild(viewBtn);
+    }
+
+    // Existing publish error display (unchanged)
+    if (this.viewModel.publishErrors[product.id]) {
+      const errorSpan = document.createElement('span');
+      errorSpan.className = 'q-seller-products__publish-error';
+      errorSpan.textContent = this.viewModel.publishErrors[product.id];
+      actions.appendChild(errorSpan);
     }
 
     info.appendChild(actions);

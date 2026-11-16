@@ -24,6 +24,8 @@ describe('SellerProductsPageView', () => {
   let view;
   let onViewProduct;
   let onCreate;
+  let onEditProduct;
+  let onDeleteProduct;
 
   beforeEach(() => {
     container = document.createElement('div');
@@ -37,15 +39,23 @@ describe('SellerProductsPageView', () => {
       publishProduct: jasmine.createSpy('publishProduct').and.resolveTo({
         data: mockProduct({ state: 'published' }),
       }),
+      unpublishProduct: jasmine.createSpy('unpublishProduct').and.resolveTo({
+        data: mockProduct({ state: 'unpublished' }),
+      }),
+      deleteProduct: jasmine.createSpy('deleteProduct').and.resolveTo(),
     };
 
     viewModel = new SellerProductsViewModel({ productsApi });
     onViewProduct = jasmine.createSpy('onViewProduct');
     onCreate = jasmine.createSpy('onCreate');
+    onEditProduct = jasmine.createSpy('onEditProduct');
+    onDeleteProduct = jasmine.createSpy('onDeleteProduct');
     view = new SellerProductsPageView({
       viewModel,
       onViewProduct,
       onCreate,
+      onEditProduct,
+      onDeleteProduct,
     });
   });
 
@@ -285,5 +295,184 @@ describe('SellerProductsPageView', () => {
     await tick();
 
     expect(viewModel.setPage).toHaveBeenCalledWith(2);
+  });
+
+  it('13. renders Despublicar button on published card and calls unpublishProduct on click', async () => {
+    const published = mockProduct({
+      id: 'p-pub',
+      state: 'published',
+      primary_image_path: 'https://example.com/item.png',
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [published],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+    spyOn(viewModel, 'unpublishProduct').and.callThrough();
+
+    view.mount(container);
+    await tick();
+
+    const unpublishBtn = container.querySelector('.q-seller-products__unpublish-btn');
+    expect(unpublishBtn).not.toBeNull();
+    expect(unpublishBtn.textContent).toBe('Despublicar');
+    expect(unpublishBtn.disabled).toBe(false);
+
+    unpublishBtn.click();
+    await tick();
+
+    expect(viewModel.unpublishProduct).toHaveBeenCalledWith('p-pub');
+    expect(productsApi.unpublishProduct).toHaveBeenCalledWith('p-pub');
+  });
+
+  it('14. displays No publicado badge text on unpublished card', async () => {
+    const unpublished = mockProduct({
+      id: 'p-unpub',
+      state: 'unpublished',
+      primary_image_path: 'https://example.com/item.png',
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [unpublished],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const badge = container.querySelector('.q-seller-products__badge');
+    expect(badge).not.toBeNull();
+    expect(badge.textContent).toBe('No publicado');
+    expect(badge.classList.contains('q-seller-products__badge--unpublished')).toBe(true);
+  });
+
+  it('15. enables Publicar button for unpublished card with primary_image_path', async () => {
+    const unpublishedWithImg = mockProduct({
+      id: 'p-unpub',
+      state: 'unpublished',
+      primary_image_path: 'https://example.com/item.png',
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [unpublishedWithImg],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+    spyOn(viewModel, 'publishProduct').and.callThrough();
+
+    view.mount(container);
+    await tick();
+
+    const publishBtn = container.querySelector('.q-seller-products__publish-btn');
+    expect(publishBtn).not.toBeNull();
+    expect(publishBtn.textContent).toBe('Publicar');
+    expect(publishBtn.disabled).toBe(false);
+
+    publishBtn.click();
+    await tick();
+
+    expect(viewModel.publishProduct).toHaveBeenCalledWith('p-unpub');
+    expect(productsApi.publishProduct).toHaveBeenCalledWith('p-unpub');
+  });
+
+  it('16. disables Publicar button for unpublished card without primary_image_path and shows tooltip', async () => {
+    const unpublishedNoImg = mockProduct({
+      id: 'p-unpub-noimg',
+      state: 'unpublished',
+      primary_image_path: null,
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [unpublishedNoImg],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const publishBtn = container.querySelector('.q-seller-products__publish-btn');
+    expect(publishBtn).not.toBeNull();
+    expect(publishBtn.disabled).toBe(true);
+    expect(publishBtn.title).toBe(viewModel.publishTooltip);
+  });
+
+  it('17. invokes onEditProduct with productId when Editar button is clicked', async () => {
+    const product = mockProduct({
+      id: 'prod-edit-1',
+      state: 'draft',
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [product],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const editBtn = container.querySelector('.q-seller-products__edit-btn');
+    expect(editBtn).not.toBeNull();
+    expect(editBtn.textContent).toBe('Editar');
+
+    editBtn.click();
+    await tick();
+
+    expect(onEditProduct).toHaveBeenCalledWith('prod-edit-1');
+  });
+
+  it('18. invokes onDeleteProduct with productId when Eliminar button is clicked', async () => {
+    const product = mockProduct({
+      id: 'prod-delete-1',
+      state: 'published',
+    });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [product],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const deleteBtn = container.querySelector('.q-seller-products__delete-btn');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn.textContent).toBe('Eliminar');
+
+    deleteBtn.click();
+    await tick();
+
+    expect(onDeleteProduct).toHaveBeenCalledWith('prod-delete-1');
+  });
+
+  it('19. renders No publicados filter tab and triggers setFilter on click', async () => {
+    view.mount(container);
+    await tick();
+
+    const unpublishedTab = container.querySelector('button[data-status="unpublished"]');
+    expect(unpublishedTab).not.toBeNull();
+    expect(unpublishedTab.textContent).toBe('No publicados');
+
+    unpublishedTab.click();
+    await tick();
+
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith(
+      jasmine.objectContaining({ status: 'unpublished', page: 1 })
+    );
+    expect(
+      container.querySelector('button[data-status="unpublished"]').classList.contains('is-active')
+    ).toBe(true);
+  });
+
+  it('20. renders unpublished KPI card with accurate count', async () => {
+    const p1 = mockProduct({ id: 'p1', state: 'unpublished' });
+    const p2 = mockProduct({ id: 'p2', state: 'unpublished' });
+    const p3 = mockProduct({ id: 'p3', state: 'published' });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [p1, p2, p3],
+      meta: { page: 1, per_page: 20, total: 3, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const kpiCard = container.querySelector('[data-kpi="unpublished"]');
+    expect(kpiCard).not.toBeNull();
+    expect(kpiCard.querySelector('.q-seller-products__kpi-label').textContent).toBe(
+      'No publicados'
+    );
+    expect(kpiCard.querySelector('.q-seller-products__kpi-value').textContent).toBe('2');
   });
 });

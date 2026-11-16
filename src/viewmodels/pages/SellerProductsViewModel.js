@@ -17,8 +17,10 @@ export class SellerProductsViewModel {
     this.meta = { page: 1, per_page: 20, total: 0, total_pages: 0 };
     this.isLoading = false;
     this.errorMessage = '';
-    this.publishingId = null; // productId currently being published
-    this.publishErrors = {}; // { [productId]: string }
+    this.publishingId = null; // productId currently in flight for an action (publish, unpublish, delete)
+    // Used for any action error keyed by product id (publish, unpublish, delete).
+    // Renamed in a future cleanup — internal only, do not rely on the name externally.
+    this.publishErrors = {};
     this.currentPage = 1;
   }
 
@@ -107,18 +109,69 @@ export class SellerProductsViewModel {
     }
   }
 
+  async unpublishProduct(productId) {
+    if (this.publishingId) return; // prevent double-clicks / concurrent mutations
+    this.publishingId = productId;
+    delete this.publishErrors[productId];
+    this._notify();
+    try {
+      await this.productsApi.unpublishProduct(productId);
+      // Update the product in-place
+      const idx = this.products.findIndex((p) => p.id === productId);
+      if (idx !== -1) {
+        this.products[idx] = { ...this.products[idx], state: 'unpublished' };
+      }
+      this._notify();
+      return { status: 'success' };
+    } catch (error) {
+      this.publishErrors[productId] = error.message || 'Error al despublicar.';
+      this._notify();
+      return { status: 'error', error };
+    } finally {
+      this.publishingId = null;
+      this._notify();
+    }
+  }
+
+  async deleteProduct(productId) {
+    if (this.publishingId) return; // prevent double-clicks / concurrent mutations
+    this.publishingId = productId;
+    delete this.publishErrors[productId];
+    this._notify();
+    try {
+      await this.productsApi.deleteProduct(productId);
+      this.products = this.products.filter((p) => p.id !== productId);
+      // If the page was emptied and we're past page 1, rewind to the previous page
+      if (this.products.length === 0 && this.currentPage > 1) {
+        await this.load({ page: this.currentPage - 1 });
+      }
+      this._notify();
+      return { status: 'success' };
+    } catch (error) {
+      this.publishErrors[productId] = error.message || 'Error al eliminar.';
+      this._notify();
+      return { status: 'error', error };
+    } finally {
+      this.publishingId = null;
+      this._notify();
+    }
+  }
+
   // Derived getters used by the view
   get kpis() {
     const list = this.products;
     const total = list.length;
     const published = list.filter((p) => p.state === 'published').length;
     const drafts = list.filter((p) => p.state === 'draft').length;
+    const unpublished = list.filter((p) => p.state === 'unpublished').length;
     const withImage = list.filter((p) => Boolean(p.primary_image_path)).length;
-    return { total, published, drafts, withImage };
+    return { total, published, drafts, unpublished, withImage };
   }
 
   canPublish(product) {
-    return Boolean(product && product.state === 'draft' && product.primary_image_path);
+    if (!product) return false;
+    const allowedState = product.state === 'draft' || product.state === 'unpublished';
+    return Boolean(allowedState && product.primary_image_path);
   }
 
   get publishTooltip() {
