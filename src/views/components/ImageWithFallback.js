@@ -18,7 +18,10 @@ const DEFAULT_PLACEHOLDER_SRC = new URL('../../assets/icons/placeholder-mark.svg
  * @param {number} [opts.size=24] - Size in pixels applied to placeholder mark width/height
  * @param {string} [opts.imageClassName=''] - Class(es) on the <img> element
  * @param {string} [opts.placeholderClassName=''] - Class(es) on the placeholder wrapper
- * @param {string} [opts.label='Imagen del producto'] - Placeholder text
+ * @param {string} [opts.markClassName=''] - Optional wrapper around the inner <img>.
+ *   When absent, <img> is rendered directly (current behavior).
+ * @param {string} [opts.label] - Optional placeholder text. When falsy, no <p> is rendered.
+ * @param {string} [opts.labelClassName=''] - Additional class on the <p> (if label present).
  * @param {string} [opts.placeholderSrc] - Optional override for placeholder SVG URL
  * @returns {HTMLElement} The <img> when src is valid, or the placeholder
  *   wrapper when src is missing/empty/error.
@@ -30,7 +33,9 @@ export function createImageWithFallback(opts = {}) {
     size = 24,
     imageClassName = '',
     placeholderClassName = '',
-    label = 'Imagen del producto',
+    markClassName = '',
+    label,
+    labelClassName = '',
     placeholderSrc = DEFAULT_PLACEHOLDER_SRC,
   } = opts;
 
@@ -45,12 +50,24 @@ export function createImageWithFallback(opts = {}) {
     markImg.alt = '';
     markImg.setAttribute('width', String(size));
     markImg.setAttribute('height', String(size));
-    wrapper.appendChild(markImg);
 
-    const labelEl = document.createElement('p');
-    labelEl.className = 'q-image-fallback__label';
-    labelEl.textContent = label;
-    wrapper.appendChild(labelEl);
+    if (markClassName) {
+      const mark = document.createElement('span');
+      mark.className = markClassName;
+      mark.appendChild(markImg);
+      wrapper.appendChild(mark);
+    } else {
+      wrapper.appendChild(markImg);
+    }
+
+    if (label) {
+      const labelEl = document.createElement('p');
+      labelEl.className = labelClassName
+        ? `q-image-fallback__label ${labelClassName}`
+        : 'q-image-fallback__label';
+      labelEl.textContent = label;
+      wrapper.appendChild(labelEl);
+    }
 
     return wrapper;
   };

@@ -130,4 +130,85 @@ describe('ImageWithFallback', () => {
     expect(innerImg).not.toBeNull();
     expect(innerImg.src).toContain(customPlaceholder);
   });
+
+  it('13. label: "" → no <p> inside the placeholder', () => {
+    const el = createImageWithFallback({
+      src: null,
+      label: '',
+    });
+    expect(el.querySelector('p')).toBeNull();
+  });
+
+  it('14. label undefined → no <p> inside the placeholder', () => {
+    const el = createImageWithFallback({
+      src: null,
+    });
+    expect(el.querySelector('p')).toBeNull();
+  });
+
+  it('15. label: "Hola" + labelClassName: "custom-label" → <p> has both classes', () => {
+    const el = createImageWithFallback({
+      src: null,
+      label: 'Hola',
+      labelClassName: 'custom-label',
+    });
+    const p = el.querySelector('p');
+    expect(p).not.toBeNull();
+    expect(p.classList.contains('q-image-fallback__label')).toBe(true);
+    expect(p.classList.contains('custom-label')).toBe(true);
+    expect(p.textContent).toBe('Hola');
+  });
+
+  it('16. markClassName: "custom-mark" → inner <img> is wrapped in <span class="custom-mark">', () => {
+    const el = createImageWithFallback({
+      src: null,
+      markClassName: 'custom-mark',
+    });
+    const span = el.querySelector('span.custom-mark');
+    expect(span).not.toBeNull();
+    expect(span.parentNode).toBe(el);
+    const innerImg = span.querySelector('img');
+    expect(innerImg).not.toBeNull();
+    expect(innerImg.parentNode).toBe(span);
+    expect(el.querySelector(':scope > img')).toBeNull();
+  });
+
+  it('17. no markClassName → <img> is a direct child of the placeholder div', () => {
+    const el = createImageWithFallback({
+      src: null,
+    });
+    expect(el.querySelector('span')).toBeNull();
+    const directImg = el.querySelector(':scope > img');
+    expect(directImg).not.toBeNull();
+    expect(directImg.parentNode).toBe(el);
+  });
+
+  it('18. placeholderClassName, markClassName, label, and labelClassName provided together', () => {
+    const el = createImageWithFallback({
+      src: null,
+      placeholderClassName: 'my-placeholder-wrapper',
+      markClassName: 'my-mark-wrapper',
+      label: 'Producto destacado',
+      labelClassName: 'my-label-modifier',
+      size: 40,
+    });
+
+    expect(el.tagName).toBe('DIV');
+    expect(el.classList.contains('my-placeholder-wrapper')).toBe(true);
+
+    const span = el.firstElementChild;
+    expect(span.tagName).toBe('SPAN');
+    expect(span.classList.contains('my-mark-wrapper')).toBe(true);
+
+    const innerImg = span.firstElementChild;
+    expect(innerImg.tagName).toBe('IMG');
+    expect(innerImg.getAttribute('width')).toBe('40');
+    expect(innerImg.getAttribute('height')).toBe('40');
+
+    const p = el.lastElementChild;
+    expect(p.tagName).toBe('P');
+    expect(p.classList.contains('q-image-fallback__label')).toBe(true);
+    expect(p.classList.contains('my-label-modifier')).toBe(true);
+    expect(p.textContent).toBe('Producto destacado');
+  });
 });
