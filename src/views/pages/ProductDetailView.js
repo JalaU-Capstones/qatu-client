@@ -1,6 +1,7 @@
 import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
 import { RecommendationCardView } from '../components/RecommendationCardView.js';
 
@@ -260,58 +261,28 @@ export class ProductDetailView {
    * @private
    */
   _renderImageFrame(frame, large) {
-    if (frame?.path) {
-      const wrapper = document.createElement('div');
-      wrapper.className = large
-        ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
-        : 'q-product-detail__image-frame';
-
-      const photo = document.createElement('img');
-      photo.className = large
-        ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
-        : 'q-product-detail__image-photo';
-      photo.alt = frame.label;
-      photo.loading = 'lazy';
-      photo.addEventListener('error', () => {
-        wrapper.innerHTML = '';
-        wrapper.appendChild(this._renderImagePlaceholder(frame.label, large));
-      });
-      photo.src = frame.path;
-      wrapper.appendChild(photo);
-      return wrapper;
-    }
-
-    return this._renderImagePlaceholder(frame?.label || 'Imagen del producto', large);
-  }
-
-  /**
-   * @param {string} label
-   * @param {boolean} large
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderImagePlaceholder(label, large) {
     const wrapper = document.createElement('div');
     wrapper.className = large
-      ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
-      : 'q-product-detail__image-placeholder';
+      ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
+      : 'q-product-detail__image-frame';
 
-    const mark = document.createElement('span');
-    mark.className = 'q-product-detail__image-mark';
+    wrapper.appendChild(
+      createImageWithFallback({
+        src: frame?.path,
+        alt: frame?.label || '',
+        size: large ? 40 : 20,
+        imageClassName: large
+          ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
+          : 'q-product-detail__image-photo',
+        placeholderClassName: large
+          ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
+          : 'q-product-detail__image-placeholder',
+        markClassName: 'q-product-detail__image-mark',
+        label: frame?.label || 'Imagen del producto',
+        labelClassName: 'q-product-detail__image-label',
+      })
+    );
 
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', large ? '40' : '20');
-    markImg.setAttribute('height', large ? '40' : '20');
-    mark.appendChild(markImg);
-
-    const text = document.createElement('p');
-    text.className = 'q-product-detail__image-label';
-    text.textContent = label;
-
-    wrapper.appendChild(mark);
-    wrapper.appendChild(text);
     return wrapper;
   }
 

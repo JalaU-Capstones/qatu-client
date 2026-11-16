@@ -1,5 +1,6 @@
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { SellerProductFormViewModel } from '../../viewmodels/pages/SellerProductFormViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 
 const CURRENCIES = ['USD', 'EUR', 'BOB', 'PEN', 'ARS', 'COP', 'MXN', 'BRL'];
 
@@ -654,14 +655,15 @@ export class SellerProductFormView {
     const thumb = document.createElement('div');
     thumb.className = 'q-seller-product-form__thumb';
 
-    const imgEl = document.createElement('img');
-    imgEl.src = img.path;
-    imgEl.alt = img.alt_text || 'Imagen de producto';
-    imgEl.loading = 'lazy';
-    imgEl.addEventListener('error', () => {
-      imgEl.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    });
-    thumb.appendChild(imgEl);
+    thumb.appendChild(
+      createImageWithFallback({
+        src: img.path,
+        alt: img.alt_text || 'Imagen de producto',
+        size: 24,
+        placeholderClassName: 'q-seller-product-form__thumb-placeholder',
+        label: '',
+      })
+    );
 
     // Error text (shown below thumb when imageErrors[id] is set)
     if (this.viewModel.imageErrors && this.viewModel.imageErrors[img.id]) {

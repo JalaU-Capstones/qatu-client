@@ -41,6 +41,10 @@
   box-sizing: border-box;
 }
 
+.q-recommendation-card__placeholder {
+  display: contents;
+}
+
 .q-recommendation-card__mark {
   display: inline-flex;
   align-items: center;

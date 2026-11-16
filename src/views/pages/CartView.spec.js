@@ -185,4 +185,13 @@ describe('CartView', () => {
     expect(container.querySelector('.q-cart')).toBeNull();
     expect(viewModel.destroy).toHaveBeenCalled();
   });
+
+  it('renders fallback placeholder when item has no imageUrl', () => {
+    viewModel.items = [createItem({ imageUrl: null })];
+    view.mount(container);
+
+    const placeholder = container.querySelector('.q-cart-item__placeholder');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.querySelector('.q-cart-item__placeholder-label').textContent).toBe('Imagen');
+  });
 });

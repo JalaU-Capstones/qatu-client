@@ -475,4 +475,18 @@ describe('SellerProductsPageView', () => {
     );
     expect(kpiCard.querySelector('.q-seller-products__kpi-value').textContent).toBe('2');
   });
+
+  it('21. renders fallback placeholder when product has no primary_image_path', async () => {
+    const p1 = mockProduct({ id: 'p1', primary_image_path: null });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [p1],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const placeholder = container.querySelector('.q-seller-products__thumb-placeholder');
+    expect(placeholder).not.toBeNull();
+  });
 });

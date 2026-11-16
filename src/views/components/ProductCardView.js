@@ -1,3 +1,5 @@
+import { createImageWithFallback } from './ImageWithFallback.js';
+
 /**
  * Product card — single reusable renderer used by Home (featured variant)
  * and Catalog (/products, default variant).
@@ -195,41 +197,18 @@ export class ProductCardView {
     const image = document.createElement('div');
     image.className = 'q-product-card-image';
 
-    const showPlaceholder = () => {
-      image.innerHTML = '';
-
-      const mark = document.createElement('span');
-      mark.className = 'q-product-card-mark';
-
-      const markImg = document.createElement('img');
-      markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      markImg.alt = '';
-      markImg.setAttribute('width', '24.7071');
-      markImg.setAttribute('height', '24.7071');
-      mark.appendChild(markImg);
-
-      const label = document.createElement('p');
-      label.className = 'q-product-card-image-label';
-      label.textContent = 'Imagen del producto';
-
-      image.appendChild(mark);
-      image.appendChild(label);
-    };
-
-    // No image URL → placeholder immediately
-    if (!this.data.imageUrl) {
-      showPlaceholder();
-      return image;
-    }
-
-    // Has a URL → try to load; on failure fall back to placeholder
-    const photo = document.createElement('img');
-    photo.className = 'q-product-card-photo';
-    photo.alt = '';
-    photo.loading = 'lazy';
-    photo.addEventListener('error', showPlaceholder);
-    photo.src = this.data.imageUrl;
-    image.appendChild(photo);
+    image.appendChild(
+      createImageWithFallback({
+        src: this.data.imageUrl,
+        alt: '',
+        size: 25,
+        imageClassName: 'q-product-card-photo',
+        placeholderClassName: 'q-product-card-placeholder',
+        markClassName: 'q-product-card-mark',
+        label: 'Imagen del producto',
+        labelClassName: 'q-product-card-image-label',
+      })
+    );
 
     return image;
   }

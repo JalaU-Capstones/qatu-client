@@ -396,4 +396,19 @@ describe('CheckoutView', () => {
 
     expect(viewModel._listeners.size).toBe(0);
   });
+
+  it('renders fallback placeholder inside thumbnail when item has no imageUrl', async () => {
+    cartStore.clear();
+    cartStore.addItem({
+      id: 'p-no-img',
+      name: 'Product without image',
+      price: 10,
+      currency: 'USD',
+      imageUrl: null,
+    });
+    await mountView();
+
+    const placeholder = container.querySelector('.q-checkout__thumb-placeholder');
+    expect(placeholder).not.toBeNull();
+  });
 });

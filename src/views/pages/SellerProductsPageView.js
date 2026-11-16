@@ -1,5 +1,6 @@
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { SellerProductsViewModel } from '../../viewmodels/pages/SellerProductsViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 
 export class SellerProductsPageView {
   /**
@@ -302,30 +303,16 @@ export class SellerProductsPageView {
     const thumbWrap = document.createElement('div');
     thumbWrap.className = 'q-seller-products__thumb-wrap';
 
-    const showPlaceholder = () => {
-      thumbWrap.replaceChildren();
-      const placeholder = document.createElement('div');
-      placeholder.className = 'q-seller-products__thumb-placeholder';
-      const img = document.createElement('img');
-      img.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      img.alt = '';
-      img.setAttribute('width', '32');
-      img.setAttribute('height', '32');
-      placeholder.appendChild(img);
-      thumbWrap.appendChild(placeholder);
-    };
-
-    if (product.primary_image_path) {
-      const img = document.createElement('img');
-      img.className = 'q-seller-products__thumb';
-      img.src = product.primary_image_path;
-      img.alt = product.name || '';
-      img.loading = 'lazy';
-      img.addEventListener('error', showPlaceholder);
-      thumbWrap.appendChild(img);
-    } else {
-      showPlaceholder();
-    }
+    thumbWrap.appendChild(
+      createImageWithFallback({
+        src: product.primary_image_path,
+        alt: product.name || '',
+        size: 32,
+        imageClassName: 'q-seller-products__thumb',
+        placeholderClassName: 'q-seller-products__thumb-placeholder',
+        label: '',
+      })
+    );
 
     card.appendChild(thumbWrap);
 

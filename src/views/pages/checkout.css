@@ -259,6 +259,10 @@
   object-fit: contain;
 }
 
+.q-checkout__thumb-placeholder {
+  display: contents;
+}
+
 .q-checkout__item-name {
   overflow: hidden;
   font-weight: var(--q-font-weight-medium, 500);

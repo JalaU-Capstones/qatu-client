@@ -410,4 +410,15 @@ describe('ProductDetailView', () => {
 
     expect(unsubSpy).toHaveBeenCalled();
   });
+
+  it('renders fallback placeholder when image path is missing', () => {
+    viewModel.getGallery = () => [{ path: null, label: 'Sin imagen' }];
+    view.mount(container);
+
+    const placeholder = container.querySelector('.q-product-detail__image-placeholder');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.querySelector('.q-product-detail__image-label').textContent).toBe(
+      'Sin imagen'
+    );
+  });
 });
