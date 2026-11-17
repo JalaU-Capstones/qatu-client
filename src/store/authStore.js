@@ -77,6 +77,11 @@ export class AuthStore {
     return this.hasRole('seller') || this.hasRole('admin');
   }
 
+  /** @returns {boolean} */
+  isAdmin() {
+    return this.hasRole('admin');
+  }
+
   /** @returns {string|null} */
   getSavedAt() {
     return this._savedAt;

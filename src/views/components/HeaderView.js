@@ -283,29 +283,68 @@ export class HeaderView {
     return link;
   }
 
-  /**
-   * Adds or removes the seller links when the roles change for an already rendered user
-   * (the dropdown is not rebuilt on every update).
-   * @param {HeaderViewModel} vm
-   * @private
-   */
+  _createSellerApplyLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-seller-apply-btn';
+    link.href = '/seller/apply';
+    link.dataset.route = '';
+    link.textContent = 'Quiero vender';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerSellerApply();
+    });
+    return link;
+  }
+
+  _createAdminSellerApplicationsLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-admin-applications-btn';
+    link.href = '/admin/seller-applications';
+    link.dataset.route = '';
+    link.textContent = 'Solicitudes de vendedores';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerAdminSellerApplications();
+    });
+    return link;
+  }
+
   _syncSellerLink(vm) {
     const dropdown = this.element?.querySelector('.q-header-dropdown');
     if (!dropdown) return;
+    const existingApply = dropdown.querySelector('.q-header-seller-apply-btn');
     const existingProducts = dropdown.querySelector('.q-header-seller-products-btn');
     const existingOrders = dropdown.querySelector('.q-header-seller-orders-btn');
+    const existingAdminApps = dropdown.querySelector('.q-header-admin-applications-btn');
     const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
 
     if (vm.isSeller) {
+      if (existingApply) existingApply.remove();
       if (!existingProducts) {
-        dropdown.insertBefore(this._createSellerProductsLink(), existingOrders || logoutBtn);
+        dropdown.insertBefore(
+          this._createSellerProductsLink(),
+          existingOrders || existingAdminApps || logoutBtn
+        );
       }
       if (!existingOrders) {
-        dropdown.insertBefore(this._createSellerOrdersLink(), logoutBtn);
+        dropdown.insertBefore(this._createSellerOrdersLink(), existingAdminApps || logoutBtn);
       }
     } else {
       if (existingProducts) existingProducts.remove();
       if (existingOrders) existingOrders.remove();
+      if (!existingApply) {
+        dropdown.insertBefore(this._createSellerApplyLink(), existingAdminApps || logoutBtn);
+      }
+    }
+
+    if (vm.isAdmin) {
+      if (!existingAdminApps) {
+        dropdown.insertBefore(this._createAdminSellerApplicationsLink(), logoutBtn);
+      }
+    } else if (existingAdminApps) {
+      existingAdminApps.remove();
     }
   }
 
@@ -420,6 +459,12 @@ export class HeaderView {
     if (this.viewModel.isSeller) {
       dropdown.appendChild(this._createSellerProductsLink());
       dropdown.appendChild(this._createSellerOrdersLink());
+    } else {
+      dropdown.appendChild(this._createSellerApplyLink());
+    }
+
+    if (this.viewModel.isAdmin) {
+      dropdown.appendChild(this._createAdminSellerApplicationsLink());
     }
 
     const logoutBtn = document.createElement('button');

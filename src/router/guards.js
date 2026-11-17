@@ -18,3 +18,16 @@ export function getSellerRouteAccess(store) {
   if (!store.isSeller()) return 'home';
   return 'allow';
 }
+
+/**
+ * Decides what to do with a visit to an admin-only route.
+ *
+ * @param {{ isAuthenticated: () => boolean, isAdmin: () => boolean }} store authStore
+ * @returns {'allow'|'login'|'forbidden'} `login` when anonymous, `forbidden` when signed in
+ *   without the admin role (403 Forbidden), `allow` otherwise.
+ */
+export function getAdminRouteAccess(store) {
+  if (!store.isAuthenticated()) return 'login';
+  if (!store.isAdmin()) return 'forbidden';
+  return 'allow';
+}

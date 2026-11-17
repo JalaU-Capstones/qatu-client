@@ -1,0 +1,182 @@
+.q-seller-apply-page {
+  width: 100%;
+  padding-top: calc(var(--q-geist-space-8x, 32) * 1px);
+  padding-bottom: calc(var(--q-geist-space-16x, 64) * 1px);
+  box-sizing: border-box;
+}
+
+.q-seller-apply-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.q-seller-apply-header {
+  margin-bottom: calc(var(--q-geist-space-6x, 24) * 1px);
+}
+
+.q-seller-apply-eyebrow {
+  margin: 0 0 6px;
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-weight: var(--q-font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--q-fg-secondary);
+}
+
+.q-seller-apply-title {
+  margin: 0 0 8px;
+  font-family: var(--q-font-sans, system-ui, sans-serif);
+  font-size: calc(var(--q-text-3xl, 30) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  color: var(--q-fg-primary);
+}
+
+.q-seller-apply-subtitle {
+  margin: 0;
+  color: var(--q-fg-muted);
+  font-size: calc(var(--q-text-base, 16) * 1px);
+}
+
+.q-seller-apply-card {
+  padding: calc(var(--q-geist-space-6x, 24) * 1px);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background: var(--q-bg-surface);
+}
+
+.q-seller-apply-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.q-seller-apply-status-title {
+  margin: 0;
+  font-size: calc(var(--q-text-xl, 20) * 1px);
+  font-weight: var(--q-font-weight-bold, 700);
+  color: var(--q-fg-primary);
+}
+
+.q-seller-apply-status-business {
+  margin: 0;
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary);
+}
+
+.q-seller-apply-status-text {
+  margin: 0;
+  color: var(--q-fg-secondary);
+}
+
+.q-seller-apply-form {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--q-geist-space-4x, 16) * 1px);
+}
+
+.q-seller-apply-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.q-seller-apply-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.q-seller-apply-label {
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  font-weight: var(--q-font-weight-medium, 500);
+  color: var(--q-fg-primary);
+}
+
+.q-seller-apply-counter {
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  color: var(--q-fg-muted);
+}
+
+.q-seller-apply-input,
+.q-seller-apply-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  background: var(--q-bg-primary);
+  color: var(--q-fg-primary);
+  font-family: inherit;
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  box-sizing: border-box;
+}
+
+.q-seller-apply-input.is-invalid,
+.q-seller-apply-textarea.is-invalid {
+  border-color: #c62828;
+}
+
+.q-seller-apply-field-error {
+  margin: 0;
+  color: #c62828;
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+}
+
+.q-seller-apply-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.q-seller-apply-alert {
+  padding: 12px 16px;
+  border-radius: calc(var(--q-radius-md, 6) * 1px);
+  margin-bottom: calc(var(--q-geist-space-4x, 16) * 1px);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+}
+
+.q-seller-apply-alert--error {
+  background-color: rgba(198, 40, 40, 0.08);
+  border: 1px solid #c62828;
+  color: #c62828;
+}
+
+.q-seller-apply-alert--success {
+  background-color: rgba(46, 125, 50, 0.08);
+  border: 1px solid #2e7d32;
+  color: #2e7d32;
+}
+
+.q-seller-apply-alert--warning {
+  background-color: rgba(237, 108, 2, 0.08);
+  border: 1px solid #ed6c02;
+  color: var(--q-fg-primary);
+}
+
+.q-seller-apply-rejection-reason {
+  margin: 6px 0 0;
+  color: var(--q-fg-secondary);
+}
+
+.q-seller-app-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-weight: var(--q-font-weight-semibold, 600);
+}
+
+.q-seller-app-badge--pending {
+  background-color: rgba(237, 108, 2, 0.14);
+  color: #b45309;
+}
+
+.q-seller-app-badge--approved {
+  background-color: rgba(46, 125, 50, 0.14);
+  color: #2e7d32;
+}
+
+.q-seller-app-badge--rejected {
+  background-color: rgba(198, 40, 40, 0.14);
+  color: #c62828;
+}
