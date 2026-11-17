@@ -222,16 +222,28 @@ a.q-header-brand {
 .q-header-dropdown-item {
   display: block;
   width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
   text-align: left;
-  padding: 0.5rem 0.75rem;
-  border: 0;
-  background: transparent;
-  border-radius: 0.25rem;
+  font: inherit;
+  color: var(--q-fg-primary);
+  text-decoration: none;
   cursor: pointer;
+  border-radius: calc(var(--q-radius-sm, 4) * 1px);
+  transition: background-color 0.15s ease;
 }
 
-.q-header-dropdown-item:hover {
+.q-header-dropdown-item:hover,
+.q-header-dropdown-item:focus-visible {
   background: var(--q-bg-surface);
+  color: var(--q-fg-primary);
+  outline: none;
+}
+
+.q-header-dropdown-item:focus-visible {
+  outline: 2px solid var(--q-accent);
+  outline-offset: -2px;
 }
 
 .q-header-search {
