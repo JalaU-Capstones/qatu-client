@@ -26,6 +26,7 @@ import './views/pages/product-detail.css';
 import './views/pages/cart.css';
 import './views/pages/checkout.css';
 import './views/styles/modal.css';
+import './views/pages/edit-product-modal.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';

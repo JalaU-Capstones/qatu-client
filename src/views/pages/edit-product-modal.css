@@ -1,0 +1,89 @@
+.q-edit-product-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem 0;
+}
+
+.q-form-field,
+.q-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.q-form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--q-fg-primary);
+}
+
+.q-form-input,
+.q-form-textarea,
+.q-form-select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--q-border-default);
+  border-radius: 0.375rem;
+  background: var(--q-bg-page);
+  color: var(--q-fg-primary);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.q-form-input:focus,
+.q-form-textarea:focus,
+.q-form-select:focus {
+  outline: none;
+  border-color: var(--q-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--q-accent) 15%, transparent);
+}
+
+.q-form-input:disabled,
+.q-form-textarea:disabled,
+.q-form-select:disabled {
+  background: var(--q-bg-surface);
+  color: var(--q-fg-muted);
+  cursor: not-allowed;
+}
+
+.q-form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.q-form-helper,
+.q-form-hint {
+  margin-top: 0.25rem;
+  color: var(--q-fg-muted);
+  font-size: 0.8125rem;
+}
+
+.q-form-hint--warning {
+  color: var(--q-color-warning);
+}
+
+.q-form-error {
+  margin-top: 0.25rem;
+  color: var(--q-color-error);
+  font-size: 0.8125rem;
+}
+
+.q-form-input.error,
+.q-form-textarea.error,
+.q-form-select.error {
+  border-color: var(--q-color-error);
+}
+
+.q-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.q-form-row .q-form-field,
+.q-form-row .q-form-group {
+  flex: 1;
+  min-width: 140px;
+}
