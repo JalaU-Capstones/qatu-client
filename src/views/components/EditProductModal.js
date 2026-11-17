@@ -166,6 +166,7 @@ export class EditProductModal {
     nameInput.value = vm.form.name;
     nameInput.addEventListener('input', () => {
       vm.setField('name', nameInput.value);
+      this._updateSaveButtonState();
     });
     nameWrap.append(nameLabel, nameInput);
     form.appendChild(nameWrap);
@@ -191,6 +192,7 @@ export class EditProductModal {
     priceInput.value = vm.form.price;
     priceInput.addEventListener('input', () => {
       vm.setField('price', priceInput.value);
+      this._updateSaveButtonState();
     });
     priceWrap.append(priceLabel, priceInput);
 
@@ -210,6 +212,7 @@ export class EditProductModal {
     stockInput.value = vm.form.stock;
     stockInput.addEventListener('input', () => {
       vm.setField('stock', stockInput.value);
+      this._updateSaveButtonState();
     });
     stockWrap.append(stockLabel, stockInput);
 
@@ -246,6 +249,7 @@ export class EditProductModal {
 
     currencySelect.addEventListener('change', () => {
       vm.setField('currency', currencySelect.value);
+      this._updateSaveButtonState();
     });
     currencyWrap.append(currencyLabel, currencySelect);
 
@@ -287,6 +291,7 @@ export class EditProductModal {
 
       categorySelect.addEventListener('change', () => {
         vm.setField('categoryId', categorySelect.value);
+        this._updateSaveButtonState();
       });
       categoryWrap.append(categoryLabel, categorySelect);
     } else {
@@ -299,6 +304,7 @@ export class EditProductModal {
       categoryInput.value = vm.form.categoryId;
       categoryInput.addEventListener('input', () => {
         vm.setField('categoryId', categoryInput.value);
+        this._updateSaveButtonState();
       });
       categoryWrap.append(categoryLabel, categoryInput);
     }
@@ -321,6 +327,7 @@ export class EditProductModal {
     descTextarea.value = vm.form.description;
     descTextarea.addEventListener('input', () => {
       vm.setField('description', descTextarea.value);
+      this._updateSaveButtonState();
     });
     descWrap.append(descLabel, descTextarea);
     form.appendChild(descWrap);
@@ -341,6 +348,7 @@ export class EditProductModal {
     attrsTextarea.value = vm.form.attributesText;
     attrsTextarea.addEventListener('input', () => {
       vm.setField('attributesText', attrsTextarea.value);
+      this._updateSaveButtonState();
     });
     attrsWrap.append(attrsLabel, attrsTextarea);
     form.appendChild(attrsWrap);
@@ -422,8 +430,12 @@ export class EditProductModal {
     const saveBtn = document.createElement('button');
     saveBtn.type = 'button';
     saveBtn.className = 'q-btn q-btn--primary q-edit-product-modal__save-btn';
+    saveBtn.dataset.action = 'save';
     saveBtn.textContent = vm.isSaving ? 'Guardando…' : 'Guardar';
-    saveBtn.disabled = !vm.isDirty || vm.isSaving || vm.isLoading;
+    saveBtn.toggleAttribute(
+      'disabled',
+      !vm.isDirty || vm.isSaving || vm.isLoading
+    );
     saveBtn.addEventListener('click', async () => {
       const res = await vm.save();
       if (res && res.status === 'success') {
@@ -437,5 +449,12 @@ export class EditProductModal {
     });
 
     this._footerContainer.append(cancelBtn, saveBtn);
+  }
+
+  _updateSaveButtonState() {
+    const saveBtn = this._footerContainer?.querySelector('[data-action="save"]');
+    if (saveBtn) {
+      saveBtn.disabled = !this.viewModel.isDirty || this.viewModel.isSaving;
+    }
   }
 }

@@ -67,6 +67,35 @@ describe('SellerProductFormView', () => {
     expect(container.querySelector('textarea[name="attributesText"]')).not.toBeNull();
   });
 
+  it('typing in the name input does not replace the input node', () => {
+    view.mount(container);
+    const input = container.querySelector('#field-name');
+    expect(input).not.toBeNull();
+
+    input.value = 'New';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(container.querySelector('#field-name')).toBe(input);
+  });
+
+  it('typing updates the submit button disabled state', () => {
+    view.mount(container);
+    const submitBtn = container.querySelector('.q-seller-product-form__submit-btn');
+    const input = container.querySelector('#field-name');
+    const priceInput = container.querySelector('#field-price');
+    const categorySelect = container.querySelector('#field-categoryId');
+
+    expect(submitBtn.disabled).toBe(true);
+    input.value = 'New product';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    priceInput.value = '10';
+    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+    categorySelect.value = 'cat-1';
+    categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(submitBtn.disabled).toBe(false);
+  });
+
   it('2. Step 1: clicking "Crear borrador" with empty fields shows inline errors and does not navigate', async () => {
     view.mount(container);
 

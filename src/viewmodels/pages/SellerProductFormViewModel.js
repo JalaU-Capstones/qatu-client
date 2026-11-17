@@ -54,7 +54,6 @@ export class SellerProductFormViewModel {
   setField(name, value) {
     this.form[name] = value;
     delete this.fieldErrors[name];
-    this._notify();
   }
 
   setStep(step) {

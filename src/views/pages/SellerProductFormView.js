@@ -266,7 +266,7 @@ export class SellerProductFormView {
     submitBtn.textContent = this.viewModel.isCreating
       ? 'Creando borrador…'
       : 'Crear borrador y continuar';
-    submitBtn.disabled = !this.viewModel.canSubmitForm();
+    submitBtn.toggleAttribute('disabled', !this.viewModel.canSubmitForm());
 
     footer.appendChild(submitBtn);
     form.appendChild(footer);
@@ -538,6 +538,7 @@ export class SellerProductFormView {
 
     input.addEventListener('input', () => {
       this.viewModel.setField(name, input.value);
+      this._updateSubmitButtonState();
     });
 
     wrap.appendChild(input);
@@ -580,6 +581,7 @@ export class SellerProductFormView {
 
     select.addEventListener('change', () => {
       this.viewModel.setField(name, select.value);
+      this._updateSubmitButtonState();
     });
 
     wrap.appendChild(select);
@@ -622,6 +624,7 @@ export class SellerProductFormView {
 
     textarea.addEventListener('input', () => {
       this.viewModel.setField(name, textarea.value);
+      this._updateSubmitButtonState();
     });
 
     wrap.appendChild(textarea);
@@ -635,6 +638,13 @@ export class SellerProductFormView {
     }
 
     return wrap;
+  }
+
+  _updateSubmitButtonState() {
+    const submitBtn = this._bodyEl?.querySelector('.q-seller-product-form__submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = !this.viewModel.canSubmitForm();
+    }
   }
 
   /**

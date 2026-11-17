@@ -83,6 +83,27 @@ describe('EditProductModal', () => {
     await openPromise;
   });
 
+  it('typing in a field does not replace the input node and updates Save disabled state', async () => {
+    modal = new EditProductModal({ productId: 'prod-100', productsApi, categoriesApi });
+    const openPromise = modal.open();
+    await tick();
+
+    const nameInput = document.querySelector('#edit-field-name');
+    const saveBtn = document.querySelector('[data-action="save"]');
+    expect(saveBtn.disabled).toBe(true);
+
+    nameInput.value = 'Nombre actualizado';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(document.querySelector('#edit-field-name')).toBe(nameInput);
+    expect(saveBtn.disabled).toBe(false);
+
+    nameInput.value = 'Teclado Mecánico';
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('.q-edit-product-modal__cancel-btn').click();
+    await openPromise;
+  });
+
   it('3. clicking Cancel on a clean form closes the modal, resolves with { saved: false }', async () => {
     modal = new EditProductModal({ productId: 'prod-100', productsApi, categoriesApi });
     const openPromise = modal.open();

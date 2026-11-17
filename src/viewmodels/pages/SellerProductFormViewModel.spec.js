@@ -40,6 +40,37 @@ describe('SellerProductFormViewModel', () => {
     expect(vm.fieldErrors.name).toBeUndefined();
   });
 
+  it('setField does not notify subscribers (prevents re-render on typing)', () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    const initialCallCount = notifySpy.calls.count();
+
+    vm.setField('name', 'New name');
+
+    expect(notifySpy.calls.count()).toBe(initialCallCount);
+    expect(vm.form.name).toBe('New name');
+  });
+
+  it('submitForm still notifies subscribers', async () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+
+    await vm.submitForm();
+
+    expect(notifySpy).toHaveBeenCalled();
+  });
+
+  it('setStep still notifies subscribers', () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    vm.productId = 'prod-123';
+    vm.images = [{ id: 'img-1' }];
+
+    vm.setStep(2);
+
+    expect(notifySpy).toHaveBeenCalled();
+  });
+
   it('2. submitForm with empty required fields sets fieldErrors and does not call createProduct', async () => {
     const res = await vm.submitForm();
 

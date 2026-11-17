@@ -112,16 +112,35 @@ describe('EditProductViewModel', () => {
     expect(noCatVm.loadedProduct.id).toBe('prod-123');
   });
 
-  it('8. setField("name", "new") updates form.name and notifies', () => {
-    let notified = false;
-    vm.subscribe(() => {
-      notified = true;
-    });
+  it('8. setField("name", "new") updates form.name without notifying', () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    const initialCallCount = notifySpy.calls.count();
 
     vm.setField('name', 'new');
 
     expect(vm.form.name).toBe('new');
-    expect(notified).toBe(true);
+    expect(notifySpy.calls.count()).toBe(initialCallCount);
+  });
+
+  it('load still notifies subscribers', async () => {
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+
+    await vm.load('prod-123');
+
+    expect(notifySpy).toHaveBeenCalled();
+  });
+
+  it('save still notifies subscribers', async () => {
+    await vm.load('prod-123');
+    const notifySpy = jasmine.createSpy('notify');
+    vm.subscribe(notifySpy);
+    vm.setField('name', 'Updated Product');
+
+    await vm.save();
+
+    expect(notifySpy).toHaveBeenCalled();
   });
 
   it('9. buildUpdatePayload() returns null when nothing changed', async () => {

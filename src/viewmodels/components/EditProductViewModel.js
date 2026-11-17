@@ -125,7 +125,6 @@ export class EditProductViewModel {
       this.form[field] = value;
       this.infoMessage = '';
       this.errorMessage = '';
-      this._notify();
     }
   }
 
