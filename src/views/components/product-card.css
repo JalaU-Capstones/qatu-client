@@ -46,6 +46,10 @@
   box-sizing: border-box;
 }
 
+.q-product-card-placeholder {
+  display: contents;
+}
+
 .q-product-card-mark {
   position: relative;
   flex-shrink: 0;

@@ -1,0 +1,93 @@
+/**
+ * Modal primitive styles (.q-modal* BEM).
+ * Used by ModalView shell (C3a) and consumed by EditProductModal (C3b)
+ * and DeleteProductModal (C4).
+ */
+
+.q-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.q-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  /* Hardcoded rgba fallback for overlay backdrop; design tokens lack a composite semi-transparent black variable */
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.q-modal__panel {
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--q-bg-surface, #ffffff);
+  color: var(--q-fg-primary, #030712);
+  border: 1px solid var(--q-border-subtle, rgba(0, 0, 0, 0.1));
+  border-radius: calc(var(--q-radius-xl, 12) * 1px);
+  box-shadow: var(--q-shadow-lg, 0 10px 24px rgba(0, 0, 0, 0.2));
+  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.q-modal__panel--sm {
+  max-width: 400px;
+}
+
+.q-modal__panel--md {
+  max-width: 600px;
+}
+
+.q-modal__panel--lg {
+  max-width: 900px;
+}
+
+.q-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.q-modal__title {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.25rem;
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary, #030712);
+}
+
+.q-modal__close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  color: var(--q-fg-muted, #71717a);
+  border-radius: calc(var(--q-radius-sm, 4) * 1px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.q-modal__close:hover {
+  color: var(--q-fg-primary, #030712);
+  background: var(--q-bg-muted, rgba(0, 0, 0, 0.05));
+}
+
+.q-modal__body {
+  margin-bottom: 1rem;
+}
+
+.q-modal__footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}

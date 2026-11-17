@@ -245,6 +245,29 @@ body {
   transform: translateY(-1px);
 }
 
+/* Variant: Danger (Red Solid — destructive actions) */
+/* Only one red palette token exists (--q-color-red-56, #ea4335). It is
+ * used for both base and hover; hover darkens via opacity on a dark bg
+ * overlay rather than a separate token shade. When a --q-color-red-700
+ * is added to the token palette it can replace the fallback below. */
+.q-btn--danger {
+  color: #ffffff;
+  background-color: var(--q-color-red-56, #dc3545);
+  border-color: var(--q-color-red-56, #dc3545);
+}
+
+.q-btn--danger:hover:not(:disabled),
+.q-btn--danger:focus-visible:not(:disabled) {
+  background-color: color-mix(in srgb, var(--q-color-red-56, #dc3545) 85%, #000000);
+  border-color: color-mix(in srgb, var(--q-color-red-56, #dc3545) 85%, #000000);
+  transform: translateY(-1px);
+}
+
+.q-btn--danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Variant: Outline (Pink Outline) */
 .q-btn--outline {
   color: var(--q-accent);
@@ -301,4 +324,13 @@ body {
 [data-theme='dark'] .q-glass-panel {
   background-color: rgba(26, 26, 30, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Utility label for ImageWithFallback placeholder text.
+   Neutralizes default <p> margin/font so consumers can style their
+   own label class on top without inheriting block-element defaults. */
+.q-image-fallback__label {
+  margin: 0;
+  font: inherit;
+  color: inherit;
 }

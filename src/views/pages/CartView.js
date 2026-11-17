@@ -1,4 +1,5 @@
 import { CartViewModel } from '../../viewmodels/pages/CartViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
 
 /**
@@ -304,45 +305,19 @@ export class CartView {
     const media = document.createElement('div');
     media.className = 'q-cart-item__media';
 
-    if (item.imageUrl) {
-      const photo = document.createElement('img');
-      photo.className = 'q-cart-item__photo';
-      photo.src = item.imageUrl;
-      photo.alt = '';
-      photo.loading = 'lazy';
-      photo.addEventListener('error', () => {
-        media.innerHTML = '';
-        media.appendChild(this._renderMediaPlaceholder());
-      });
-      media.appendChild(photo);
-      return media;
-    }
+    media.appendChild(
+      createImageWithFallback({
+        src: item.imageUrl,
+        alt: item.name || '',
+        size: 20,
+        imageClassName: 'q-cart-item__photo',
+        placeholderClassName: 'q-cart-item__placeholder',
+        label: 'Imagen',
+        labelClassName: 'q-cart-item__placeholder-label',
+      })
+    );
 
-    media.appendChild(this._renderMediaPlaceholder());
     return media;
-  }
-
-  /**
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderMediaPlaceholder() {
-    const placeholder = document.createElement('div');
-    placeholder.className = 'q-cart-item__placeholder';
-
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', '20');
-    markImg.setAttribute('height', '20');
-
-    const label = document.createElement('span');
-    label.className = 'q-cart-item__placeholder-label';
-    label.textContent = 'Imagen';
-
-    placeholder.appendChild(markImg);
-    placeholder.appendChild(label);
-    return placeholder;
   }
 
   /**

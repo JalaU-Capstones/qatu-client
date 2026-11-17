@@ -25,6 +25,8 @@ import './views/components/recommendation-card.css';
 import './views/pages/product-detail.css';
 import './views/pages/cart.css';
 import './views/pages/checkout.css';
+import './views/styles/modal.css';
+import './views/pages/edit-product-modal.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
@@ -44,6 +46,8 @@ import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewMode
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
 import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
+import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
+import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -91,6 +95,7 @@ if (app) {
 
   let categories = [];
   const categoriesApi = new CategoriesApi();
+  const productsApi = new ProductsApi();
   const categoriesReady = categoriesApi
     .getCategories()
     .then((res) => {
@@ -254,11 +259,32 @@ if (app) {
       return;
     }
 
+    const sellerProductsViewModel = new SellerProductsViewModel();
     currentPageView = new SellerProductsPageView({
-      viewModel: new SellerProductsViewModel(),
+      viewModel: sellerProductsViewModel,
       onNavigate: (path) => router.navigate(path),
       onCreate: () => router.navigate('/seller/products/new'),
       onViewProduct: (slug) => router.navigate(`/products/${slug}`),
+      onEditProduct: (productId) => {
+        const modal = new EditProductModal({
+          productId,
+          productsApi,
+          categoriesApi,
+          onSaved: (updatedProduct) => {
+            sellerProductsViewModel.applyProductUpdate(updatedProduct);
+          },
+        });
+        void modal.open();
+      },
+      onDeleteProduct: (productId) => {
+        const product = sellerProductsViewModel.products.find((p) => p.id === productId);
+        const modal = new DeleteConfirmModal({
+          productId,
+          productName: product?.name || 'este producto',
+          onConfirm: () => sellerProductsViewModel.deleteProduct(productId),
+        });
+        void modal.open();
+      },
     });
     currentPageView.mount(mainEl);
   };
@@ -284,7 +310,7 @@ if (app) {
     }
 
     const viewModel = new SellerProductFormViewModel({
-      productsApi: new ProductsApi(),
+      productsApi,
       categories,
     });
     const view = new SellerProductFormView({

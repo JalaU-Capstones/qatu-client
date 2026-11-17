@@ -1,5 +1,7 @@
+import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
 import { RecommendationCardView } from '../components/RecommendationCardView.js';
 
@@ -15,19 +17,23 @@ export class ProductDetailView {
    * @param {Function} [options.onBuyNow] Called after a successful "Comprar ahora".
    * @param {Function} [options.onAuthRequired] Called when a guest tries to add
    *   the product to the cart — the shell redirects to `/login`.
+   * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
     viewModel = new ProductDetailViewModel(),
     productSlug = null,
     onBuyNow = null,
     onAuthRequired = null,
+    authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
     this.productSlug = productSlug;
     this.onBuyNow = onBuyNow;
     this.onAuthRequired = onAuthRequired;
+    this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
+    this._authUnsubscribe = null;
   }
 
   render() {
@@ -50,6 +56,10 @@ export class ProductDetailView {
     container.appendChild(el);
 
     this._unsubscribe = this.viewModel.subscribe(() => {
+      this._renderContent();
+    });
+
+    this._authUnsubscribe = this.authStore.subscribe(() => {
       this._renderContent();
     });
 
@@ -251,58 +261,28 @@ export class ProductDetailView {
    * @private
    */
   _renderImageFrame(frame, large) {
-    if (frame?.path) {
-      const wrapper = document.createElement('div');
-      wrapper.className = large
-        ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
-        : 'q-product-detail__image-frame';
-
-      const photo = document.createElement('img');
-      photo.className = large
-        ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
-        : 'q-product-detail__image-photo';
-      photo.alt = frame.label;
-      photo.loading = 'lazy';
-      photo.addEventListener('error', () => {
-        wrapper.innerHTML = '';
-        wrapper.appendChild(this._renderImagePlaceholder(frame.label, large));
-      });
-      photo.src = frame.path;
-      wrapper.appendChild(photo);
-      return wrapper;
-    }
-
-    return this._renderImagePlaceholder(frame?.label || 'Imagen del producto', large);
-  }
-
-  /**
-   * @param {string} label
-   * @param {boolean} large
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderImagePlaceholder(label, large) {
     const wrapper = document.createElement('div');
     wrapper.className = large
-      ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
-      : 'q-product-detail__image-placeholder';
+      ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
+      : 'q-product-detail__image-frame';
 
-    const mark = document.createElement('span');
-    mark.className = 'q-product-detail__image-mark';
+    wrapper.appendChild(
+      createImageWithFallback({
+        src: frame?.path,
+        alt: frame?.label || '',
+        size: large ? 40 : 20,
+        imageClassName: large
+          ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
+          : 'q-product-detail__image-photo',
+        placeholderClassName: large
+          ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
+          : 'q-product-detail__image-placeholder',
+        markClassName: 'q-product-detail__image-mark',
+        label: frame?.label || 'Imagen del producto',
+        labelClassName: 'q-product-detail__image-label',
+      })
+    );
 
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', large ? '40' : '20');
-    markImg.setAttribute('height', large ? '40' : '20');
-    mark.appendChild(markImg);
-
-    const text = document.createElement('p');
-    text.className = 'q-product-detail__image-label';
-    text.textContent = label;
-
-    wrapper.appendChild(mark);
-    wrapper.appendChild(text);
     return wrapper;
   }
 
@@ -354,67 +334,81 @@ export class ProductDetailView {
     const purchase = document.createElement('div');
     purchase.className = 'q-product-detail__purchase';
 
-    const quantityRow = document.createElement('div');
-    quantityRow.className = 'q-product-detail__quantity-row';
+    const user = this.authStore.getUser();
+    const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
 
-    const quantityLabel = document.createElement('span');
-    quantityLabel.className = 'q-product-detail__quantity-label';
-    quantityLabel.textContent = 'Cantidad';
+    if (isOwn) {
+      // Seller viewing their own product: replace buy controls with an informational notice.
+      // "Envío gratis" is also hidden — it only applies to buyers, not the seller themselves.
+      const notice = document.createElement('p');
+      notice.className = 'q-product-detail__feedback';
+      notice.setAttribute('role', 'status');
+      notice.textContent = 'Este es tu producto. No puedes comprarlo.';
+      purchase.appendChild(notice);
+    } else {
+      const quantityRow = document.createElement('div');
+      quantityRow.className = 'q-product-detail__quantity-row';
 
-    const quantitySelector = new QuantitySelectorView({
-      value: vm.quantity,
-      min: 1,
-      max: vm.getMaxQuantity(),
-      disabled: vm.isOutOfStock(),
-      onChange: (value) => vm.setQuantity(value),
-      label: 'Cantidad del producto',
-    });
+      const quantityLabel = document.createElement('span');
+      quantityLabel.className = 'q-product-detail__quantity-label';
+      quantityLabel.textContent = 'Cantidad';
 
-    quantityRow.appendChild(quantityLabel);
-    quantityRow.appendChild(quantitySelector.render());
-    purchase.appendChild(quantityRow);
+      const quantitySelector = new QuantitySelectorView({
+        value: vm.quantity,
+        min: 1,
+        max: vm.getMaxQuantity(),
+        disabled: vm.isOutOfStock(),
+        onChange: (value) => vm.setQuantity(value),
+        label: 'Cantidad del producto',
+      });
 
-    const actions = document.createElement('div');
-    actions.className = 'q-product-detail__actions';
+      quantityRow.appendChild(quantityLabel);
+      quantityRow.appendChild(quantitySelector.render());
+      purchase.appendChild(quantityRow);
 
-    const addButton = document.createElement('button');
-    addButton.type = 'button';
-    addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
-    addButton.textContent = vm.isOutOfStock()
-      ? 'Agotado'
-      : vm.isAdding
-        ? 'Añadiendo…'
-        : 'Agregar al carrito';
-    addButton.disabled = vm.isOutOfStock() || vm.isAdding;
-    addButton.addEventListener('click', () =>
-      vm.addToCart().then((result) => {
-        if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
-          this.onAuthRequired();
+      const actions = document.createElement('div');
+      actions.className = 'q-product-detail__actions';
+
+      const addButton = document.createElement('button');
+      addButton.type = 'button';
+      addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
+      addButton.textContent = vm.isOutOfStock()
+        ? 'Agotado'
+        : vm.isAdding
+          ? 'Añadiendo…'
+          : 'Agregar al carrito';
+      addButton.disabled = vm.isOutOfStock() || vm.isAdding;
+      addButton.addEventListener('click', () =>
+        vm.addToCart().then((result) => {
+          if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+            this.onAuthRequired();
+          }
+        })
+      );
+      actions.appendChild(addButton);
+
+      const buyButton = document.createElement('button');
+      buyButton.type = 'button';
+      buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
+      buyButton.textContent = 'Comprar ahora';
+      buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
+      buyButton.addEventListener('click', async () => {
+        const result = await vm.addToCart();
+        if (result.status === 'added' && typeof this.onBuyNow === 'function') {
+          this.onBuyNow();
         }
-      })
-    );
-    actions.appendChild(addButton);
+      });
+      actions.appendChild(buyButton);
 
-    const buyButton = document.createElement('button');
-    buyButton.type = 'button';
-    buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
-    buyButton.textContent = 'Comprar ahora';
-    buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
-    buyButton.addEventListener('click', async () => {
-      const result = await vm.addToCart();
-      if (result.status === 'added' && typeof this.onBuyNow === 'function') {
-        this.onBuyNow();
-      }
-    });
-    actions.appendChild(buyButton);
+      purchase.appendChild(actions);
 
-    purchase.appendChild(actions);
+      const shipping = document.createElement('p');
+      shipping.className = 'q-product-detail__shipping';
+      shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
+      purchase.appendChild(shipping);
+    }
+
     info.appendChild(purchase);
-
-    const shipping = document.createElement('p');
-    shipping.className = 'q-product-detail__shipping';
-    shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
-    info.appendChild(shipping);
 
     if (vm.feedback) {
       const feedback = document.createElement('p');
@@ -665,6 +659,8 @@ export class ProductDetailView {
       this._unsubscribe();
       this._unsubscribe = null;
     }
+    this._authUnsubscribe?.();
+    this._authUnsubscribe = null;
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }

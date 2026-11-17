@@ -203,8 +203,8 @@ describe('FeaturedProductsView', () => {
     expect(mark).not.toBeNull();
     expect(mark.getAttribute('alt')).toBe('');
     expect(mark.getAttribute('src')).toContain('placeholder-mark.svg');
-    expect(mark.getAttribute('width')).toBe('24.7071');
-    expect(mark.getAttribute('height')).toBe('24.7071');
+    expect(mark.getAttribute('width')).toBe('25');
+    expect(mark.getAttribute('height')).toBe('25');
   });
 
   it('should render the product photo instead of the placeholder when primary_image_path is set', () => {
@@ -391,5 +391,102 @@ describe('FeaturedProductsView', () => {
     const btn = cardEl.querySelector('button.q-product-card-action');
     expect(btn.textContent).toBe('Añadir');
     expect(btn.disabled).toBe(false);
+  });
+
+  // ─── authStore / own product (C5) ────────────────────────────────────────
+
+  function makeAuthStore(user = null) {
+    const authListeners = new Set();
+    return {
+      getUser: () => user,
+      subscribe: jasmine.createSpy('subscribe').and.callFake((fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      }),
+      _fire() {
+        authListeners.forEach((fn) => fn());
+      },
+    };
+  }
+
+  it('C5-1: guest (getUser → null) → card shows "Añadir" button', () => {
+    const authStore = makeAuthStore(null);
+    const featView = new FeaturedProductsView(viewModel, { authStore });
+    const el = featView.render();
+    // All products from the viewModel have seller_id undefined → guest sees buttons
+    const btns = el.querySelectorAll('button.q-product-card-action');
+    expect(btns.length).toBeGreaterThan(0);
+    featView.destroy();
+  });
+
+  it('C5-2: seller viewing own product → no "Añadir" button for that card', () => {
+    const authStore = makeAuthStore({ id: 'seller-99', username: 'yo' });
+    const cardEl = new FeaturedProductsView(viewModel, { authStore })._renderCard({
+      id: 'p-own',
+      name: 'Mi Prod',
+      stock: 5,
+      seller_id: 'seller-99',
+    });
+    expect(cardEl.querySelector('button.q-product-card-action')).toBeNull();
+  });
+
+  it('C5-3: seller viewing another seller\'s product → "Añadir" button present', () => {
+    const authStore = makeAuthStore({ id: 'seller-99', username: 'yo' });
+    const cardEl = new FeaturedProductsView(viewModel, { authStore })._renderCard({
+      id: 'p-other',
+      name: 'Otra Prod',
+      stock: 5,
+      seller_id: 'seller-77',
+    });
+    expect(cardEl.querySelector('button.q-product-card-action')).not.toBeNull();
+  });
+
+  it('C5-4: authStore change fires re-render in place', () => {
+    let currentUser = null;
+    const authListeners = new Set();
+    const authStore = {
+      getUser: () => currentUser,
+      subscribe: (fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      },
+    };
+    const featView = new FeaturedProductsView(viewModel, { authStore });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    featView.mount(host);
+
+    const before = host.firstElementChild;
+
+    // All default products have no seller_id → all show Añadir
+    expect(host.querySelectorAll('button.q-product-card-action').length).toBeGreaterThan(0);
+
+    // fire auth change
+    currentUser = { id: 'seller-00', username: 'x' };
+    authListeners.forEach((fn) => fn());
+
+    // the same section element is kept alive; children update in place
+    expect(host.firstElementChild).toBe(before);
+
+    // products still have no seller_id → buttons still present (isOwn = false)
+    expect(host.querySelectorAll('button.q-product-card-action').length).toBeGreaterThan(0);
+
+    host.parentNode.removeChild(host);
+  });
+
+  it('C5-5: destroy() unsubscribes from authStore', () => {
+    const authStore = makeAuthStore(null);
+    const featView = new FeaturedProductsView(viewModel, { authStore });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    featView.mount(host);
+
+    expect(authStore.subscribe).toHaveBeenCalled();
+    const unsubSpy = jasmine.createSpy('unsub');
+    featView._authUnsubscribe = unsubSpy;
+    featView.destroy();
+
+    expect(unsubSpy).toHaveBeenCalled();
+    host.parentNode.removeChild(host);
   });
 });

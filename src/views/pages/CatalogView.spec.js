@@ -388,4 +388,98 @@ describe('CatalogView', () => {
       view.destroy();
     });
   });
+
+  // ─── authStore / own product (C5) ────────────────────────────────────────
+
+  function makeAuthStore(user = null) {
+    const authListeners = new Set();
+    return {
+      getUser: () => user,
+      subscribe: jasmine.createSpy('subscribe').and.callFake((fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      }),
+      _fire() {
+        authListeners.forEach((fn) => fn());
+      },
+    };
+  }
+
+  it('C5-1: guest (getUser → null) → card shows "Añadir" button regardless of seller_id', () => {
+    const authStore = makeAuthStore(null);
+    mockViewModel.products = [
+      { id: 'p1', name: 'Prod', price: 10, currency: 'USD', seller_id: 'seller-1' },
+    ];
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    expect(container.querySelector('button.q-product-card-action')).not.toBeNull();
+    view.destroy();
+  });
+
+  it('C5-2: logged-in seller viewing own product → no "Añadir" button', () => {
+    const authStore = makeAuthStore({ id: 'seller-1', username: 'tester' });
+    mockViewModel.products = [
+      { id: 'p1', name: 'Mi Prod', price: 10, currency: 'USD', seller_id: 'seller-1' },
+    ];
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    expect(container.querySelector('button.q-product-card-action')).toBeNull();
+    view.destroy();
+  });
+
+  it('C5-3: logged-in seller viewing another seller\'s product → "Añadir" button present', () => {
+    const authStore = makeAuthStore({ id: 'seller-1', username: 'tester' });
+    mockViewModel.products = [
+      { id: 'p2', name: 'Otra Prod', price: 20, currency: 'USD', seller_id: 'seller-2' },
+    ];
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    expect(container.querySelector('button.q-product-card-action')).not.toBeNull();
+    view.destroy();
+  });
+
+  it('C5-4: authStore change fires re-render (login as own seller hides button)', () => {
+    let currentUser = null;
+    const authListeners = new Set();
+    const authStore = {
+      getUser: () => currentUser,
+      subscribe: (fn) => {
+        authListeners.add(fn);
+        return () => authListeners.delete(fn);
+      },
+    };
+    mockViewModel.products = [
+      { id: 'p1', name: 'Prod', price: 10, currency: 'USD', seller_id: 'seller-1' },
+    ];
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    // Initially guest → button shows
+    expect(container.querySelector('button.q-product-card-action')).not.toBeNull();
+
+    // Login as the product's seller
+    currentUser = { id: 'seller-1', username: 'tester' };
+    authListeners.forEach((fn) => fn());
+
+    // Button should be gone
+    expect(container.querySelector('button.q-product-card-action')).toBeNull();
+    view.destroy();
+  });
+
+  it('C5-5: destroy() unsubscribes from authStore', () => {
+    const authStore = makeAuthStore(null);
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    expect(authStore.subscribe).toHaveBeenCalled();
+    const unsubSpy = jasmine.createSpy('unsub');
+    // Replace stored unsub with spy
+    view._authUnsubscribe = unsubSpy;
+    view.destroy();
+
+    expect(unsubSpy).toHaveBeenCalled();
+  });
 });

@@ -307,11 +307,18 @@ export class ProductsApi {
    * Handles a JSON response: returns the parsed body on 2xx, throws an Error
    * with `code` and `statusCode` extracted from `body.error` on non-2xx.
    *
+   * On 204 No Content the body is empty; `res.json()` would reject with a
+   * SyntaxError. We short-circuit before attempting to parse and return a
+   * neutral `{ data: null, meta: {} }` envelope so DELETE callers work.
+   *
    * @param {Response} res
    * @returns {Promise<Object>}
    * @private
    */
   async _handleJson(res) {
+    if (res.status === 204) {
+      return { data: null, meta: {} };
+    }
     const body = await res.json().catch(() => null);
     if (!res.ok) {
       const err = new Error(
@@ -323,6 +330,88 @@ export class ProductsApi {
       throw err;
     }
     return body;
+  }
+
+  /**
+   * PATCH /v1/products/:id/unpublish — transition published → unpublished.
+   *
+   * @param {string} productId
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   */
+  async unpublishProduct(productId) {
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}/unpublish`, {
+      method: 'PATCH',
+      withAuth: true,
+    });
+    const body = await this._handleJson(res);
+    return body;
+  }
+
+  /**
+   * PATCH /v1/products/:id — update whitelisted fields of a product.
+   * Accepted fields: name, description, price, stock, currency,
+   * category_id, attributes. Backend rejects slug, state, and unknown keys.
+   *
+   * @param {string} productId
+   * @param {{ name?: string, description?: string, price?: number,
+   *           stock?: number, currency?: string, category_id?: string,
+   *           attributes?: Object }} fields  At least one field required.
+   * @returns {Promise<{ data: Object, meta: Object }>}
+   * @throws {Error} with `.code === 'VALIDATION_ERROR'` when `fields` is empty.
+   */
+  async updateProduct(productId, fields) {
+    if (!fields || typeof fields !== 'object' || Object.keys(fields).length === 0) {
+      const err = new Error('At least one field is required');
+      err.code = 'VALIDATION_ERROR';
+      err.statusCode = 400;
+      throw err;
+    }
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}`, {
+      method: 'PATCH',
+      withAuth: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    });
+    const body = await this._handleJson(res);
+    return body;
+  }
+
+  /**
+   * DELETE /v1/products/:id — permanently delete a product.
+   * Returns `undefined` on success (204 No Content).
+   *
+   * @param {string} productId
+   * @returns {Promise<void>}
+   */
+  async deleteProduct(productId) {
+    const res = await this._fetch(`/products/${encodeURIComponent(productId)}`, {
+      method: 'DELETE',
+      withAuth: true,
+    });
+    // 204 expected. Any 2xx is accepted. Non-2xx throws via _handleJson.
+    if (res.status >= 200 && res.status < 300) {
+      return;
+    }
+    await this._handleJson(res); // throws on non-2xx
+  }
+
+  /**
+   * DELETE /v1/products/:id/images/:imageId — remove a single product image.
+   * Returns `undefined` on success (204 No Content).
+   *
+   * @param {string} productId
+   * @param {string} imageId
+   * @returns {Promise<void>}
+   */
+  async deleteProductImage(productId, imageId) {
+    const res = await this._fetch(
+      `/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+      { method: 'DELETE', withAuth: true }
+    );
+    if (res.status >= 200 && res.status < 300) {
+      return;
+    }
+    await this._handleJson(res); // throws on non-2xx
   }
 
   /**

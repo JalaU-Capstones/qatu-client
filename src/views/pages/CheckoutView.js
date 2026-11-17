@@ -4,6 +4,7 @@ import {
   SHIPPING_LIMITS,
 } from '../../models/validation/shippingForm.js';
 import { CheckoutViewModel } from '../../viewmodels/pages/CheckoutViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 
 const FORM_ID = 'q-checkout-form';
 
@@ -499,27 +500,16 @@ export class CheckoutView {
     const thumb = document.createElement('div');
     thumb.className = 'q-checkout__thumb';
 
-    const showPlaceholder = () => {
-      thumb.innerHTML = '';
-      const mark = document.createElement('img');
-      mark.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      mark.alt = '';
-      mark.width = 18;
-      mark.height = 18;
-      thumb.appendChild(mark);
-    };
+    thumb.appendChild(
+      createImageWithFallback({
+        src: item.imageUrl,
+        alt: item.name || '',
+        size: 18,
+        placeholderClassName: 'q-checkout__thumb-placeholder',
+        label: '',
+      })
+    );
 
-    if (!item.imageUrl) {
-      showPlaceholder();
-      return thumb;
-    }
-
-    const photo = document.createElement('img');
-    photo.src = item.imageUrl;
-    photo.alt = '';
-    photo.loading = 'lazy';
-    photo.addEventListener('error', showPlaceholder);
-    thumb.appendChild(photo);
     return thumb;
   }
 
