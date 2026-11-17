@@ -140,7 +140,13 @@ export class AuthStore {
 
   /** @private */
   _notify() {
-    this._listeners.forEach((listener) => listener(this));
+    // Iterate a snapshot so listeners that unsubscribe / resubscribe during
+    // notify (e.g. FeaturedProductsView re-rendering on auth change) do not
+    // create an infinite loop. Matches FeaturedProductsViewModel._notify()
+    // which uses the same pattern.
+    for (const listener of [...this._listeners]) {
+      listener(this);
+    }
   }
 
   /** @private */

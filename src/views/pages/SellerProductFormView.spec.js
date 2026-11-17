@@ -309,15 +309,18 @@ describe('SellerProductFormView', () => {
   });
 
   it('18. Step 2: renders placeholder inside thumb when image fails to load', () => {
+    viewModel.productId = 'prod-1';
     viewModel.images = [{ id: 'img-1', path: 'https://example.com/broken.png' }];
     viewModel.setStep(2);
     view.mount(container);
 
-    const img = container.querySelector('.q-seller-product-form__thumb img');
+    const thumb = container.querySelector('.q-seller-product-form__thumb');
+    expect(thumb).not.toBeNull();
+    const img = thumb.querySelector('img');
     expect(img).not.toBeNull();
     img.dispatchEvent(new Event('error'));
 
-    const placeholder = container.querySelector('.q-seller-product-form__thumb-placeholder');
+    const placeholder = thumb.querySelector('.q-seller-product-form__thumb-placeholder');
     expect(placeholder).not.toBeNull();
   });
 });

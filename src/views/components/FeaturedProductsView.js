@@ -28,6 +28,16 @@ export class FeaturedProductsView {
       return this.element;
     }
 
+    this.element = this._buildSection();
+    return this.element;
+  }
+
+  /**
+   * Builds the section DOM without mutating the mounted instance.
+   * @returns {HTMLElement}
+   * @private
+   */
+  _buildSection() {
     const section = document.createElement('section');
     section.className = 'q-featured';
     section.setAttribute('aria-labelledby', 'q-featured-title');
@@ -39,27 +49,17 @@ export class FeaturedProductsView {
     container.appendChild(this.viewModel.errorMessage ? this._renderMessage() : this._renderGrid());
     section.appendChild(container);
 
-    this.element = section;
+    return section;
+  }
 
-    this._unsubscribe = this.viewModel.subscribe(() => {
-      if (this.element && this.element.parentNode) {
-        const parent = this.element.parentNode;
-        const next = this.element.nextSibling;
-        this.destroy();
-        parent.insertBefore(this.render(), next);
-      }
-    });
-
-    this._authUnsubscribe = this.authStore.subscribe(() => {
-      if (this.element && this.element.parentNode) {
-        const parent = this.element.parentNode;
-        const next = this.element.nextSibling;
-        this.destroy();
-        parent.insertBefore(this.render(), next);
-      }
-    });
-
-    return this.element;
+  /**
+   * Re-renders the section contents in place without destroying the view.
+   * @private
+   */
+  _refresh() {
+    if (!this.element) return;
+    const section = this._buildSection();
+    this.element.replaceChildren(...section.childNodes);
   }
 
   /**
@@ -68,9 +68,23 @@ export class FeaturedProductsView {
    * @returns {HTMLElement}
    */
   mount(container) {
-    const el = this.render();
-    container.appendChild(el);
-    return el;
+    if (!this.element) {
+      this.render();
+    }
+
+    if (this.element.parentNode !== container) {
+      container.appendChild(this.element);
+    }
+
+    if (!this._unsubscribe) {
+      this._unsubscribe = this.viewModel.subscribe(() => this._refresh());
+    }
+
+    if (!this._authUnsubscribe) {
+      this._authUnsubscribe = this.authStore.subscribe(() => this._refresh());
+    }
+
+    return this.element;
   }
 
   /**

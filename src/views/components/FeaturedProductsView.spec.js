@@ -203,8 +203,8 @@ describe('FeaturedProductsView', () => {
     expect(mark).not.toBeNull();
     expect(mark.getAttribute('alt')).toBe('');
     expect(mark.getAttribute('src')).toContain('placeholder-mark.svg');
-    expect(mark.getAttribute('width')).toBe('24.7071');
-    expect(mark.getAttribute('height')).toBe('24.7071');
+    expect(mark.getAttribute('width')).toBe('25');
+    expect(mark.getAttribute('height')).toBe('25');
   });
 
   it('should render the product photo instead of the placeholder when primary_image_path is set', () => {
@@ -456,12 +456,17 @@ describe('FeaturedProductsView', () => {
     document.body.appendChild(host);
     featView.mount(host);
 
+    const before = host.firstElementChild;
+
     // All default products have no seller_id → all show Añadir
     expect(host.querySelectorAll('button.q-product-card-action').length).toBeGreaterThan(0);
 
     // fire auth change
     currentUser = { id: 'seller-00', username: 'x' };
     authListeners.forEach((fn) => fn());
+
+    // the same section element is kept alive; children update in place
+    expect(host.firstElementChild).toBe(before);
 
     // products still have no seller_id → buttons still present (isOwn = false)
     expect(host.querySelectorAll('button.q-product-card-action').length).toBeGreaterThan(0);
@@ -472,7 +477,9 @@ describe('FeaturedProductsView', () => {
   it('C5-5: destroy() unsubscribes from authStore', () => {
     const authStore = makeAuthStore(null);
     const featView = new FeaturedProductsView(viewModel, { authStore });
-    featView.render();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    featView.mount(host);
 
     expect(authStore.subscribe).toHaveBeenCalled();
     const unsubSpy = jasmine.createSpy('unsub');
@@ -480,5 +487,6 @@ describe('FeaturedProductsView', () => {
     featView.destroy();
 
     expect(unsubSpy).toHaveBeenCalled();
+    host.parentNode.removeChild(host);
   });
 });
