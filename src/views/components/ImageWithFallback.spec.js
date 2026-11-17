@@ -77,7 +77,7 @@ describe('ImageWithFallback', () => {
     expect(innerImg).not.toBeNull();
     expect(innerImg.getAttribute('width')).toBe('32');
     expect(innerImg.getAttribute('height')).toBe('32');
-    expect(innerImg.src).toContain('placeholder-mark.svg');
+    expect(innerImg.src).toContain('product-placeholder.svg');
     expect(innerImg.alt).toBe('');
   });
 

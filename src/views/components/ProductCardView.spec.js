@@ -144,7 +144,7 @@ describe('ProductCardView', () => {
 
     const mark = el.querySelector('.q-product-card-mark img');
     expect(mark).not.toBeNull();
-    expect(mark.getAttribute('src')).toContain('placeholder-mark.svg');
+    expect(mark.getAttribute('src')).toContain('product-placeholder.svg');
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
   });
 

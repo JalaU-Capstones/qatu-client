@@ -118,7 +118,7 @@ describe('ProductDetailView', () => {
     );
     expect(container.querySelectorAll('.q-product-detail__tab').length).toBe(3);
     expect(container.querySelector('.q-product-detail__seller-card')).not.toBeNull();
-    expect(container.querySelectorAll('.q-recommendation-card').length).toBe(3);
+    expect(container.querySelectorAll('[role="listitem"]').length).toBe(3);
   });
 
   it('renders the loading state', () => {
@@ -216,7 +216,8 @@ describe('ProductDetailView', () => {
   it('recommendation cards link to each product detail by slug', () => {
     view.mount(container);
 
-    const links = container.querySelectorAll('.q-recommendation-card__link');
+    const cards = container.querySelectorAll('[role="listitem"]');
+    const links = Array.from(cards, (card) => card.querySelector('a'));
     expect(links.length).toBe(3);
     expect(links[0].getAttribute('href')).toBe('/products/huipil');
     expect(links[1].getAttribute('href')).toBe('/products/bolso');

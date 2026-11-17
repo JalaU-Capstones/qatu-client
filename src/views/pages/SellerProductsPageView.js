@@ -1,6 +1,5 @@
-import { formatPrice } from '../../utils/formatCurrency.js';
 import { SellerProductsViewModel } from '../../viewmodels/pages/SellerProductsViewModel.js';
-import { createImageWithFallback } from '../components/ImageWithFallback.js';
+import { ProductCard } from '../components/ProductCard.js';
 
 export class SellerProductsPageView {
   /**
@@ -246,6 +245,7 @@ export class SellerProductsPageView {
     const grid = document.createElement('div');
     grid.className = 'q-seller-products__grid';
     grid.dataset.role = 'grid';
+    grid.setAttribute('role', 'list');
 
     for (const product of this.viewModel.products) {
       grid.appendChild(this._renderProductCard(product));
@@ -295,71 +295,22 @@ export class SellerProductsPageView {
   }
 
   _renderProductCard(product) {
-    const card = document.createElement('article');
-    card.className = 'q-seller-products__card q-glass-panel';
+    const card = new ProductCard({
+      product,
+      variant: 'seller',
+      onView: product.slug ? () => this.onViewProduct?.(product.slug) : undefined,
+      onEdit: (item) => this.onEditProduct?.(item.id),
+      onDelete: (item) => this.onDeleteProduct?.(item.id),
+    }).render();
     card.dataset.productId = product.id;
-
-    // Thumbnail
-    const thumbWrap = document.createElement('div');
-    thumbWrap.className = 'q-seller-products__thumb-wrap';
-
-    thumbWrap.appendChild(
-      createImageWithFallback({
-        src: product.primary_image_path,
-        alt: product.name || '',
-        size: 32,
-        imageClassName: 'q-seller-products__thumb',
-        placeholderClassName: 'q-seller-products__thumb-placeholder',
-        label: '',
-      })
-    );
-
-    card.appendChild(thumbWrap);
-
-    // Info
-    const info = document.createElement('div');
-    info.className = 'q-seller-products__info';
-
-    const headerRow = document.createElement('div');
-    headerRow.className = 'q-seller-products__card-header';
-
-    const title = document.createElement('h3');
-    title.className = 'q-seller-products__name';
-    title.textContent = product.name || 'Sin título';
-
-    const stateLabels = {
-      published: 'Publicado',
-      draft: 'Borrador',
-      unpublished: 'No publicado',
-    };
-    const badge = document.createElement('span');
-    badge.className = `q-seller-products__badge q-seller-products__badge--${product.state}`;
-    badge.textContent = stateLabels[product.state] || product.state;
-
-    headerRow.append(title, badge);
-    info.appendChild(headerRow);
-
-    const metaRow = document.createElement('div');
-    metaRow.className = 'q-seller-products__meta';
-
-    const price = document.createElement('span');
-    price.className = 'q-seller-products__price';
-    price.textContent = formatPrice(product.price, product.currency);
 
     const stock = document.createElement('span');
     stock.className = 'q-seller-products__stock';
     stock.textContent = `Stock: ${product.stock ?? 0}`;
+    const controls = card.querySelector('.product-card__seller-controls');
+    controls.appendChild(stock);
 
-    metaRow.append(price, stock);
-    info.appendChild(metaRow);
-
-    // Actions
-    const actions = document.createElement('div');
-    actions.className = 'q-seller-products__actions';
-
-    // Primary state-transition button
     if (product.state === 'published') {
-      // "Despublicar" — direct action, no confirmation
       const unpublishBtn = document.createElement('button');
       unpublishBtn.type = 'button';
       unpublishBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__unpublish-btn';
@@ -367,9 +318,8 @@ export class SellerProductsPageView {
       unpublishBtn.textContent = isUnpublishing ? 'Despublicando…' : 'Despublicar';
       unpublishBtn.disabled = isUnpublishing;
       unpublishBtn.addEventListener('click', () => this.viewModel.unpublishProduct(product.id));
-      actions.appendChild(unpublishBtn);
+      controls.appendChild(unpublishBtn);
     } else if (product.state === 'draft' || product.state === 'unpublished') {
-      // "Publicar" (covers draft → published and unpublished → published re-publish)
       const publishBtn = document.createElement('button');
       publishBtn.type = 'button';
       publishBtn.className = 'q-btn q-btn--primary q-btn--sm q-seller-products__publish-btn';
@@ -383,56 +333,27 @@ export class SellerProductsPageView {
         }
       }
       publishBtn.addEventListener('click', () => this.viewModel.publishProduct(product.id));
-      actions.appendChild(publishBtn);
+      controls.appendChild(publishBtn);
     }
 
-    // Secondary actions (always present for active states)
-    if (product.state !== 'archived') {
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__edit-btn';
-      editBtn.textContent = 'Editar';
-      editBtn.addEventListener('click', () => {
-        if (typeof this.onEditProduct === 'function') this.onEditProduct(product.id);
-      });
-      actions.appendChild(editBtn);
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.className = 'q-btn q-btn--ghost q-btn--sm q-seller-products__delete-btn';
-      deleteBtn.textContent = 'Eliminar';
-      deleteBtn.addEventListener('click', () => {
-        if (typeof this.onDeleteProduct === 'function') this.onDeleteProduct(product.id);
-      });
-      actions.appendChild(deleteBtn);
-    }
-
-    // Existing "Ver" link for published products (keep as-is, place after primary action)
-    if (product.state === 'published') {
+    if (product.state === 'published' && product.slug) {
       const viewBtn = document.createElement('button');
       viewBtn.type = 'button';
       viewBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn';
       viewBtn.textContent = 'Ver';
       viewBtn.addEventListener('click', () => {
-        if (typeof this.onViewProduct === 'function') {
-          this.onViewProduct(product.slug || product.id);
-        } else if (typeof this.onNavigate === 'function') {
-          this.onNavigate(`/products/${product.slug || product.id}`);
-        }
+        this.onViewProduct?.(product.slug);
       });
-      actions.appendChild(viewBtn);
+      controls.appendChild(viewBtn);
     }
 
-    // Existing publish error display (unchanged)
     if (this.viewModel.publishErrors[product.id]) {
       const errorSpan = document.createElement('span');
       errorSpan.className = 'q-seller-products__publish-error';
       errorSpan.textContent = this.viewModel.publishErrors[product.id];
-      actions.appendChild(errorSpan);
+      controls.appendChild(errorSpan);
     }
 
-    info.appendChild(actions);
-    card.appendChild(info);
     return card;
   }
 }

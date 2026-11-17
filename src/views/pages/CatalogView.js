@@ -1,7 +1,7 @@
 import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
 import { authStore as realAuthStore } from '../../store/authStore.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
-import { ProductCardView } from '../components/ProductCardView.js';
+import { ProductCard } from '../components/ProductCard.js';
 
 const ICONS = {
   search:
@@ -71,10 +71,10 @@ export class CatalogView {
     const results = document.createElement('div');
     results.className = 'q-catalog__results';
 
-    // Product grid container — must be <ul> because ProductCardView renders <li> cards
-    const grid = document.createElement('ul');
+    const grid = document.createElement('div');
     grid.className = 'q-catalog__grid';
     grid.id = 'q-catalog-grid';
+    grid.setAttribute('role', 'list');
     this._grid = grid;
     results.appendChild(grid);
 
@@ -335,13 +335,13 @@ export class CatalogView {
     this._grid.innerHTML = '';
 
     if (vm.isLoading) {
-      const loading = document.createElement('li');
+      const loading = document.createElement('div');
       loading.className = 'q-catalog__message q-catalog__message--loading';
       loading.setAttribute('role', 'status');
       loading.textContent = 'Cargando productos...';
       this._grid.appendChild(loading);
     } else if (vm.errorMessage) {
-      const error = document.createElement('li');
+      const error = document.createElement('div');
       error.className = 'q-catalog__message q-catalog__message--error';
       error.setAttribute('role', 'alert');
       error.textContent = vm.errorMessage;
@@ -349,7 +349,7 @@ export class CatalogView {
     } else if (vm.isNoResults) {
       this._grid.appendChild(this._createNoResults(vm));
     } else if (!vm.products || vm.products.length === 0) {
-      const empty = document.createElement('li');
+      const empty = document.createElement('div');
       empty.className = 'q-catalog__message q-catalog__message--empty';
       empty.textContent = 'No hay productos disponibles';
       this._grid.appendChild(empty);
@@ -359,35 +359,14 @@ export class CatalogView {
         const isOwn = Boolean(
           user && user.id && product.seller_id && user.id === product.seller_id
         );
-        const cardView = new ProductCardView(
-          {
-            id: product.id,
-            name: product.name,
-            sellerLine: product.seller || '', // Catalog may not have seller — leave empty
-            priceLabel: `${product.currency || 'USD'} ${Number(product.price || 0).toFixed(2)}`,
-            ratingLabel: product.average_rating
-              ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
-              : 'Sin reseñas',
-            ratingAccessible: product.average_rating
-              ? `Calificación ${Number(product.average_rating).toFixed(1)} de 5, ${product.ratings_count || 0} reseñas`
-              : 'Sin reseñas',
-            starsFilled: Array.from(
-              { length: 5 },
-              (_, i) => Number(product.average_rating) >= i + 0.5
-            ),
-            imageUrl: product.primary_image_path || null,
-            isNew: false,
-            stock: typeof product.stock === 'number' ? product.stock : null,
-            state: product.state || 'published',
-          },
-          {
-            variant: 'default',
-            onAddToCart: () => this.onAddToCart(product, 1),
-            detailHref: `/products/${product.slug || product.id}`,
-            hideCartButton: isOwn,
-          }
+        this._grid.appendChild(
+          new ProductCard({
+            product,
+            onAddToCart: (item, quantity) => this.onAddToCart(item, quantity),
+            onView: () => {},
+            hideAddToCart: isOwn,
+          }).render()
         );
-        this._grid.appendChild(cardView.render());
       });
     }
 
@@ -488,11 +467,11 @@ export class CatalogView {
 
   /**
    * @param {CatalogViewModel} vm
-   * @returns {HTMLLIElement}
+   * @returns {HTMLElement}
    * @private
    */
   _createNoResults(vm) {
-    const item = document.createElement('li');
+    const item = document.createElement('div');
     item.className = 'q-catalog__message q-catalog__message--no-results';
     item.setAttribute('role', 'status');
 

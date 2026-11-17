@@ -1,5 +1,7 @@
-const DEFAULT_PLACEHOLDER_SRC = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url)
-  .href;
+const DEFAULT_PLACEHOLDER_SRC = new URL(
+  '../../assets/icons/product-placeholder.svg',
+  import.meta.url
+).href;
 
 /**
  * Renders an <img> that falls back to the project placeholder when the

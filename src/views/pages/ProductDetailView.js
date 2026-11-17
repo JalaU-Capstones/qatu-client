@@ -1,9 +1,8 @@
 import { authStore as realAuthStore } from '../../store/authStore.js';
-import { formatPrice } from '../../utils/formatCurrency.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
 import { createImageWithFallback } from '../components/ImageWithFallback.js';
+import { ProductCard } from '../components/ProductCard.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
-import { RecommendationCardView } from '../components/RecommendationCardView.js';
 
 /**
  * Product detail page content view. Mounts INSIDE the persistent
@@ -633,21 +632,18 @@ export class ProductDetailView {
       return section;
     }
 
-    const grid = document.createElement('ul');
+    const grid = document.createElement('div');
     grid.className = 'q-product-detail__similar-grid';
+    grid.setAttribute('role', 'list');
 
     this.viewModel.similarProducts.forEach((product) => {
-      const card = new RecommendationCardView({
-        id: product.id,
-        name: product.name,
-        ratingLabel: product.average_rating
-          ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
-          : undefined,
-        priceLabel: formatPrice(product.price, product.currency),
-        imageUrl: product.primary_image_path || null,
-        detailHref: `/products/${product.slug || product.id}`,
-      });
-      grid.appendChild(card.render());
+      grid.appendChild(
+        new ProductCard({
+          product,
+          variant: 'compact',
+          onView: () => {},
+        }).render()
+      );
     });
 
     section.appendChild(grid);

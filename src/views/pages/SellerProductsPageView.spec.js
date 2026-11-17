@@ -74,7 +74,7 @@ describe('SellerProductsPageView', () => {
     await tick();
 
     expect(container.querySelector('.q-seller-products__empty')).not.toBeNull();
-    expect(container.querySelectorAll('.q-seller-products__card').length).toBe(0);
+    expect(container.querySelectorAll('[role="listitem"]').length).toBe(0);
     expect(container.textContent).toContain('No tienes productos en esta lista.');
   });
 
@@ -106,7 +106,7 @@ describe('SellerProductsPageView', () => {
       container.querySelector('[data-kpi="withImage"] .q-seller-products__kpi-value').textContent
     ).toBe('1');
 
-    expect(container.querySelectorAll('.q-seller-products__card').length).toBe(2);
+    expect(container.querySelectorAll('[role="listitem"]').length).toBe(2);
   });
 
   it('3. triggers setFilter when a filter tab is clicked', async () => {
@@ -222,7 +222,7 @@ describe('SellerProductsPageView', () => {
     await tick();
 
     expect(container.querySelector('.q-seller-products__error')).toBeNull();
-    expect(container.querySelectorAll('.q-seller-products__card').length).toBe(1);
+    expect(container.querySelectorAll('[role="listitem"]').length).toBe(1);
   });
 
   it('9. displays publish error on the card if publishing fails', async () => {
@@ -338,10 +338,9 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    const badge = container.querySelector('.q-seller-products__badge');
+    const badge = container.querySelector('.product-card__status');
     expect(badge).not.toBeNull();
     expect(badge.textContent).toBe('No publicado');
-    expect(badge.classList.contains('q-seller-products__badge--unpublished')).toBe(true);
   });
 
   it('15. enables Publicar button for unpublished card with primary_image_path', async () => {
@@ -404,7 +403,8 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    const editBtn = container.querySelector('.q-seller-products__edit-btn');
+    container.querySelector('button[aria-label^="Acciones de"]').click();
+    const editBtn = container.querySelector('button[aria-label^="Editar"]');
     expect(editBtn).not.toBeNull();
     expect(editBtn.textContent).toBe('Editar');
 
@@ -427,7 +427,8 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    const deleteBtn = container.querySelector('.q-seller-products__delete-btn');
+    container.querySelector('button[aria-label^="Acciones de"]').click();
+    const deleteBtn = container.querySelector('button[aria-label^="Eliminar"]');
     expect(deleteBtn).not.toBeNull();
     expect(deleteBtn.textContent).toBe('Eliminar');
 
@@ -486,7 +487,7 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    const placeholder = container.querySelector('.q-seller-products__thumb-placeholder');
+    const placeholder = container.querySelector('img[src*="product-placeholder.svg"]');
     expect(placeholder).not.toBeNull();
   });
 });

@@ -21,7 +21,6 @@ import './views/pages/seller-product-form.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
-import './views/components/recommendation-card.css';
 import './views/pages/product-detail.css';
 import './views/pages/cart.css';
 import './views/pages/checkout.css';

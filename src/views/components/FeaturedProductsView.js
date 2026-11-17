@@ -1,6 +1,6 @@
 import { authStore as realAuthStore } from '../../store/authStore.js';
 import { FeaturedProductsViewModel } from '../../viewmodels/components/FeaturedProductsViewModel.js';
-import { ProductCardView } from './ProductCardView.js';
+import { ProductCard } from './ProductCard.js';
 
 /**
  * View component for the Featured products section of the home page.
@@ -171,8 +171,9 @@ export class FeaturedProductsView {
    * @private
    */
   _renderGrid() {
-    const grid = document.createElement('ul');
+    const grid = document.createElement('div');
     grid.className = 'q-featured-grid';
+    grid.setAttribute('role', 'list');
 
     this.viewModel.products.forEach((product) => {
       grid.appendChild(this._renderCard(product));
@@ -189,28 +190,11 @@ export class FeaturedProductsView {
   _renderCard(product) {
     const user = this.authStore.getUser();
     const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
-    const cardView = new ProductCardView(
-      {
-        id: product.id,
-        name: product.name,
-        sellerLine: this.viewModel.getOriginLabel(product),
-        priceLabel: this.viewModel.getPriceLabel(product),
-        ratingLabel: this.viewModel.getRatingLabel(product),
-        ratingAccessible: this.viewModel.getRatingAccessibleLabel(product),
-        starsFilled: this.viewModel.getStarsFilled(product),
-        imageUrl: this.viewModel.getImageUrl(product),
-        isNew: this.viewModel.isNewProduct(product),
-        stock: typeof product.stock === 'number' ? product.stock : null,
-        state: product.state || 'published',
-      },
-      {
-        variant: 'featured',
-        onAddToCart: (id) => this.viewModel.addToCart(id),
-        onToggleFavorite: () => {},
-        detailHref: `/products/${product.slug || product.id}`,
-        hideCartButton: isOwn,
-      }
-    );
-    return cardView.render();
+    return new ProductCard({
+      product,
+      onAddToCart: (item, quantity) => this.viewModel.addToCart(item.id, quantity),
+      onView: () => {},
+      hideAddToCart: isOwn,
+    }).render();
   }
 }
