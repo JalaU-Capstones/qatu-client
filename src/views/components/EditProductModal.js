@@ -432,10 +432,7 @@ export class EditProductModal {
     saveBtn.className = 'q-btn q-btn--primary q-edit-product-modal__save-btn';
     saveBtn.dataset.action = 'save';
     saveBtn.textContent = vm.isSaving ? 'Guardando…' : 'Guardar';
-    saveBtn.toggleAttribute(
-      'disabled',
-      !vm.isDirty || vm.isSaving || vm.isLoading
-    );
+    saveBtn.toggleAttribute('disabled', !vm.isDirty || vm.isSaving || vm.isLoading);
     saveBtn.addEventListener('click', async () => {
       const res = await vm.save();
       if (res && res.status === 'success') {
