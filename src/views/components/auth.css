@@ -10,7 +10,7 @@
   display: grid;
   grid-template-columns: 52fr 48fr;
   width: 100%;
-  overflow: visible;
+  overflow: hidden;
   min-height: calc(100vh - var(--q-header-height, 72) * 1px);
   background: var(--q-auth-cream, #f6f2ec);
 }

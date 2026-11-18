@@ -43,7 +43,7 @@ describe('HeaderView', () => {
     expect(nav).not.toBeNull();
 
     const links = el.querySelectorAll('.q-navbar-link');
-    expect(links.length).toBe(3);
+    expect(links.length).toBe(2);
   });
 
   it('login button text is "Iniciar sesión"', () => {
@@ -234,8 +234,8 @@ describe('HeaderView', () => {
     el.querySelector('.q-header-seller-products-btn').click();
     el.querySelector('.q-header-logout-btn').click();
 
-    el.querySelector('.q-header-cat-dropdown__trigger').click();
-    el.querySelector('.q-header-cat-dropdown__menu a').click();
+    expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+    expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
 
     const searchInput = el.querySelector('.q-header-search__input');
     searchInput.value = 'zapatos';
@@ -254,7 +254,7 @@ describe('HeaderView', () => {
     expect(callbacks.onSellerOrdersClick).toHaveBeenCalled();
     expect(callbacks.onSellerProductsClick).toHaveBeenCalled();
     expect(callbacks.onLogoutClick).toHaveBeenCalled();
-    expect(callbacks.onCategoryClick).toHaveBeenCalledWith('cat-1');
+    expect(callbacks.onCategoryClick).not.toHaveBeenCalled();
     expect(callbacks.onSearch).toHaveBeenCalledWith('zapatos');
   });
 
@@ -542,28 +542,25 @@ describe('HeaderView', () => {
       viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
       const el = view.render();
 
-      const trigger = el.querySelector('.q-header-cat-dropdown__trigger');
-      expect(trigger).not.toBeNull();
-      expect(trigger.textContent).toContain('Categorías');
-
-      const menu = el.querySelector('.q-header-cat-dropdown__menu');
-      expect(menu).not.toBeNull();
-      expect(menu.textContent).toContain('Electrónica');
+      expect(viewModel.categories).toEqual([{ id: 1, name: 'Electrónica' }]);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
     });
 
     it('clicking the trigger toggles the menu (hidden attribute)', () => {
       viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
       const el = view.render();
 
-      const trigger = el.querySelector('.q-header-cat-dropdown__trigger');
-      const menu = el.querySelector('.q-header-cat-dropdown__menu');
-      expect(menu.hasAttribute('hidden')).toBe(true);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+    });
 
-      trigger.click();
-      expect(menu.hasAttribute('hidden')).toBe(false);
+    it('header does NOT render the categorias dropdown or nav item', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
 
-      trigger.click();
-      expect(menu.hasAttribute('hidden')).toBe(true);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
     });
 
     it('search form: submitting with text calls viewModel.triggerSearch', () => {
@@ -641,11 +638,11 @@ describe('HeaderView', () => {
         const el = view.mount(container);
 
         viewModel.setCategories([{ id: 'cat-new', name: 'Cerámica' }]);
-        expect(el.querySelector('.q-header-cat-dropdown__menu').textContent).toContain('Cerámica');
-        el.querySelector('.q-header-cat-dropdown__trigger').click();
-        el.querySelector('.q-header-cat-dropdown__menu a').click();
+        expect(viewModel.categories).toEqual([{ id: 'cat-new', name: 'Cerámica' }]);
+        expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+        expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
 
-        expect(onCategoryClick).toHaveBeenCalledWith('cat-new');
+        expect(onCategoryClick).not.toHaveBeenCalled();
       });
     });
 
@@ -655,11 +652,11 @@ describe('HeaderView', () => {
       const el = view.mount(container);
 
       viewModel.setCategories([{ id: 'cat-new', name: 'Cerámica' }]);
-      expect(el.querySelector('.q-header-cat-dropdown__menu').textContent).toContain('Cerámica');
-      el.querySelector('.q-header-cat-dropdown__trigger').click();
-      el.querySelector('.q-header-cat-dropdown__menu a').click();
+      expect(viewModel.categories).toEqual([{ id: 'cat-new', name: 'Cerámica' }]);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
 
-      expect(onCategoryClick).toHaveBeenCalledWith('cat-new');
+      expect(onCategoryClick).not.toHaveBeenCalled();
     });
 
     it('search: empty submit does nothing', () => {

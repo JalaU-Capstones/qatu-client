@@ -61,7 +61,8 @@ export class HeaderView {
     const navWrapper = document.createElement('div');
     navWrapper.className = 'q-header-nav';
     navWrapper.appendChild(this.navbarView.render());
-    this._replaceCategoriasWithDropdown();
+    const categoriesLink = navWrapper.querySelector('[data-link-id="nav-categorias"]');
+    if (categoriesLink) categoriesLink.remove();
 
     // 3. Right Actions
     const actionsWrapper = document.createElement('div');
@@ -242,76 +243,6 @@ export class HeaderView {
 
     form.append(input, toggle);
     return form;
-  }
-
-  _replaceCategoriasWithDropdown() {
-    const nav = this.navbarView.element;
-    if (!nav) return;
-    const catLink = nav.querySelector('[data-link-id="nav-categorias"]');
-    if (catLink && catLink.parentElement) {
-      const dropdown = this._createCatDropdown();
-      catLink.parentElement.replaceChild(dropdown, catLink);
-    }
-  }
-
-  _createCatDropdown() {
-    const container = document.createElement('div');
-    container.className = 'q-header-cat-dropdown';
-
-    const triggerBtn = document.createElement('button');
-    triggerBtn.type = 'button';
-    triggerBtn.className = 'q-navbar-link q-header-nav__link q-header-cat-dropdown__trigger';
-    triggerBtn.innerHTML = `
-      Categorías
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="q-header-cat-dropdown__chevron">
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
-    `;
-
-    const menu = document.createElement('div');
-    menu.className = 'q-header-cat-dropdown__menu';
-    menu.setAttribute('hidden', '');
-
-    this._renderCatDropdownItems(menu);
-
-    triggerBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (menu.hasAttribute('hidden')) {
-        menu.removeAttribute('hidden');
-      } else {
-        menu.setAttribute('hidden', '');
-      }
-    });
-
-    container.appendChild(triggerBtn);
-    container.appendChild(menu);
-    return container;
-  }
-
-  _renderCatDropdownItems(menu) {
-    menu.replaceChildren();
-    if (!this.viewModel.categories || this.viewModel.categories.length === 0) {
-      const empty = document.createElement('span');
-      empty.className = 'q-header-cat-dropdown__empty';
-      empty.textContent = 'Cargando…';
-      menu.appendChild(empty);
-      return;
-    }
-
-    for (const cat of this.viewModel.categories) {
-      const a = document.createElement('a');
-      a.href = `/products?category=${encodeURIComponent(cat.id)}`;
-      a.dataset.route = '';
-      a.textContent = cat.name;
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        menu.setAttribute('hidden', '');
-        this.viewModel.triggerCategory(cat.id);
-      });
-      menu.appendChild(a);
-    }
   }
 
   /**
@@ -610,11 +541,6 @@ export class HeaderView {
 
     this._syncSellerLink(vm);
 
-    const catMenu = this.element.querySelector('.q-header-cat-dropdown__menu');
-    if (catMenu) {
-      this._renderCatDropdownItems(catMenu);
-    }
-
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');
     if (dropdown) {
@@ -634,16 +560,6 @@ export class HeaderView {
   _handleDocumentClick(event) {
     if (this.viewModel.isDropdownOpen && this.element && !this.element.contains(event.target)) {
       this.viewModel.closeDropdown();
-    }
-    const catDropdown = this.element?.querySelector('.q-header-cat-dropdown');
-    const catMenu = this.element?.querySelector('.q-header-cat-dropdown__menu');
-    if (
-      catMenu &&
-      !catMenu.hasAttribute('hidden') &&
-      catDropdown &&
-      !catDropdown.contains(event.target)
-    ) {
-      catMenu.setAttribute('hidden', '');
     }
   }
 
