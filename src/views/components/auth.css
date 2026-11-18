@@ -131,8 +131,8 @@
 .q-auth__card {
   box-sizing: border-box;
   width: 100%;
-  max-width: 420px;
-  padding: clamp(28px, 3vw, 40px);
+  max-width: 530px;
+  padding: clamp(27px, 2.5vw, 32px);
   border: 1px solid transparent;
   border-radius: calc(var(--q-radius-lg, 12) * 1px);
   background: var(--q-bg-surface);
@@ -219,14 +219,65 @@
 }
 
 .q-auth-input-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
+}
+
+.q-auth-password-input {
+  padding-right: 40px;
+}
+
+.q-auth-password-toggle {
+  position: absolute;
+  right: 12px;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--q-fg-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.q-auth-password-toggle:hover,
+.q-auth-password-toggle:focus,
+.q-auth-password-toggle:focus-visible {
+  opacity: 1;
+}
+
+.q-auth-password-toggle:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--q-accent);
+  outline-offset: 2px;
+}
+
+.q-auth-password-toggle svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.q-auth-password-eye-off {
+  display: none;
+}
+
+.q-auth-password-toggle.is-revealed .q-auth-password-eye {
+  display: none;
+}
+
+.q-auth-password-toggle.is-revealed .q-auth-password-eye-off {
+  display: block;
 }
 
 .q-auth__input {
   box-sizing: border-box;
   width: 100%;
-  height: 40px;
+  height: 46px;
   padding: 0 12px;
   border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-md, 8) * 1px);
@@ -291,7 +342,7 @@
 .q-auth__card .q-auth__google {
   display: flex;
   width: 100%;
-  height: 44px;
+  height: 48px;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
@@ -311,6 +362,10 @@
 .q-auth__card .q-auth__submit:disabled {
   cursor: wait;
   opacity: 0.7;
+}
+
+.q-auth__card .q-auth__google {
+  height: 50px;
 }
 
 .q-auth__error {

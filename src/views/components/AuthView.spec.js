@@ -193,6 +193,85 @@ describe('AuthView', () => {
     expect(viewModel.registerData.acceptTerms).toBe(true);
   });
 
+  it('should render a password toggle for login and both register password fields', () => {
+    const el = view.render();
+
+    expect(el.querySelectorAll('#q-login-password + *').length).toBe(1);
+    expect(el.querySelectorAll('.q-login-panel .q-auth-password-toggle').length).toBe(0);
+    expect(el.querySelectorAll('.q-auth-password-toggle').length).toBe(3);
+  });
+
+  it('should give the login password toggle the correct controls and initial state', () => {
+    const el = view.render();
+    const input = el.querySelector('#q-login-password');
+    const toggle = el.querySelector('.q-login-form .q-auth-password-toggle');
+
+    expect(toggle).not.toBeNull();
+    expect(toggle.type).toBe('button');
+    expect(toggle.getAttribute('aria-controls')).toBe(input.id);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('Mostrar contraseña');
+  });
+
+  it('should toggle the login password input type and accessible state', () => {
+    const el = view.render();
+    container.appendChild(el);
+    const input = el.querySelector('#q-login-password');
+    const toggle = el.querySelector('.q-login-form .q-auth-password-toggle');
+    input.value = 'hunter2';
+
+    toggle.click();
+
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('hunter2');
+    expect(document.activeElement).toBe(input);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Ocultar contraseña');
+
+    toggle.click();
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('should keep register password toggles independent', () => {
+    const el = view.render();
+    const password = el.querySelector('#q-register-password');
+    const confirm = el.querySelector('#q-register-confirm-password');
+    const toggles = el.querySelectorAll('.q-register-form .q-auth-password-toggle');
+
+    expect(toggles.length).toBe(2);
+    toggles[0].click();
+    expect(password.type).toBe('text');
+    expect(confirm.type).toBe('password');
+
+    toggles[1].click();
+    expect(password.type).toBe('text');
+    expect(confirm.type).toBe('text');
+  });
+
+  it('should expose every password toggle as keyboard-focusable', () => {
+    const el = view.render();
+    const toggles = el.querySelectorAll('.q-auth-password-toggle');
+
+    expect(toggles.length).toBe(3);
+    toggles.forEach((toggle) => {
+      expect(toggle.tabIndex).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it('should preserve independent aria-controls for every password field', () => {
+    const el = view.render();
+    const controls = Array.from(el.querySelectorAll('.q-auth-password-toggle')).map((toggle) =>
+      toggle.getAttribute('aria-controls')
+    );
+
+    expect(controls).toEqual([
+      'q-login-password',
+      'q-register-password',
+      'q-register-confirm-password',
+    ]);
+  });
+
   it('should trigger login submit when login form is submitted', () => {
     let submitted = false;
     viewModel.onLogin = () => {

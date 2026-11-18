@@ -59,6 +59,53 @@ export class AuthView {
   }
 
   /**
+   * Adds an independent password-visibility control to a password input.
+   * @param {HTMLInputElement} input
+   * @private
+   */
+  _installPasswordToggle(input) {
+    const wrapper = input.closest('.q-auth-input-wrapper');
+    if (!wrapper) return;
+
+    input.classList.add('q-auth-password-input');
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'q-auth-password-toggle';
+    toggle.setAttribute('aria-controls', input.id);
+    toggle.setAttribute('aria-label', 'Mostrar contraseña');
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.innerHTML = `
+      <svg class="q-auth-password-eye" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </svg>
+      <svg class="q-auth-password-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m3 3 18 18M10.6 7.2A9.8 9.8 0 0 1 12 7c6 0 9.5 5 9.5 5a14 14 0 0 1-2.1 2.3M6.6 6.8C3.9 8.5 2.5 12 2.5 12s3.5 5 9.5 5c1.2 0 2.3-.2 3.3-.5M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+
+    toggle.addEventListener('click', () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const direction = input.selectionDirection;
+      const revealed = input.type === 'password';
+
+      input.type = revealed ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', String(revealed));
+      toggle.setAttribute('aria-label', revealed ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      toggle.classList.toggle('is-revealed', revealed);
+
+      input.focus();
+      if (typeof start === 'number' && typeof end === 'number') {
+        input.setSelectionRange(start, end, direction || 'none');
+      }
+    });
+
+    wrapper.appendChild(toggle);
+  }
+
+  /**
    * Creates the Login Form Panel (Left side).
    * @returns {HTMLElement}
    * @private
@@ -153,6 +200,7 @@ export class AuthView {
     passwordInput.addEventListener('input', (e) => {
       this.viewModel.setLoginField('password', e.target.value);
     });
+    this._installPasswordToggle(passwordInput);
 
     const rememberInput = panel.querySelector('#q-login-remember');
     rememberInput.addEventListener('change', (e) => {
@@ -340,6 +388,8 @@ export class AuthView {
     confirmPassInput.addEventListener('input', (e) => {
       this.viewModel.setRegisterField('confirmPassword', e.target.value);
     });
+    this._installPasswordToggle(passInput);
+    this._installPasswordToggle(confirmPassInput);
 
     const termsInput = panel.querySelector('#q-register-terms');
     termsInput.addEventListener('change', (e) => {
