@@ -56,7 +56,7 @@ describe('CatalogView', () => {
     view.mount(container);
 
     // Content-only: no shell elements
-    expect(container.querySelector('header, .q-header')).toBeNull();
+    expect(container.querySelector('.q-header')).toBeNull();
     expect(container.querySelector('footer, .q-footer')).toBeNull();
     expect(container.querySelector('main')).toBeNull();
 
@@ -65,7 +65,7 @@ describe('CatalogView', () => {
 
     const title = container.querySelector('.q-catalog__title');
     expect(title).not.toBeNull();
-    expect(title.textContent).toBe('Catálogo');
+    expect(title.textContent).toBe('Todos los productos');
 
     const subtitle = container.querySelector('.q-catalog__subtitle');
     expect(subtitle).not.toBeNull();
@@ -329,18 +329,15 @@ describe('CatalogView', () => {
 
     it('should render removable chips for active filters', () => {
       mockViewModel.hasActiveFilters = true;
-      mockViewModel.activeFilterChips = [
-        { key: 'search', label: '«phone»' },
-        { key: 'category', label: 'Electronics' },
-      ];
+      mockViewModel.activeFilterChips = [{ key: 'category', label: 'Electronics' }];
       const view = new CatalogView(mockViewModel);
       view.mount(container);
 
       const chips = container.querySelectorAll('.q-catalog__chip');
-      expect(chips.length).toBe(2);
+      expect(chips.length).toBe(1);
 
       chips[0].querySelector('.q-catalog__chip-remove').click();
-      expect(mockViewModel.removeFilter).toHaveBeenCalledWith('search');
+      expect(mockViewModel.removeFilter).toHaveBeenCalledWith('category');
       view.destroy();
     });
 
@@ -369,16 +366,102 @@ describe('CatalogView', () => {
       mockViewModel.hasActiveFilters = true;
       mockViewModel.title = 'Resultados para «phone»';
       mockViewModel.resultsLabel = '3 resultados encontrados';
+      mockViewModel.meta = { page: 1, per_page: 20, total: 3, total_pages: 1 };
       mockViewModel.notify();
 
       expect(container.querySelector('.q-catalog__title').textContent).toBe(
         'Resultados para «phone»'
       );
       expect(container.querySelector('.q-catalog__eyebrow').textContent).toBe(
-        '3 resultados encontrados'
+        '3 RESULTADOS ENCONTRADOS'
       );
       view.destroy();
     });
+  });
+
+  it('renders the eyebrow count and title for a search query', () => {
+    mockViewModel.filters = { ...mockViewModel.filters, search: 'chompa' };
+    mockViewModel.meta = { page: 1, per_page: 20, total: 48, total_pages: 3 };
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    expect(container.querySelector('.q-catalog__eyebrow').textContent).toBe(
+      '48 RESULTADOS ENCONTRADOS'
+    );
+    expect(container.querySelector('.q-catalog__title').textContent).toBe(
+      'Resultados para «chompa»'
+    );
+    view.destroy();
+  });
+
+  it("renders 'Todos los productos' when no search query", () => {
+    mockViewModel.filters = { search: '', category: '', minPrice: null, maxPrice: null };
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    expect(container.querySelector('.q-catalog__title').textContent).toBe('Todos los productos');
+    view.destroy();
+  });
+
+  it('renders active-filter chips and removes one on click', () => {
+    mockViewModel.filters = {
+      search: '',
+      category: 'textiles',
+      minPrice: 200,
+      maxPrice: 700,
+    };
+    mockViewModel.hasActiveFilters = true;
+    mockViewModel.categories = [{ id: 'c1', name: 'Textiles', slug: 'textiles' }];
+    mockViewModel.activeFilterChips = [
+      { key: 'category', label: 'Textiles' },
+      { key: 'price', label: 'USD 200.00 — USD 700.00' },
+    ];
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const chips = container.querySelectorAll('.q-catalog__chip');
+    expect(chips.length).toBe(2);
+    chips[0].querySelector('.q-catalog__chip-remove').click();
+    expect(mockViewModel.removeFilter).toHaveBeenCalledWith('category');
+    view.destroy();
+  });
+
+  it('renders the sort select disabled when sort is not supported', () => {
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const sort = container.querySelector('.q-catalog__sort select');
+    expect(sort.disabled).toBe(true);
+    expect(sort.getAttribute('aria-disabled')).toBe('true');
+    expect(sort.title).toBe('Ordenamiento próximamente');
+    view.destroy();
+  });
+
+  it('renders the back link to / and uses the catalog grid class', () => {
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const back = container.querySelector('.q-catalog__back');
+    expect(back.getAttribute('href')).toBe('/');
+    expect(container.querySelector('#q-catalog-grid').classList.contains('q-catalog__grid')).toBe(
+      true
+    );
+    view.destroy();
+  });
+
+  it('filters panel still calls the same apply method as before refactor', () => {
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    container
+      .querySelector('.q-catalog__filters-form')
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    expect(mockViewModel.applyFilters).toHaveBeenCalled();
+    view.destroy();
   });
 
   // ─── authStore / own product (C5) ────────────────────────────────────────

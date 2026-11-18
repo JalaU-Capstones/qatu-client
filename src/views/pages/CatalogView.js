@@ -1,5 +1,6 @@
 import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
 import { authStore as realAuthStore } from '../../store/authStore.js';
+import { formatPrice } from '../../utils/formatCurrency.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
 import { ProductCard } from '../components/ProductCard.js';
 
@@ -58,12 +59,6 @@ export class CatalogView {
     inner.appendChild(this._createHeader());
     inner.appendChild(this._createSearchForm());
 
-    const chips = document.createElement('ul');
-    chips.className = 'q-catalog__chips';
-    chips.setAttribute('aria-label', 'Filtros aplicados');
-    this._refs.chips = chips;
-    inner.appendChild(chips);
-
     const layout = document.createElement('div');
     layout.className = 'q-catalog__layout';
     layout.appendChild(this._createFiltersPanel());
@@ -71,7 +66,7 @@ export class CatalogView {
     const results = document.createElement('div');
     results.className = 'q-catalog__results';
 
-    const grid = document.createElement('div');
+    const grid = document.createElement('ul');
     grid.className = 'q-catalog__grid';
     grid.id = 'q-catalog-grid';
     grid.setAttribute('role', 'list');
@@ -108,16 +103,34 @@ export class CatalogView {
    * @private
    */
   _createHeader() {
-    const headerDiv = document.createElement('div');
+    const headerDiv = document.createElement('header');
     headerDiv.className = 'q-catalog__header';
+
+    const backLink = document.createElement('a');
+    backLink.className = 'q-catalog__back';
+    backLink.href = '/';
+    backLink.setAttribute('data-route', '');
+    backLink.textContent = 'Volver al inicio →';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'q-catalog__header-row';
 
     const heading = document.createElement('div');
     heading.className = 'q-catalog__heading';
+
+    const eyebrowRow = document.createElement('div');
+    eyebrowRow.className = 'q-catalog__eyebrow-row';
+
+    const eyebrowDot = document.createElement('span');
+    eyebrowDot.className = 'q-catalog__eyebrow-dot';
+    eyebrowDot.setAttribute('aria-hidden', 'true');
 
     const eyebrow = document.createElement('p');
     eyebrow.className = 'q-catalog__eyebrow';
     eyebrow.setAttribute('aria-live', 'polite');
     this._refs.eyebrow = eyebrow;
+    eyebrowRow.appendChild(eyebrowDot);
+    eyebrowRow.appendChild(eyebrow);
 
     const title = document.createElement('h1');
     title.className = 'q-catalog__title';
@@ -128,18 +141,47 @@ export class CatalogView {
     subtitle.textContent = 'Explora todos nuestros productos disponibles';
     this._refs.subtitle = subtitle;
 
-    heading.appendChild(eyebrow);
+    heading.appendChild(eyebrowRow);
     heading.appendChild(title);
     heading.appendChild(subtitle);
 
-    const backLink = document.createElement('a');
-    backLink.className = 'q-catalog__back';
-    backLink.href = '/';
-    backLink.setAttribute('data-route', '');
-    backLink.innerHTML = `<span>Volver al inicio</span>${ICONS.arrowRight}`;
+    const chips = document.createElement('ul');
+    chips.className = 'q-catalog__chips q-catalog__active-filters';
+    chips.setAttribute('aria-label', 'Filtros aplicados');
+    this._refs.chips = chips;
+    heading.appendChild(chips);
 
-    headerDiv.appendChild(heading);
+    const sortLabel = document.createElement('label');
+    sortLabel.className = 'q-catalog__sort';
+    const srOnly = document.createElement('span');
+    srOnly.className = 'q-sr-only';
+    srOnly.textContent = 'Ordenar por';
+    const sortSelect = document.createElement('select');
+    sortSelect.setAttribute('aria-label', 'Ordenar por');
+    ['Recientes', 'Precio: menor a mayor', 'Precio: mayor a menor', 'Mejor valorados'].forEach(
+      (labelText) => {
+        const option = document.createElement('option');
+        option.textContent = labelText;
+        sortSelect.appendChild(option);
+      }
+    );
+    if (
+      !Object.prototype.hasOwnProperty.call(this.viewModel, 'sort') &&
+      typeof this.viewModel.sort !== 'string'
+    ) {
+      sortSelect.disabled = true;
+      sortSelect.setAttribute('aria-disabled', 'true');
+      sortSelect.title = 'Ordenamiento próximamente';
+    }
+    this._refs.sortSelect = sortSelect;
+    sortLabel.appendChild(srOnly);
+    sortLabel.appendChild(sortSelect);
+
+    titleRow.appendChild(heading);
+    titleRow.appendChild(sortLabel);
+
     headerDiv.appendChild(backLink);
+    headerDiv.appendChild(titleRow);
     return headerDiv;
   }
 
@@ -203,6 +245,19 @@ export class CatalogView {
     panel.className = 'q-catalog__filters';
     panel.setAttribute('aria-labelledby', 'q-catalog-filters-title');
 
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'q-catalog__filters-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', 'q-catalog-filters-body');
+    toggle.textContent = 'Filtros';
+    toggle.addEventListener('click', () => {
+      const open = panel.classList.toggle('q-catalog__filters--open');
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+    this._refs.filtersToggle = toggle;
+    panel.appendChild(toggle);
+
     const heading = document.createElement('h2');
     heading.className = 'q-catalog__filters-title';
     heading.id = 'q-catalog-filters-title';
@@ -210,6 +265,7 @@ export class CatalogView {
 
     const form = document.createElement('form');
     form.className = 'q-catalog__filters-form';
+    form.id = 'q-catalog-filters-body';
     form.noValidate = true;
 
     const categorySelect = document.createElement('select');
@@ -226,8 +282,29 @@ export class CatalogView {
     const fields = document.createElement('div');
     fields.className = 'q-catalog__filters-fields';
     fields.appendChild(this._createField('Categoría', categorySelect));
-    fields.appendChild(this._createField('Precio mínimo (USD)', minPriceInput));
-    fields.appendChild(this._createField('Precio máximo (USD)', maxPriceInput));
+    fields.appendChild(this._createField('Precio mínimo', minPriceInput));
+
+    const maxField = this._createField('Precio máximo', maxPriceInput);
+    const maxHint = document.createElement('span');
+    maxHint.className = 'q-catalog__filters-hint';
+    maxHint.textContent = 'Bs 2.000';
+    maxHint.hidden = false;
+    maxField.appendChild(maxHint);
+    maxPriceInput.addEventListener('input', () => {
+      maxHint.hidden = Boolean(maxPriceInput.value);
+    });
+    fields.appendChild(maxField);
+
+    const stockLabel = document.createElement('label');
+    stockLabel.className = 'q-catalog__stock-label';
+    const stockInput = document.createElement('input');
+    stockInput.type = 'checkbox';
+    stockInput.disabled = true;
+    stockInput.setAttribute('aria-disabled', 'true');
+    stockInput.title = 'Filtro de stock próximamente';
+    stockLabel.appendChild(stockInput);
+    stockLabel.appendChild(document.createTextNode(' Solo con stock'));
+    fields.appendChild(stockLabel);
 
     const error = document.createElement('p');
     error.className = 'q-catalog__filters-error';
@@ -335,13 +412,13 @@ export class CatalogView {
     this._grid.innerHTML = '';
 
     if (vm.isLoading) {
-      const loading = document.createElement('div');
+      const loading = document.createElement('li');
       loading.className = 'q-catalog__message q-catalog__message--loading';
       loading.setAttribute('role', 'status');
       loading.textContent = 'Cargando productos...';
       this._grid.appendChild(loading);
     } else if (vm.errorMessage) {
-      const error = document.createElement('div');
+      const error = document.createElement('li');
       error.className = 'q-catalog__message q-catalog__message--error';
       error.setAttribute('role', 'alert');
       error.textContent = vm.errorMessage;
@@ -349,7 +426,7 @@ export class CatalogView {
     } else if (vm.isNoResults) {
       this._grid.appendChild(this._createNoResults(vm));
     } else if (!vm.products || vm.products.length === 0) {
-      const empty = document.createElement('div');
+      const empty = document.createElement('li');
       empty.className = 'q-catalog__message q-catalog__message--empty';
       empty.textContent = 'No hay productos disponibles';
       this._grid.appendChild(empty);
@@ -379,12 +456,14 @@ export class CatalogView {
    */
   _updateHeader(vm) {
     const { eyebrow, title, subtitle } = this._refs;
-    title.textContent = vm.title;
+    title.textContent = vm.filters.search
+      ? `Resultados para «${vm.filters.search}»`
+      : 'Todos los productos';
     subtitle.hidden = Boolean(vm.filters.search);
-
-    const showCount = vm.hasActiveFilters && !vm.isLoading && !vm.errorMessage;
-    eyebrow.textContent = showCount ? vm.resultsLabel : '';
-    eyebrow.hidden = !showCount;
+    const total = vm.meta?.total || 0;
+    eyebrow.textContent =
+      total === 1 ? '1 RESULTADO ENCONTRADO' : `${total} RESULTADOS ENCONTRADOS`;
+    eyebrow.hidden = false;
   }
 
   /**
@@ -441,7 +520,32 @@ export class CatalogView {
   _updateChips(vm) {
     const list = this._refs.chips;
     list.innerHTML = '';
-    const chips = vm.activeFilterChips;
+    const chips = (vm.activeFilterChips || [])
+      .filter((chip) => chip.key !== 'search')
+      .map((chip) => ({ ...chip }));
+    if (vm.filters?.category && !chips.some((chip) => chip.key === 'category')) {
+      const category = (vm.categories || []).find((item) => item.slug === vm.filters.category);
+      chips.push({
+        key: 'category',
+        label: category?.name || vm.filters.category,
+      });
+    }
+    if (vm.filters?.minPrice !== null || vm.filters?.maxPrice !== null) {
+      const min = vm.filters.minPrice;
+      const max = vm.filters.maxPrice;
+      const priceLabel =
+        min !== null && max !== null
+          ? `${formatPrice(min, 'BOB')} — ${formatPrice(max, 'BOB')}`
+          : min !== null
+            ? `Desde ${formatPrice(min, 'BOB')}`
+            : `Hasta ${formatPrice(max, 'BOB')}`;
+      const existingPrice = chips.find((chip) => chip.key === 'price');
+      if (existingPrice) {
+        existingPrice.label = priceLabel;
+      } else {
+        chips.push({ key: 'price', label: priceLabel });
+      }
+    }
     list.hidden = chips.length === 0;
 
     chips.forEach((chip) => {
@@ -456,7 +560,8 @@ export class CatalogView {
       remove.className = 'q-catalog__chip-remove';
       remove.setAttribute('aria-label', `Quitar filtro ${chip.label}`);
       remove.dataset.filterKey = chip.key;
-      remove.innerHTML = ICONS.close;
+      remove.innerHTML = '×';
+      remove.setAttribute('aria-hidden', 'false');
       remove.addEventListener('click', () => this.viewModel.removeFilter(chip.key));
 
       item.appendChild(label);
@@ -471,7 +576,7 @@ export class CatalogView {
    * @private
    */
   _createNoResults(vm) {
-    const item = document.createElement('div');
+    const item = document.createElement('li');
     item.className = 'q-catalog__message q-catalog__message--no-results';
     item.setAttribute('role', 'status');
 
