@@ -2,7 +2,7 @@ import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.
 import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
-import { ProductCard } from '../components/ProductCard.js';
+import { ProductCardView } from '../components/ProductCardView.js';
 
 const ICONS = {
   search:
@@ -436,14 +436,36 @@ export class CatalogView {
         const isOwn = Boolean(
           user && user.id && product.seller_id && user.id === product.seller_id
         );
-        this._grid.appendChild(
-          new ProductCard({
-            product,
-            onAddToCart: (item, quantity) => this.onAddToCart(item, quantity),
-            onView: () => {},
-            hideAddToCart: isOwn,
-          }).render()
+        const rating = Number(product.average_rating || 0);
+        const cardView = new ProductCardView(
+          {
+            id: product.id,
+            name: product.name,
+            sellerLine: product.seller?.full_name || product.seller || '',
+            priceLabel: formatPrice(product.price, product.currency || 'BOB'),
+            ratingLabel: product.average_rating
+              ? `${rating.toFixed(1)} (${product.ratings_count || 0})`
+              : undefined,
+            ratingAccessible: product.average_rating
+              ? `Calificación ${rating.toFixed(1)} de 5, ${product.ratings_count || 0} reseñas`
+              : undefined,
+            starsFilled: Array.from(
+              { length: 5 },
+              (_, i) => Number(product.average_rating || 0) >= i + 0.5
+            ),
+            imageUrl: product.primary_image_path || null,
+            isNew: false,
+            stock: typeof product.stock === 'number' ? product.stock : null,
+            state: product.state || 'published',
+          },
+          {
+            variant: 'default',
+            onAddToCart: () => this.onAddToCart(product, 1),
+            detailHref: `/products/${product.slug || product.id}`,
+            hideCartButton: isOwn,
+          }
         );
+        this._grid.appendChild(cardView.render());
       });
     }
 

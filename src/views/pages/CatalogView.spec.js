@@ -98,7 +98,7 @@ describe('CatalogView', () => {
     const loadingEl = grid.querySelector('.q-catalog__message--loading');
     expect(loadingEl).not.toBeNull();
     expect(loadingEl.textContent).toContain('Cargando productos...');
-    expect(grid.querySelectorAll('[role="listitem"]').length).toBe(0);
+    expect(grid.querySelectorAll('.q-product-card').length).toBe(0);
 
     view.destroy();
   });
@@ -128,7 +128,7 @@ describe('CatalogView', () => {
     const emptyEl = grid.querySelector('.q-catalog__message--empty');
     expect(emptyEl).not.toBeNull();
     expect(emptyEl.textContent).toBe('No hay productos disponibles');
-    expect(grid.querySelectorAll('[role="listitem"]').length).toBe(0);
+    expect(grid.querySelectorAll('.q-product-card').length).toBe(0);
 
     view.destroy();
   });
@@ -144,7 +144,7 @@ describe('CatalogView', () => {
     const view = new CatalogView(mockViewModel);
     view.mount(container);
 
-    const cards = container.querySelectorAll('#q-catalog-grid [role="listitem"]');
+    const cards = container.querySelectorAll('#q-catalog-grid .q-product-card');
     expect(cards.length).toBe(3);
 
     const titles = Array.from(cards).map((card) => card.querySelector('h3').textContent);
@@ -157,11 +157,24 @@ describe('CatalogView', () => {
     view.destroy();
   });
 
+  it('catalog cards render as ProductCardView instances', () => {
+    mockViewModel.products = [
+      { id: '1', name: 'Aguayo', price: 40, currency: 'BOB' },
+      { id: '2', name: 'Café', price: 14, currency: 'BOB' },
+    ];
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    expect(container.querySelectorAll('.q-product-card').length).toBe(2);
+    view.destroy();
+  });
+
   it('should update the product grid reactively when ViewModel changes', () => {
     const view = new CatalogView(mockViewModel);
     view.mount(container);
 
-    expect(container.querySelectorAll('#q-catalog-grid [role="listitem"]').length).toBe(0);
+    expect(container.querySelectorAll('#q-catalog-grid .q-product-card').length).toBe(0);
 
     mockViewModel.products = [
       { id: 'p1', name: 'Producto A', price: 25, currency: 'USD' },
@@ -169,7 +182,7 @@ describe('CatalogView', () => {
     ];
     mockViewModel.notify();
 
-    expect(container.querySelectorAll('#q-catalog-grid [role="listitem"]').length).toBe(2);
+    expect(container.querySelectorAll('#q-catalog-grid .q-product-card').length).toBe(2);
 
     view.destroy();
   });
@@ -253,10 +266,11 @@ describe('CatalogView', () => {
     const view = new CatalogView(mockViewModel);
     view.mount(container);
 
-    const buttons = container.querySelectorAll('#q-catalog-grid button[aria-label^="Añadir"]');
-    expect(container.textContent).toContain('Agotado');
-    expect(buttons[0].textContent).toBe('Añadir');
+    const buttons = container.querySelectorAll('#q-catalog-grid button.q-product-card-action');
+    expect(container.textContent).toContain('Sin stock');
+    expect(buttons[0].textContent).toBe('Sin stock');
     expect(buttons[0].disabled).toBe(true);
+    expect(buttons[1].textContent).toBe('No disponible');
     expect(buttons[1].disabled).toBe(true);
 
     view.destroy();
