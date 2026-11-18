@@ -41,7 +41,7 @@
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: clamp(3rem, 5vw + 1.5rem, 4.6375rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.072em;
   line-height: 1.005;
   color: var(--q-fg-primary, #171717);
   margin: 0 0 1.25rem 0;
