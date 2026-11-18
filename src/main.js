@@ -19,6 +19,8 @@ import './views/pages/orders.css';
 import './views/pages/seller-orders.css';
 import './views/pages/seller-products.css';
 import './views/pages/seller-product-form.css';
+import './views/pages/seller-apply.css';
+import './views/pages/admin-seller-applications.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
@@ -32,7 +34,7 @@ import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
 import { ProductsApi } from './models/api/ProductsApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
-import { getSellerRouteAccess } from './router/guards.js';
+import { getAdminRouteAccess, getSellerRouteAccess } from './router/guards.js';
 import { Router } from './router/Router.js';
 import { AuthBootstrapService } from './services/AuthBootstrapService.js';
 import { cartService } from './services/CartService.js';
@@ -50,6 +52,7 @@ import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { AdminSellerApplicationsPageView } from './views/pages/AdminSellerApplicationsPageView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
@@ -60,6 +63,7 @@ import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
 import { ProductDetailView } from './views/pages/ProductDetailView.js';
 import { ProfileView } from './views/pages/ProfileView.js';
+import { SellerApplyPageView } from './views/pages/SellerApplyPageView.js';
 import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
 import { SellerProductFormView } from './views/pages/SellerProductFormView.js';
 import { SellerProductsPageView } from './views/pages/SellerProductsPageView.js';
@@ -117,8 +121,6 @@ if (app) {
   footer.mount(app);
 
   const bootstrapService = new AuthBootstrapService({ authApi, authStore });
-  // Never rejects. Role-gated routes await it: in a new tab the roles only exist once
-  // `GET /auth/me` answers, and deciding earlier would bounce a legitimate seller.
   const sessionReady = bootstrapService.bootstrap();
 
   let currentPageView = null;
@@ -224,7 +226,6 @@ if (app) {
   const renderSellerOrders = async () => {
     clearCurrentView('seller');
     await sessionReady;
-    // The user may have navigated elsewhere (or this route resolved twice) while waiting.
     if (currentPageView || router.currentPath !== '/seller/orders') return;
 
     const access = getSellerRouteAccess(authStore);
@@ -383,6 +384,49 @@ if (app) {
     activeAuth = view;
   };
 
+  const renderSellerApply = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/seller/apply') return;
+
+    if (!authStore.isAuthenticated()) {
+      authRedirectStore.setReturnTo('/seller/apply');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+
+    currentPageView = new SellerApplyPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderAdminSellerApplications = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/admin/seller-applications') return;
+
+    const access = getAdminRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/admin/seller-applications');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+
+    currentPageView = new AdminSellerApplicationsPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+
+    if (access === 'forbidden') {
+      currentPageView.render();
+      mainEl.appendChild(currentPageView.element);
+      currentPageView._renderForbidden();
+      return;
+    }
+
+    currentPageView.mount(mainEl);
+  };
+
   /**
    * Product-card "Añadir" handler: delegates to CartService; guests are
    * redirected to /login and their intent is queued for replay after login.
@@ -425,6 +469,8 @@ if (app) {
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
+  router.addRoute('/seller/apply', () => renderSellerApply());
+  router.addRoute('/admin/seller-applications', () => renderAdminSellerApplications());
 
   router.addRoute('/auth/callback', () => {
     clearCurrentView();
@@ -446,6 +492,9 @@ if (app) {
   header.viewModel.onSearch = (term) => router.navigate('/products?q=' + encodeURIComponent(term));
   header.viewModel.onCategoryClick = (categoryId) =>
     router.navigate('/products?category=' + encodeURIComponent(categoryId));
+  header.viewModel.onSellerApplyClick = () => router.navigate('/seller/apply');
+  header.viewModel.onAdminSellerApplicationsClick = () =>
+    router.navigate('/admin/seller-applications');
 
   header.viewModel.onLogoutClick = async () => {
     try {

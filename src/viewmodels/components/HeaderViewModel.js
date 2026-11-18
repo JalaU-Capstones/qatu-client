@@ -30,6 +30,7 @@ export class HeaderViewModel {
     this.loginHref = options.loginHref || '/login';
     this.user = options.user || null;
     this.isSeller = Boolean(options.isSeller);
+    this.isAdmin = Boolean(options.isAdmin);
     this.theme = options.theme || 'system';
     this.onLoginClick = options.onLoginClick || null;
     this.onCartClick = options.onCartClick || null;
@@ -38,6 +39,8 @@ export class HeaderViewModel {
     this.onOrdersClick = options.onOrdersClick || null;
     this.onSellerOrdersClick = options.onSellerOrdersClick || null;
     this.onSellerProductsClick = options.onSellerProductsClick || null;
+    this.onSellerApplyClick = options.onSellerApplyClick || null;
+    this.onAdminSellerApplicationsClick = options.onAdminSellerApplicationsClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.categories = options.categories || [];
@@ -68,6 +71,18 @@ export class HeaderViewModel {
     const next = Boolean(value);
     if (this.isSeller !== next) {
       this.isSeller = next;
+      this._notify();
+    }
+  }
+
+  /**
+   * Whether the signed-in user has the admin role.
+   * @param {boolean} value
+   */
+  setIsAdmin(value) {
+    const next = Boolean(value);
+    if (this.isAdmin !== next) {
+      this.isAdmin = next;
       this._notify();
     }
   }
@@ -166,6 +181,24 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onSellerProductsClick === 'function') {
       this.onSellerProductsClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller application page. */
+  triggerSellerApply() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerApplyClick === 'function') {
+      this.onSellerApplyClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to admin seller applications page. */
+  triggerAdminSellerApplications() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminSellerApplicationsClick === 'function') {
+      this.onAdminSellerApplicationsClick();
     }
     this._notify();
   }
