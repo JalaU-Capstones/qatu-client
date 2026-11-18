@@ -2,41 +2,51 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  width: 100%;
   box-sizing: border-box;
-  padding: 12px 24px 0;
-  background: transparent;
-  pointer-events: none;
+  padding: 0 24px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--q-cat-pink, #d81b78) 12%, transparent) 0%,
+    color-mix(in srgb, var(--q-bg-surface, #fff) 88%, transparent) 100%
+  );
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid color-mix(in srgb, var(--q-border-default) 60%, transparent);
 }
 
 .q-header__shell {
   max-width: 1320px;
   margin: 0 auto;
-  pointer-events: auto;
+  width: 100%;
 }
 
 .q-header__pill {
-  position: relative;
   display: flex;
-  height: 56px;
   align-items: center;
   gap: 20px;
-  padding: 0 20px;
-  border: 1px solid color-mix(in srgb, var(--q-border-default) 60%, transparent);
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--q-bg-surface) 82%, transparent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  height: 60px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
-.q-header__pill::before {
+.q-header__pill::before,
+.q-header__pill::after {
+  content: none;
+}
+
+.q-header::before {
   content: '';
   position: absolute;
-  top: -3px;
-  left: -1px;
-  right: -1px;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 3px;
-  border-radius: 9999px 9999px 0 0;
   pointer-events: none;
   background: linear-gradient(
     90deg,
@@ -47,14 +57,13 @@
   );
 }
 
-[data-theme='dark'] .q-header__pill {
-  border-color: rgba(255, 255, 255, 0.06);
-  background: color-mix(in srgb, #0b0718 78%, transparent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-}
-
-body[data-route='auth'] .q-header {
-  padding-top: 16px;
+[data-theme='dark'] .q-header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--q-cat-pink, #d81b78) 8%, transparent) 0%,
+    color-mix(in srgb, #0b0718 92%, transparent) 100%
+  );
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .q-header__left {
@@ -437,16 +446,12 @@ a.q-header-brand:hover .q-brand-logo {
 
 @media (max-width: 767px) {
   .q-header {
-    padding: 12px 12px 0;
-  }
-
-  body[data-route='auth'] .q-header {
-    padding-top: 16px;
+    padding: 0 12px;
   }
 
   .q-header__pill {
     gap: 8px;
-    padding: 0 12px;
+    padding: 0;
   }
 
   .q-header__left {
@@ -480,7 +485,7 @@ a.q-header-brand:hover .q-brand-logo {
 @media (max-width: 400px) {
   .q-header__pill {
     gap: 4px;
-    padding: 0 8px;
+    padding: 0;
   }
 
   .q-header__left {
