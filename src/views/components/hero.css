@@ -39,11 +39,12 @@
 
 .q-hero__title {
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: calc(var(--q-text-5xl, 48) * 1px);
-  font-weight: var(--q-font-weight-semibold, 600);
-  line-height: var(--q-leading-tight, 1.05);
+  font-size: clamp(3rem, 5vw + 1.5rem, 4.6375rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.005;
   color: var(--q-fg-primary, #171717);
-  margin: calc(var(--q-geist-space-3x, 12) * 1px) 0;
+  margin: 0 0 1.25rem 0;
 }
 
 .q-hero__title-accent {
@@ -226,7 +227,8 @@ a.q-hero__floating-card:focus-visible {
   }
 
   .q-hero__title {
-    font-size: calc(var(--q-text-4xl, 36) * 1px);
+    font-size: clamp(2.5rem, 4.5vw, 3.25rem);
+    letter-spacing: -0.015em;
   }
 }
 
@@ -237,7 +239,8 @@ a.q-hero__floating-card:focus-visible {
   }
 
   .q-hero__title {
-    font-size: calc(var(--q-text-3xl, 30) * 1px);
+    font-size: clamp(2rem, 7vw, 2.75rem);
+    letter-spacing: -0.015em;
   }
 
   .q-hero__subtitle {

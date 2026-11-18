@@ -34,11 +34,19 @@ describe('HeroView', () => {
     const subtitle = el.querySelector('.q-hero__subtitle');
 
     expect(eyebrow).not.toBeNull();
-    expect(eyebrow.textContent).toBe('INSPIRADO EN NUESTRA TIERRA');
+    expect(eyebrow.textContent).toBe('INSPIRADO EN NUESTRAS FERIAS');
     expect(title).not.toBeNull();
     expect(title.textContent).toBe('Lo mejor de Latinoamérica, en un solo lugar.');
     expect(subtitle).not.toBeNull();
     expect(subtitle.textContent).toContain('Descubre productos únicos');
+  });
+
+  it('renders the hero H1 with the .q-hero__title class', () => {
+    const el = view.render();
+    const title = el.querySelector('h1');
+
+    expect(title).not.toBeNull();
+    expect(title.classList.contains('q-hero__title')).toBe(true);
   });
 
   it('should render title as two spans: .q-hero__title-main and .q-hero__title-accent', () => {

@@ -1,6 +1,6 @@
 export class HeroViewModel {
   constructor(options = {}) {
-    this.eyebrow = options.eyebrow || 'Inspirado en nuestra tierra';
+    this.eyebrow = options.eyebrow || 'Inspirado en nuestras ferias';
     this.titleMain = options.titleMain || 'Lo mejor de Latinoamérica,';
     this.titleAccent = options.titleAccent || 'en un solo lugar.';
     this.subtitle =

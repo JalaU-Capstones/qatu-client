@@ -8,7 +8,7 @@ describe('HeroViewModel', () => {
   });
 
   it('should initialize with default options', () => {
-    expect(viewModel.eyebrow).toBe('Inspirado en nuestra tierra');
+    expect(viewModel.eyebrow).toBe('Inspirado en nuestras ferias');
     expect(viewModel.titleMain).toBe('Lo mejor de Latinoamérica,');
     expect(viewModel.titleAccent).toBe('en un solo lugar.');
     expect(viewModel.subtitle).toContain('Descubre productos únicos');
