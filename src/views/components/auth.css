@@ -33,6 +33,9 @@
   content: '';
   opacity: 1;
   pointer-events: none;
+  filter: blur(60px);
+  will-change: filter;
+  transform: translateZ(0);
 }
 
 .q-auth__left::before {
