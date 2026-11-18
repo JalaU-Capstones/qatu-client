@@ -102,6 +102,9 @@ export class FeaturedStoresView {
       const card = document.createElement('div');
       card.className = `q-store-card q-store-card--${store.accent || 'pink'}`;
 
+      const cardHeader = document.createElement('div');
+      cardHeader.className = 'q-store-card__header';
+
       // Colored avatar with initials
       const avatar = document.createElement('div');
       avatar.className = 'q-store-card__avatar';
@@ -112,6 +115,7 @@ export class FeaturedStoresView {
       initials.textContent = store.initials || '?';
 
       avatar.appendChild(initials);
+      cardHeader.appendChild(avatar);
 
       const name = document.createElement('h3');
       name.className = 'q-store-card__name';
@@ -146,7 +150,7 @@ export class FeaturedStoresView {
         e.preventDefault();
       });
 
-      card.appendChild(avatar);
+      card.appendChild(cardHeader);
       card.appendChild(name);
       card.appendChild(category);
       card.appendChild(rating);

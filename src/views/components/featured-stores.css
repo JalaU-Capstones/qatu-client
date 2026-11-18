@@ -92,6 +92,55 @@ a.q-featured-stores__see-all:hover {
     box-shadow 150ms ease;
 }
 
+.q-store-card__header {
+  position: relative;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+  border-radius: 12px 12px 0 0;
+  margin: -25px -25px 16px;
+  overflow: hidden;
+  background: var(--q-bg-elevated);
+}
+
+.q-featured-stores__item:nth-child(3n + 1) .q-store-card__header {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--q-cat-pink, var(--q-accent)) 22%, transparent) 0%,
+    color-mix(in srgb, var(--q-cat-pink, var(--q-accent)) 8%, transparent) 100%
+  );
+}
+
+.q-featured-stores__item:nth-child(3n + 2) .q-store-card__header {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--q-cat-teal, var(--q-ambient-cyan)) 22%, transparent) 0%,
+    color-mix(in srgb, var(--q-cat-teal, var(--q-ambient-cyan)) 8%, transparent) 100%
+  );
+}
+
+.q-featured-stores__item:nth-child(3n + 3) .q-store-card__header {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--q-color-primary) 22%, transparent) 0%,
+    color-mix(in srgb, var(--q-color-primary) 8%, transparent) 100%
+  );
+}
+
+.q-store-card__header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 16px,
+    rgba(255, 255, 255, 0.18) 16px 20px
+  );
+  pointer-events: none;
+}
+
 .q-store-card:hover {
   border-color: var(--q-border-strong, #171717);
   box-shadow: var(--q-shadow-sm);
@@ -104,7 +153,9 @@ a.q-featured-stores__see-all:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: calc(var(--q-geist-space-4x, 16) * 1px);
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
   color: var(--q-bg-page);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: 0.9375rem;
@@ -216,5 +267,9 @@ a.q-store-card__cta:focus-visible {
 
   .q-store-card {
     padding: calc(var(--q-geist-space-4x, 16) * 1px);
+  }
+
+  .q-store-card__header {
+    margin: -17px -17px 16px;
   }
 }

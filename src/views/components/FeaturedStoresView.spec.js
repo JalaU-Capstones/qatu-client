@@ -62,6 +62,22 @@ describe('FeaturedStoresView', () => {
     expect(cards.length).toBe(3);
   });
 
+  it('store cards render a pattern header when no image is available', () => {
+    viewModel.setStores([
+      {
+        id: 'sin-imagen',
+        name: 'Tienda sin imagen',
+        category: 'Artesanías',
+        rating: 5,
+        reviewCount: 1,
+        href: '/tiendas/sin-imagen',
+      },
+    ]);
+
+    const el = view.render();
+    expect(el.querySelector('.q-store-card__header')).not.toBeNull();
+  });
+
   it('should render each store card with initials avatar, name, category, rating with star svg, and CTA button', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-store-card');

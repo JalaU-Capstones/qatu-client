@@ -1,21 +1,50 @@
 import { CategoriesViewModel } from '../../viewmodels/components/CategoriesViewModel.js';
 
-/**
- * Inline SVG icon factory for category cards.
- * Returns an SVG string ready for innerHTML.
- * @param {string} name
- * @returns {string}
- */
-function categoryIconSvg(name) {
-  const icons = {
-    laptop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>`,
-    coffee: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8z"/><path d="M17 10h2a2 2 0 1 1 0 4h-2"/><line x1="5" y1="2" x2="5" y2="5"/><line x1="10" y1="2" x2="10" y2="5"/><line x1="15" y1="2" x2="15" y2="5"/></svg>`,
-    vase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l-1 5c2 2 3 4 3 7a6 6 0 0 1-6 6 6 6 0 0 1-6-6c0-3 1-5 3-7L8 3z"/></svg>`,
-    home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>`,
-    ball: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>`,
-    headphones: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>`,
-  };
-  return icons[name] || icons.home;
+const svg = (paths) =>
+  `<svg width="24" height="24" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" fill="none">${paths}</svg>`;
+
+const YARN_BALL = svg(
+  '<circle cx="12" cy="12" r="9"/><path d="M12 3c-2.5 3-2.5 15 0 18M12 3c2.5 3 2.5 15 0 18M3.5 9c3 2 14 2 17 0M3.5 15c3-2 14-2 17 0"/>'
+);
+const HANDBAG = svg(
+  '<path d="M5 10h14l-1.2 9.2A2 2 0 0 1 15.8 21H8.2a2 2 0 0 1-2-1.8L5 10z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/>'
+);
+const PALETTE = svg(
+  '<circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><path d="M15 15a2 2 0 1 1 4 0v2a2 2 0 0 1-2 2h-1"/>'
+);
+const LAPTOP = svg(
+  '<rect x="4" y="5" width="16" height="11" rx="2"/><path d="M2 19h20l-1.5-3h-17z"/>'
+);
+const HOUSE = svg('<path d="M3 11l9-7 9 7v8a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2v-8z"/>');
+const BALL = svg(
+  '<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6c4 4 8 4 12 0M6 18c4-4 8-4 12 0"/>'
+);
+const DEFAULT_ICON = svg('<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>');
+
+const CATEGORY_ICONS = {
+  'textiles-y-moda': YARN_BALL,
+  textiles: YARN_BALL,
+  'accesorios-y-bolsos': HANDBAG,
+  accesorios: HANDBAG,
+  artesanias: PALETTE,
+  electronica: LAPTOP,
+  'hogar-y-decoracion': HOUSE,
+  hogar: HOUSE,
+  deportes: BALL,
+};
+
+function categoryIconSvg(category) {
+  const slug =
+    category.iconSlug ||
+    category.slug ||
+    category.id ||
+    category.name
+      ?.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  return Object.hasOwn(CATEGORY_ICONS, slug) ? CATEGORY_ICONS[slug] : DEFAULT_ICON;
 }
 
 /**
@@ -121,10 +150,10 @@ export class CategoriesView {
       card.className = `q-category-card q-category-card--${category.style?.color || 'pink'}`;
       card.href = category.href;
 
-      const iconWrapper = document.createElement('div');
+      const iconWrapper = document.createElement('span');
       iconWrapper.className = 'q-category-card__icon';
       iconWrapper.setAttribute('aria-hidden', 'true');
-      iconWrapper.innerHTML = categoryIconSvg(category.style?.icon);
+      iconWrapper.innerHTML = categoryIconSvg(category);
 
       const name = document.createElement('h3');
       name.className = 'q-category-card__name';

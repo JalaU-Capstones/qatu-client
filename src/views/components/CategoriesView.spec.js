@@ -48,6 +48,42 @@ describe('CategoriesView', () => {
     expect(cards.length).toBe(6);
   });
 
+  it('renders a themed SVG icon per category', () => {
+    view.mount(container);
+
+    const icons = container.querySelectorAll('.q-category-card__icon svg');
+    expect(icons.length).toBe(viewModel.categories.length);
+    expect(new Set(Array.from(icons, (icon) => icon.innerHTML)).size).toBeGreaterThan(1);
+  });
+
+  it('prefers iconSlug to the category slug', () => {
+    viewModel.setCategories([
+      {
+        slug: 'textiles',
+        iconSlug: 'accesorios',
+        name: 'Textiles',
+        productCount: 0,
+        href: '/categorias/textiles',
+      },
+    ]);
+
+    const svg = view.render().querySelector('.q-category-card__icon svg');
+    expect(svg.querySelector('path').getAttribute('d')).toBe(
+      'M5 10h14l-1.2 9.2A2 2 0 0 1 15.8 21H8.2a2 2 0 0 1-2-1.8L5 10z'
+    );
+  });
+
+  it('uses the default icon for unknown categories', () => {
+    viewModel.setCategories([
+      { slug: 'unknown-slug', name: 'Unknown', productCount: 0, href: '/categorias/unknown' },
+    ]);
+
+    const el = view.render();
+    const svg = el.querySelector('.q-category-card__icon svg');
+    expect(svg).not.toBeNull();
+    expect(svg.querySelector('path').getAttribute('d')).toBe('M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z');
+  });
+
   it('should render each card with name, svg icon, and formatted product count', () => {
     const el = view.render();
     const cards = el.querySelectorAll('.q-category-card');
