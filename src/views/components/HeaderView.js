@@ -180,6 +180,7 @@ export class HeaderView {
     const loginBtn = document.createElement('button');
     loginBtn.type = 'button';
     loginBtn.className = 'q-btn q-btn--outline q-btn--sm q-header-login-btn';
+    loginBtn.classList.add('q-header-login-btn--mobile');
     loginBtn.textContent = this.viewModel.loginText;
 
     loginBtn.addEventListener('click', (e) => {

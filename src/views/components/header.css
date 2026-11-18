@@ -444,3 +444,33 @@ a.q-header-brand:hover .q-brand-logo {
     font-size: 12px;
   }
 }
+
+/* Mobile login button: prevent text truncation in the pill */
+@media (max-width: 767px) {
+  .q-header-login-btn,
+  .q-header-login-btn--mobile {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .q-header-actions {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .q-header__pill {
+    gap: 4px;
+    padding: 0 8px;
+  }
+
+  .q-header__left {
+    gap: 4px;
+  }
+
+  a.q-header-brand .q-brand-logo {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+}

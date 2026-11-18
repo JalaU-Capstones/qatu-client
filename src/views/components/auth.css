@@ -35,17 +35,17 @@
 }
 
 .q-auth__left::before {
-  top: -180px;
-  left: -180px;
-  width: clamp(520px, 52vw, 820px);
-  background: color-mix(in srgb, var(--q-cat-pink, var(--q-accent)) 55%, transparent);
+  top: -140px;
+  left: -140px;
+  width: clamp(420px, 42vw, 640px);
+  background: color-mix(in srgb, var(--q-cat-pink, var(--q-accent)) 32%, transparent);
 }
 
 .q-auth__left::after {
-  right: -180px;
-  bottom: -140px;
-  width: clamp(460px, 46vw, 720px);
-  background: color-mix(in srgb, var(--q-cat-teal, var(--q-ambient-cyan)) 60%, transparent);
+  right: -120px;
+  bottom: 60px;
+  width: clamp(360px, 36vw, 520px);
+  background: color-mix(in srgb, var(--q-cat-teal, var(--q-ambient-cyan)) 38%, transparent);
 }
 
 .q-auth__left-content {
