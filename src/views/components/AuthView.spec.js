@@ -272,6 +272,15 @@ describe('AuthView', () => {
     ]);
   });
 
+  it('password toggle count remains unchanged after the auth layout pass', () => {
+    const el = view.render();
+    const loginToggles = el.querySelectorAll('.q-login-form .q-auth-password-toggle');
+    const registerToggles = el.querySelectorAll('.q-register-form .q-auth-password-toggle');
+
+    expect(loginToggles.length).toBe(1);
+    expect(registerToggles.length).toBe(2);
+  });
+
   it('should trigger login submit when login form is submitted', () => {
     let submitted = false;
     viewModel.onLogin = () => {

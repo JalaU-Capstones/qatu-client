@@ -34,6 +34,16 @@ describe('AuthPageView', () => {
 
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+  it('renders a single layout container wrapping both auth panels', () => {
+    const view = createView({ mode: 'login' });
+    view.mount(container);
+
+    const layouts = container.querySelectorAll('.q-auth__layout');
+    expect(layouts.length).toBe(1);
+    expect(layouts[0].querySelector('.q-auth__left')).not.toBeNull();
+    expect(layouts[0].querySelector('.q-auth__right')).not.toBeNull();
+  });
+
   it('should default mode to "register" when constructed without arguments', () => {
     const view = createView();
     expect(view.mode).toBe('register');
