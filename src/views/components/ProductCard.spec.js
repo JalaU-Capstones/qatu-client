@@ -44,6 +44,22 @@ describe('ProductCard', () => {
     expect(image.alt).toBe('Woven bag');
   });
 
+  it('uses a generic alt label when the product name is empty', () => {
+    const card = new ProductCard({ product: { images: [] } }).render();
+
+    expect(card.querySelector('img').alt).toBe('Imagen del producto');
+  });
+
+  it('uses the seller thumbnail placeholder class for seller cards', () => {
+    const card = new ProductCard({
+      product: { ...product, images: [] },
+      variant: 'seller',
+    }).render();
+
+    expect(card.querySelector('.q-seller-products__thumb-wrap')).not.toBeNull();
+    expect(card.querySelector('.q-seller-products__thumb-placeholder-img')).not.toBeNull();
+  });
+
   it('shows the out-of-stock badge and disables the add button', () => {
     const card = new ProductCard({ product: { ...product, stock: 0 } }).render();
 

@@ -1,0 +1,69 @@
+.q-recommendation-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
+  border-radius: calc(var(--q-radius-md) * 1px);
+}
+
+.q-recommendation-card__media {
+  width: 100%;
+}
+
+.q-recommendation-card__image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background-color: var(--q-bg-elevated, var(--q-bg-surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.q-recommendation-card__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.q-recommendation-card__placeholder-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 12% 12%;
+  object-fit: contain;
+  box-sizing: border-box;
+}
+
+.q-recommendation-card__info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: calc(var(--q-geist-space-2x) * 1px);
+  padding: calc(var(--q-geist-space-3x) * 1px);
+}
+
+.q-recommendation-card__seller,
+.q-recommendation-card__rating,
+.q-recommendation-card__price {
+  margin: 0;
+}
+
+.q-recommendation-card__title {
+  margin: 0;
+  font-size: calc(var(--q-text-base) * 1px);
+}
+
+.q-recommendation-card__title-link {
+  color: inherit;
+}
+
+.q-recommendation-card__price {
+  color: var(--q-color-primary);
+  font-weight: var(--q-font-weight-bold);
+}

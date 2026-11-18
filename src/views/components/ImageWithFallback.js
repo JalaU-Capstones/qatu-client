@@ -16,17 +16,19 @@ const DEFAULT_PLACEHOLDER_SRC = new URL(
  *
  * @param {Object} [opts={}]
  * @param {string|null|undefined} [opts.src] - Image source URL; falsy returns placeholder directly
- * @param {string} [opts.alt=''] - Alt text for <img> (ignored by placeholder)
+ * @param {string} [opts.alt=''] - Alt text for the loaded image
  * @param {number} [opts.size=24] - Size in pixels applied to placeholder mark width/height
  * @param {string} [opts.imageClassName=''] - Class(es) on the <img> element
+ * @param {string} [opts.placeholderImageClassName=''] - Class(es) on a direct placeholder <img>;
+ *   when provided, no wrapper, mark, or label is rendered.
+ * @param {string} [opts.placeholderAlt] - Alt text for a direct placeholder <img>
  * @param {string} [opts.placeholderClassName=''] - Class(es) on the placeholder wrapper
  * @param {string} [opts.markClassName=''] - Optional wrapper around the inner <img>.
  *   When absent, <img> is rendered directly (current behavior).
  * @param {string} [opts.label] - Optional placeholder text. When falsy, no <p> is rendered.
  * @param {string} [opts.labelClassName=''] - Additional class on the <p> (if label present).
  * @param {string} [opts.placeholderSrc] - Optional override for placeholder SVG URL
- * @returns {HTMLElement} The <img> when src is valid, or the placeholder
- *   wrapper when src is missing/empty/error.
+ * @returns {HTMLElement} The loaded <img>, direct placeholder <img>, or placeholder wrapper.
  */
 export function createImageWithFallback(opts = {}) {
   const {
@@ -34,6 +36,8 @@ export function createImageWithFallback(opts = {}) {
     alt = '',
     size = 24,
     imageClassName = '',
+    placeholderImageClassName = '',
+    placeholderAlt = alt,
     placeholderClassName = '',
     markClassName = '',
     label,
@@ -42,6 +46,15 @@ export function createImageWithFallback(opts = {}) {
   } = opts;
 
   const createPlaceholder = () => {
+    if (placeholderImageClassName) {
+      const placeholder = document.createElement('img');
+      placeholder.src = placeholderSrc;
+      placeholder.alt = placeholderAlt || '';
+      placeholder.className = placeholderImageClassName;
+      placeholder.loading = 'lazy';
+      return placeholder;
+    }
+
     const wrapper = document.createElement('div');
     if (placeholderClassName) {
       wrapper.className = placeholderClassName;

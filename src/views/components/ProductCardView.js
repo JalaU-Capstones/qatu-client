@@ -200,13 +200,10 @@ export class ProductCardView {
     image.appendChild(
       createImageWithFallback({
         src: this.data.imageUrl,
-        alt: '',
-        size: 25,
+        alt: this.data.name || 'Imagen del producto',
         imageClassName: 'q-product-card-photo',
-        placeholderClassName: 'q-product-card-placeholder',
-        markClassName: 'q-product-card-mark',
-        label: 'Imagen del producto',
-        labelClassName: 'q-product-card-image-label',
+        placeholderImageClassName: 'q-product-card-placeholder-img',
+        placeholderAlt: this.data.name || 'Imagen del producto',
       })
     );
 

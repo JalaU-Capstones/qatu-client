@@ -30,9 +30,10 @@ describe('RecommendationCardView', () => {
     expect(el.tagName.toLowerCase()).toBe('li');
     expect(el.classList.contains('q-recommendation-card')).toBe(true);
     expect(el.querySelector('.q-recommendation-card__image')).not.toBeNull();
-    expect(el.querySelector('.q-recommendation-card__image-label').textContent).toBe(
-      'Imagen del producto'
-    );
+    const placeholder = el.querySelector('.q-recommendation-card__placeholder-img');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
+    expect(placeholder.alt).toBe('Huipil bordado');
     expect(el.querySelector('.q-recommendation-card__title-link').textContent).toBe(
       'Huipil bordado'
     );
@@ -68,7 +69,7 @@ describe('RecommendationCardView', () => {
 
     const img = el.querySelector('.q-recommendation-card__photo');
     expect(img).not.toBeNull();
-    expect(img.getAttribute('alt')).toBe('');
+    expect(img.getAttribute('alt')).toBe('Huipil bordado');
     expect(img.getAttribute('src')).toBe('https://example.com/product.jpg');
   });
 

@@ -135,6 +135,35 @@
   gap: calc(var(--q-geist-space-5x, 20) * 1px);
 }
 
+.q-seller-products__thumb-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background-color: var(--q-bg-elevated, var(--q-bg-surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.q-seller-products__thumb,
+.q-seller-products__thumb-placeholder-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.q-seller-products__thumb {
+  object-fit: cover;
+  object-position: center;
+}
+
+.q-seller-products__thumb-placeholder-img {
+  padding: 12% 12%;
+  object-fit: contain;
+}
+
 .q-seller-products__stock {
   font-size: calc(var(--q-text-xs, 12) * 1px);
   color: var(--q-fg-muted);

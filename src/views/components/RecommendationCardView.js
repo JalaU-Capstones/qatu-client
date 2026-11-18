@@ -90,13 +90,10 @@ export class RecommendationCardView {
     image.appendChild(
       createImageWithFallback({
         src: this.data.imageUrl,
-        alt: '',
-        size: 24,
+        alt: this.data.name || 'Imagen del producto',
         imageClassName: 'q-recommendation-card__photo',
-        placeholderClassName: 'q-recommendation-card__placeholder',
-        markClassName: 'q-recommendation-card__mark',
-        label: 'Imagen del producto',
-        labelClassName: 'q-recommendation-card__image-label',
+        placeholderImageClassName: 'q-recommendation-card__placeholder-img',
+        placeholderAlt: this.data.name || 'Imagen del producto',
       })
     );
 

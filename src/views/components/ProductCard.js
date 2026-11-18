@@ -125,7 +125,10 @@ export class ProductCard {
     media.className = 'product-card__media';
 
     const frame = document.createElement('div');
-    frame.className = 'product-card__image-frame';
+    frame.className =
+      this.variant === 'seller'
+        ? 'product-card__image-frame q-seller-products__thumb-wrap'
+        : 'product-card__image-frame';
 
     const imageSource =
       this.product.images?.[0]?.url ||
@@ -134,10 +137,14 @@ export class ProductCard {
       this.product.primary_image_path;
     const image = document.createElement('img');
     image.className = imageSource
-      ? 'product-card__image'
-      : 'product-card__image product-card__image--placeholder';
+      ? this.variant === 'seller'
+        ? 'product-card__image q-seller-products__thumb'
+        : 'product-card__image'
+      : this.variant === 'seller'
+        ? 'product-card__image product-card__image--placeholder q-seller-products__thumb-placeholder-img'
+        : 'product-card__image product-card__image--placeholder';
     image.src = imageSource || PRODUCT_PLACEHOLDER_SRC;
-    image.alt = this.product.name || '';
+    image.alt = this.product.name || 'Imagen del producto';
     image.loading = 'lazy';
     if (imageSource) {
       image.addEventListener(

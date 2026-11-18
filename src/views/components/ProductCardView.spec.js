@@ -131,10 +131,10 @@ describe('ProductCardView', () => {
     const photo = el.querySelector('.q-product-card-photo');
     expect(photo).not.toBeNull();
     expect(photo.getAttribute('src')).toBe('https://example.com/item.jpg');
-    expect(el.querySelector('.q-product-card-mark')).toBeNull();
+    expect(photo.alt).toBe('Item with photo');
   });
 
-  it('renders placeholder mark when imageUrl is null', () => {
+  it('renders the polygon placeholder image when imageUrl is null', () => {
     const cardView = new ProductCardView({
       id: 'p8',
       name: 'Item without photo',
@@ -142,9 +142,10 @@ describe('ProductCardView', () => {
     });
     const el = cardView.render();
 
-    const mark = el.querySelector('.q-product-card-mark img');
-    expect(mark).not.toBeNull();
-    expect(mark.getAttribute('src')).toContain('product-placeholder.svg');
+    const placeholder = el.querySelector('.q-product-card-placeholder-img');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
+    expect(placeholder.alt).toBe('Item without photo');
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
   });
 
@@ -161,12 +162,13 @@ describe('ProductCardView', () => {
   });
 
   it('_renderImage renders placeholder immediately when imageUrl is null', () => {
-    const cardView = new ProductCardView({ id: 'img-null', name: 'Item', imageUrl: null });
+    const cardView = new ProductCardView({ id: 'img-null', name: '', imageUrl: null });
     const el = cardView.render();
-    expect(el.querySelector('.q-product-card-photo')).toBeNull();
-    expect(el.querySelector('.q-product-card-mark')).not.toBeNull();
-    expect(el.querySelector('.q-product-card-image-label')).not.toBeNull();
-    expect(el.querySelector('.q-product-card-image-label').textContent).toBe('Imagen del producto');
+    const placeholder = el.querySelector('.q-product-card-placeholder-img');
+
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
+    expect(placeholder.alt).toBe('Imagen del producto');
   });
 
   it('_renderImage renders placeholder when imageUrl fails to load', () => {
@@ -180,10 +182,12 @@ describe('ProductCardView', () => {
     expect(img).not.toBeNull();
     // Trigger the error event synchronously
     img.dispatchEvent(new Event('error'));
-    // After error, the img should be removed and placeholder present
+    // The failed photo is replaced by the polygon placeholder image.
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
-    expect(el.querySelector('.q-product-card-mark')).not.toBeNull();
-    expect(el.querySelector('.q-product-card-image-label')).not.toBeNull();
+    const placeholder = el.querySelector('.q-product-card-placeholder-img');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
+    expect(placeholder.alt).toBe('Item');
   });
 
   it('mounts into container and cleans up on destroy', () => {
