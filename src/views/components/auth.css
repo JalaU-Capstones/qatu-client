@@ -5,9 +5,11 @@
 }
 
 .q-auth__layout {
+  position: relative;
   display: grid;
   grid-template-columns: 52fr 48fr;
   width: 100%;
+  overflow: visible;
   min-height: calc(100vh - var(--q-header-height, 72) * 1px);
 }
 
@@ -15,7 +17,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
   padding: clamp(40px, 6vw, 88px);
   isolation: isolate;
   background: var(--q-auth-cream);
@@ -28,22 +30,21 @@
   aspect-ratio: 1;
   border-radius: 50%;
   content: '';
-  opacity: 0.18;
   pointer-events: none;
 }
 
 .q-auth__left::before {
-  top: -25%;
-  left: -20%;
-  width: clamp(420px, 55vw, 720px);
-  background: var(--q-auth-pink);
+  top: -180px;
+  left: -180px;
+  width: clamp(520px, 52vw, 820px);
+  background: color-mix(in srgb, var(--q-cat-pink, var(--q-accent)) 55%, transparent);
 }
 
 .q-auth__left::after {
-  right: -18%;
-  bottom: -20%;
-  width: clamp(380px, 45vw, 620px);
-  background: var(--q-auth-teal);
+  right: -180px;
+  bottom: -140px;
+  width: clamp(460px, 46vw, 720px);
+  background: color-mix(in srgb, var(--q-cat-teal, var(--q-ambient-cyan)) 60%, transparent);
 }
 
 .q-auth__left-content {
@@ -375,11 +376,11 @@
 }
 
 [data-theme='dark'] .q-auth__left::before {
-  background: #4a0f3d;
+  background: color-mix(in srgb, #4a0f3d 85%, transparent);
 }
 
 [data-theme='dark'] .q-auth__left::after {
-  background: #0f3a3f;
+  background: color-mix(in srgb, #0f3a3f 80%, transparent);
 }
 
 [data-theme='dark'] .q-auth__card {

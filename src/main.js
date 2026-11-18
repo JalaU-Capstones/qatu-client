@@ -124,7 +124,8 @@ if (app) {
   let currentPageView = null;
   let activeAuth = null;
 
-  const clearCurrentView = () => {
+  const clearCurrentView = (route = 'default') => {
+    document.body.dataset.route = route;
     if (currentPageView && typeof currentPageView.destroy === 'function') {
       currentPageView.destroy();
     }
@@ -146,7 +147,7 @@ if (app) {
   };
 
   const renderCatalog = () => {
-    clearCurrentView();
+    clearCurrentView('catalog');
     const catalogViewModel = new CatalogViewModel({
       onFiltersChange: (query) => window.history.pushState({}, '', `/products${query}`),
     });
@@ -221,7 +222,7 @@ if (app) {
   };
 
   const renderSellerOrders = async () => {
-    clearCurrentView();
+    clearCurrentView('seller');
     await sessionReady;
     // The user may have navigated elsewhere (or this route resolved twice) while waiting.
     if (currentPageView || router.currentPath !== '/seller/orders') return;
@@ -244,7 +245,7 @@ if (app) {
   };
 
   const renderSellerProducts = async () => {
-    clearCurrentView();
+    clearCurrentView('seller');
     await sessionReady;
     if (currentPageView || router.currentPath !== '/seller/products') return;
 
@@ -290,7 +291,7 @@ if (app) {
   };
 
   const renderSellerProductNew = async () => {
-    clearCurrentView();
+    clearCurrentView('seller');
     await sessionReady;
     if (currentPageView || router.currentPath !== '/seller/products/new') return;
 
@@ -343,6 +344,7 @@ if (app) {
   };
 
   const renderAuth = (mode) => {
+    document.body.dataset.route = 'auth';
     // ADR-012 / Discovery D1: authenticated users must not reach the auth
     // form. `loadFromStorage()` is synchronous (runs before router.start()),
     // so `isAuthenticated()` is reliable here — no race condition.
@@ -359,7 +361,7 @@ if (app) {
       return;
     }
 
-    clearCurrentView();
+    clearCurrentView('auth');
     const view = new AuthPageView({
       mode,
       authApi,

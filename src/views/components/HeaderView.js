@@ -30,8 +30,14 @@ export class HeaderView {
     header.className = 'q-header';
     header.setAttribute('role', 'banner');
 
-    const container = document.createElement('div');
-    container.className = 'q-header-container';
+    const shell = document.createElement('div');
+    shell.className = 'q-header__shell';
+
+    const pill = document.createElement('div');
+    pill.className = 'q-header__pill';
+
+    const leftCluster = document.createElement('div');
+    leftCluster.className = 'q-header__left';
 
     // 1. Brand Logo
     const brandLink = document.createElement('a');
@@ -112,11 +118,10 @@ export class HeaderView {
       actionsWrapper.appendChild(this._createLoginButton());
     }
 
-    container.appendChild(brandLink);
-    container.appendChild(navWrapper);
-    container.appendChild(this._createSearchBar());
-    container.appendChild(actionsWrapper);
-    header.appendChild(container);
+    leftCluster.append(brandLink, navWrapper);
+    pill.append(leftCluster, this._createSearchBar(), actionsWrapper);
+    shell.appendChild(pill);
+    header.appendChild(shell);
 
     this.element = header;
 
@@ -194,6 +199,8 @@ export class HeaderView {
 
     const input = document.createElement('input');
     input.type = 'search';
+    input.id = 'q-header-search-input';
+    input.name = 'q';
     input.className = 'q-header-search__input';
     input.placeholder = 'Buscar productos, tiendas y categorías';
     input.setAttribute('aria-label', 'Buscar productos, tiendas y categorías');
@@ -205,6 +212,25 @@ export class HeaderView {
       this.viewModel.setSearchValue(input.value);
     });
 
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'q-header-search__toggle';
+    toggle.setAttribute('aria-label', 'Abrir búsqueda');
+    toggle.setAttribute('aria-controls', input.id);
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m20 20-4-4"></path>
+      </svg>
+    `;
+    toggle.addEventListener('click', () => {
+      const expanded = form.classList.toggle('q-header-search--expanded');
+      toggle.setAttribute('aria-expanded', String(expanded));
+      toggle.setAttribute('aria-label', expanded ? 'Cerrar búsqueda' : 'Abrir búsqueda');
+      if (expanded) input.focus();
+    });
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const val = (input.value || '').trim();
@@ -213,7 +239,7 @@ export class HeaderView {
       this.viewModel.triggerSearch();
     });
 
-    form.appendChild(input);
+    form.append(input, toggle);
     return form;
   }
 

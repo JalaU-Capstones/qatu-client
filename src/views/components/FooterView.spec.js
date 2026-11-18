@@ -48,12 +48,29 @@ describe('FooterView', () => {
     expect(links).toContain('Preguntas frecuentes');
   });
 
-  it('should render social buttons f, ig, x', () => {
+  it('should render four social links with accessible icons', () => {
     const el = view.render();
-    const socialBtns = Array.from(el.querySelectorAll('.q-footer-social-btn')).map(
-      (btn) => btn.textContent
+    const socialLinks = Array.from(el.querySelectorAll('.q-footer-social-btn'));
+    expect(socialLinks.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Instagram',
+      'Facebook',
+      'TikTok',
+      'X',
+    ]);
+    socialLinks.forEach((link) => {
+      expect(link.querySelector('svg')).not.toBeNull();
+    });
+  });
+
+  it('renders the existing four-column structure and source headings', () => {
+    const el = view.render();
+
+    expect(el.querySelectorAll('.q-footer-grid > .q-footer-col').length).toBe(4);
+    expect(el.querySelector('.q-footer-col-brand .q-brand-logo')).not.toBeNull();
+    const headings = Array.from(el.querySelectorAll('.q-footer-heading')).map(
+      (heading) => heading.textContent
     );
-    expect(socialBtns).toEqual(['f', 'ig', 'x']);
+    expect(headings).toEqual(['Comprar y vender', 'Ayuda', 'Síguenos']);
   });
 
   it('should render bottom legal bar with copyright and motto', () => {

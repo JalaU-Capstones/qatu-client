@@ -46,6 +46,18 @@ describe('HeaderView', () => {
     expect(links.length).toBe(3);
   });
 
+  it('renders the header shell with the pill inside and its three content clusters', () => {
+    const el = view.render();
+    const shell = el.querySelector('.q-header__shell');
+    const pill = shell.querySelector('.q-header__pill');
+
+    expect(shell).not.toBeNull();
+    expect(pill).not.toBeNull();
+    expect(pill.querySelector('.q-header__left .q-header-brand')).not.toBeNull();
+    expect(pill.querySelector('.q-header-search')).not.toBeNull();
+    expect(pill.querySelector('.q-header-actions')).not.toBeNull();
+  });
+
   it('should render cart badge when cartCount > 0 and update reactively', () => {
     const el = view.render();
     let badge = el.querySelector('.q-header-cart-badge');
@@ -132,6 +144,7 @@ describe('HeaderView', () => {
   it('should reactively transition from login button to avatar when user logs in', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+    expect(el.querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
     expect(el.querySelector('.q-header-user-avatar')).toBeNull();
 
     viewModel.setUser({ username: 'roberto' });
@@ -141,6 +154,68 @@ describe('HeaderView', () => {
     viewModel.setUser(null);
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
     expect(el.querySelector('.q-header-user-avatar')).toBeNull();
+  });
+
+  it('preserves header, navigation, and dropdown handlers after mounting', () => {
+    const callbacks = {
+      onLoginClick: jasmine.createSpy('onLoginClick'),
+      onLogoClick: jasmine.createSpy('onLogoClick'),
+      onCartClick: jasmine.createSpy('onCartClick'),
+      onOrdersClick: jasmine.createSpy('onOrdersClick'),
+      onSellerOrdersClick: jasmine.createSpy('onSellerOrdersClick'),
+      onSellerProductsClick: jasmine.createSpy('onSellerProductsClick'),
+      onProfileClick: jasmine.createSpy('onProfileClick'),
+      onSearch: jasmine.createSpy('onSearch'),
+      onCategoryClick: jasmine.createSpy('onCategoryClick'),
+      onLogoutClick: jasmine.createSpy('onLogoutClick'),
+      onThemeToggleClick: jasmine.createSpy('onThemeToggleClick'),
+    };
+    Object.assign(viewModel, callbacks);
+    viewModel.setIsSeller(true);
+    viewModel.setCategories([{ id: 'cat-1', name: 'Artesanía' }]);
+    viewModel.setUser({ username: 'seller', email: 'seller@example.com' });
+    const el = view.mount(container);
+
+    el.querySelector('.q-header-brand').click();
+    el.querySelector('.q-header-cart-btn').click();
+    el.querySelector('.q-header-theme-btn').click();
+    el.querySelector('[data-link-id="nav-tiendas"]').click();
+    expect(viewModel.navbarViewModel.activeLinkId).toBe('nav-tiendas');
+
+    viewModel.setUser(null);
+    expect(el.querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+    el.querySelector('.q-header-login-btn').click();
+    viewModel.setUser({ username: 'seller', email: 'seller@example.com' });
+
+    el.querySelector('.q-header-user-avatar').click();
+    el.querySelector('.q-header-profile-btn').click();
+    el.querySelector('.q-header-orders-btn').click();
+    el.querySelector('.q-header-seller-orders-btn').click();
+    el.querySelector('.q-header-seller-products-btn').click();
+    el.querySelector('.q-header-logout-btn').click();
+
+    el.querySelector('.q-header-cat-dropdown__trigger').click();
+    el.querySelector('.q-header-cat-dropdown__menu a').click();
+
+    const searchInput = el.querySelector('.q-header-search__input');
+    searchInput.value = 'zapatos';
+    el.querySelector('.q-header-search').dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+
+    expect(callbacks.onLoginClick).toHaveBeenCalled();
+    expect(callbacks.onLogoClick).toHaveBeenCalled();
+    expect(callbacks.onCartClick).toHaveBeenCalled();
+    expect(callbacks.onThemeToggleClick).toHaveBeenCalled();
+    expect(callbacks.onProfileClick).toHaveBeenCalledWith(
+      jasmine.objectContaining({ username: 'seller' })
+    );
+    expect(callbacks.onOrdersClick).toHaveBeenCalled();
+    expect(callbacks.onSellerOrdersClick).toHaveBeenCalled();
+    expect(callbacks.onSellerProductsClick).toHaveBeenCalled();
+    expect(callbacks.onLogoutClick).toHaveBeenCalled();
+    expect(callbacks.onCategoryClick).toHaveBeenCalledWith('cat-1');
+    expect(callbacks.onSearch).toHaveBeenCalledWith('zapatos');
   });
 
   it('should mount into container correctly', () => {
@@ -463,6 +538,34 @@ describe('HeaderView', () => {
 
       expect(viewModel.triggerSearch).toHaveBeenCalled();
       expect(viewModel.searchValue).toBe('zapatos');
+    });
+
+    it('search submit calls onSearch with the typed term', () => {
+      const onSearch = jasmine.createSpy('onSearch');
+      viewModel.onSearch = onSearch;
+      const el = view.render();
+      const input = el.querySelector('.q-header-search__input');
+      input.value = '  cerámica  ';
+
+      el.querySelector('.q-header-search').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+
+      expect(onSearch).toHaveBeenCalledWith('cerámica');
+    });
+
+    it('search toggle exposes the input and updates its expanded state', () => {
+      const el = view.render();
+      const form = el.querySelector('.q-header-search');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      expect(form.classList.contains('q-header-search--expanded')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+      toggle.click();
+      expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
     });
 
     it('search: empty submit does nothing', () => {
