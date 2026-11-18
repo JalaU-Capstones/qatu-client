@@ -52,10 +52,7 @@ import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
-<<<<<<< HEAD
 import { AdminSellerApplicationsPageView } from './views/pages/AdminSellerApplicationsPageView.js';
-=======
->>>>>>> 8e72f6f (fix: corrected format)
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
