@@ -6,7 +6,8 @@
 
 .q-catalog {
   width: 100%;
-  padding-top: calc(var(--q-geist-space-10x, 40) * 1px);
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  padding-top: 0;
   padding-bottom: calc(var(--q-geist-space-16x, 64) * 1px);
   background-color: transparent;
   box-sizing: border-box;
@@ -489,7 +490,7 @@
 .q-catalog > .q-section-container {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 40px 24px 64px;
+  padding: calc(var(--q-header-overlay-height, 72px) + 24px) 24px 64px;
   box-sizing: border-box;
 }
 

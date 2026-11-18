@@ -11,7 +11,9 @@
   grid-template-columns: 52fr 48fr;
   width: 100%;
   overflow: hidden;
-  min-height: calc(100vh - var(--q-header-height, 72) * 1px);
+  min-height: 100vh;
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  box-sizing: border-box;
   background: var(--q-auth-cream, #f6f2ec);
 }
 
@@ -21,6 +23,7 @@
   align-items: center;
   overflow: visible;
   padding: clamp(40px, 6vw, 88px);
+  padding-top: calc(clamp(40px, 6vw, 88px) + var(--q-header-overlay-height, 72px));
   background: transparent;
 }
 
@@ -131,7 +134,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
+  padding: calc(48px + var(--q-header-overlay-height, 72px)) 24px 48px;
   background: transparent;
 }
 
@@ -488,7 +491,7 @@
   }
 
   .q-auth__left {
-    padding: 40px 28px;
+    padding: calc(40px + var(--q-header-overlay-height, 72px)) 28px 40px;
   }
 
   .q-auth__headline {
@@ -496,7 +499,7 @@
   }
 
   .q-auth__right {
-    padding: 32px 20px;
+    padding: calc(32px + var(--q-header-overlay-height, 72px)) 20px 32px;
   }
 }
 
@@ -511,7 +514,7 @@
 
   .q-auth__right {
     grid-column: 1;
-    padding: 24px;
+    padding: calc(24px + var(--q-header-overlay-height, 72px)) 24px 24px;
   }
 
   .q-auth__card {

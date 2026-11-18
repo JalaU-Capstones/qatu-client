@@ -71,6 +71,7 @@
 }
 
 .q-app {
+  --q-header-overlay-height: calc(var(--q-header-height, 64) * 1px + 8px);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -78,6 +79,7 @@
 
 .q-main {
   flex: 1;
+  padding-top: var(--q-header-overlay-height, 72px);
 }
 
 .q-section-container {
@@ -172,24 +174,6 @@ body {
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  pointer-events: none;
-  z-index: 1000;
-  background: linear-gradient(
-    90deg,
-    var(--q-cat-pink, #d81b78) 0%,
-    #7c4ddb 33%,
-    var(--q-ds-blue-600, #1f5fd6) 66%,
-    var(--q-cat-teal, #17b3c7) 100%
-  );
 }
 
 /* ── Global Button System ──────────────────────────────────────

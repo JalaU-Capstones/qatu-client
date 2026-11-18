@@ -5,7 +5,9 @@
 
 .q-hero {
   position: relative;
-  padding: calc(var(--q-geist-space-16x, 64) * 1px) 0;
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  padding: calc(var(--q-header-overlay-height, 72px) + var(--q-geist-space-16x, 64) * 1px) 0
+    calc(var(--q-geist-space-16x, 64) * 1px);
   background-color: transparent;
   overflow: hidden;
 }
@@ -235,7 +237,8 @@ a.q-hero__floating-card:focus-visible {
 /* Mobile breakpoint */
 @media (max-width: 767px) {
   .q-hero {
-    padding: calc(var(--q-geist-space-10x, 40) * 1px) 0;
+    padding: calc(var(--q-header-overlay-height, 72px) + var(--q-geist-space-10x, 40) * 1px) 0
+      calc(var(--q-geist-space-10x, 40) * 1px);
   }
 
   .q-hero__title {

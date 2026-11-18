@@ -204,7 +204,7 @@ export class HeaderView {
     input.id = 'q-header-search-input';
     input.name = 'q';
     input.className = 'q-header-search__input';
-    input.placeholder = 'Buscar productos, tiendas y categorías';
+    input.placeholder = "Buscar en Q'atu";
     input.setAttribute('aria-label', 'Buscar productos, tiendas y categorías');
     if (this.viewModel.searchValue) {
       input.value = this.viewModel.searchValue;
