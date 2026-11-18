@@ -46,6 +46,10 @@ describe('HeaderView', () => {
     expect(links.length).toBe(3);
   });
 
+  it('login button text is "Iniciar sesión"', () => {
+    expect(view.render().querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+  });
+
   it('renders the header shell with the pill inside and its three content clusters', () => {
     const el = view.render();
     const shell = el.querySelector('.q-header__shell');
@@ -56,6 +60,20 @@ describe('HeaderView', () => {
     expect(pill.querySelector('.q-header__left .q-header-brand')).not.toBeNull();
     expect(pill.querySelector('.q-header-search')).not.toBeNull();
     expect(pill.querySelector('.q-header-actions')).not.toBeNull();
+  });
+
+  it('route-awareness: mounting the header does not remove the body route', () => {
+    const previousRoute = document.body.dataset.route;
+    document.body.dataset.route = 'auth';
+    view.mount(container);
+
+    expect(document.body.dataset.route).toBe('auth');
+
+    if (previousRoute === undefined) {
+      delete document.body.dataset.route;
+    } else {
+      document.body.dataset.route = previousRoute;
+    }
   });
 
   it('should render cart badge when cartCount > 0 and update reactively', () => {
@@ -566,6 +584,32 @@ describe('HeaderView', () => {
       toggle.click();
       expect(form.classList.contains('q-header-search--expanded')).toBe(false);
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('search toggle updates its label and focuses the expanded input', () => {
+      const el = view.mount(container);
+      const input = el.querySelector('.q-header-search__input');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      expect(toggle.getAttribute('aria-label')).toBe('Cerrar búsqueda');
+      expect(document.activeElement).toBe(input);
+
+      toggle.click();
+      expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+    });
+
+    it('updates category dropdown items when categories arrive after mounting', () => {
+      const onCategoryClick = jasmine.createSpy('onCategoryClick');
+      viewModel.onCategoryClick = onCategoryClick;
+      const el = view.mount(container);
+
+      viewModel.setCategories([{ id: 'cat-new', name: 'Cerámica' }]);
+      expect(el.querySelector('.q-header-cat-dropdown__menu').textContent).toContain('Cerámica');
+      el.querySelector('.q-header-cat-dropdown__trigger').click();
+      el.querySelector('.q-header-cat-dropdown__menu a').click();
+
+      expect(onCategoryClick).toHaveBeenCalledWith('cat-new');
     });
 
     it('search: empty submit does nothing', () => {

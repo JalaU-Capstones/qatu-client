@@ -73,6 +73,34 @@ describe('FooterView', () => {
     expect(headings).toEqual(['Comprar y vender', 'Ayuda', 'Síguenos']);
   });
 
+  it('renders social links with safe external-link attributes', () => {
+    const el = view.render();
+    const socialLinks = Array.from(el.querySelectorAll('.q-footer-social-btn'));
+
+    socialLinks.forEach((link) => {
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    });
+  });
+
+  it('preserves custom social links and adds the missing TikTok link', () => {
+    const customModel = new FooterViewModel({
+      social: {
+        title: 'Síguenos',
+        items: [{ id: 'blog', label: 'Blog', href: 'https://example.com/blog' }],
+      },
+    });
+    const customView = new FooterView(customModel);
+    const el = customView.render();
+
+    expect(el.querySelector('[aria-label="Blog"]').getAttribute('href')).toBe(
+      'https://example.com/blog'
+    );
+    expect(el.querySelector('[aria-label="TikTok"]')).not.toBeNull();
+
+    customView.destroy();
+  });
+
   it('should render bottom legal bar with copyright and motto', () => {
     const el = view.render();
     const copyright = el.querySelector('.q-footer-copyright');

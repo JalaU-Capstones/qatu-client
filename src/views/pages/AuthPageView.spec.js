@@ -123,6 +123,26 @@ describe('AuthPageView', () => {
     ]);
   });
 
+  it('renders the marketing panel on the auth page', () => {
+    const view = createView({ mode: 'login' });
+    view.mount(container);
+
+    expect(container.querySelector('.q-auth__left')).not.toBeNull();
+  });
+
+  it('keeps the marketing panel mounted while switching auth modes', () => {
+    const view = createView({ mode: 'login' });
+    view.mount(container);
+    const marketing = container.querySelector('.q-auth__left');
+
+    view.setMode('register');
+
+    expect(container.querySelector('.q-auth__left')).toBe(marketing);
+    expect(container.querySelector('h1').textContent).toBe(
+      'Crea tu cuenta y compra con propósito.'
+    );
+  });
+
   it('shows login-only controls and the register confirmation field in their modes', () => {
     const view = createView({ mode: 'login' });
     view.mount(container);

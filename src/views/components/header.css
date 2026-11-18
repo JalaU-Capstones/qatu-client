@@ -1,7 +1,7 @@
 .q-header {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 100;
   box-sizing: border-box;
   padding: 12px 24px 0;
   background: transparent;
