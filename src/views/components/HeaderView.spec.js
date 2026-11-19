@@ -599,10 +599,13 @@ describe('HeaderView', () => {
       toggle.click();
       expect(form.classList.contains('q-header-search--expanded')).toBe(true);
       expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(form.firstElementChild).toBe(toggle);
+      expect(toggle.querySelector('[data-icon="collapse"]')).not.toBeNull();
 
       toggle.click();
       expect(form.classList.contains('q-header-search--expanded')).toBe(false);
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.querySelector('[data-icon="search"]')).not.toBeNull();
     });
 
     it('search toggle updates its label and focuses the expanded input', () => {
@@ -616,6 +619,39 @@ describe('HeaderView', () => {
 
       toggle.click();
       expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+    });
+
+    it('clears the search term without collapsing the expanded search', () => {
+      const el = view.mount(container);
+      const form = el.querySelector('.q-header-search');
+      const input = el.querySelector('.q-header-search__input');
+      const clearButton = el.querySelector('.q-header-search__clear');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      input.value = 'cerámica';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(clearButton.hidden).toBe(false);
+      expect(viewModel.searchValue).toBe('cerámica');
+
+      clearButton.click();
+
+      expect(input.value).toBe('');
+      expect(viewModel.searchValue).toBe('');
+      expect(clearButton.hidden).toBe(true);
+      expect(form.classList.contains('q-header-search--expanded')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(input);
+
+      input.value = 'volver';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      toggle.click();
+      expect(clearButton.hidden).toBe(true);
+
+      toggle.click();
+      expect(clearButton.hidden).toBe(false);
+      expect(input.value).toBe('volver');
     });
 
     it('closes the expanded search with Escape and returns focus to the toggle', () => {

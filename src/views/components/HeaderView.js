@@ -210,8 +210,23 @@ export class HeaderView {
       input.value = this.viewModel.searchValue;
     }
 
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.className = 'q-header-search__clear';
+    clearButton.setAttribute('aria-label', 'Limpiar búsqueda');
+    clearButton.textContent = '\u00d7';
+    clearButton.hidden = true;
+
     input.addEventListener('input', () => {
       this.viewModel.setSearchValue(input.value);
+      clearButton.hidden = !form.classList.contains('q-header-search--expanded') || !input.value;
+    });
+
+    clearButton.addEventListener('click', () => {
+      input.value = '';
+      clearButton.hidden = true;
+      this.viewModel.setSearchValue('');
+      input.focus();
     });
 
     const toggle = document.createElement('button');
@@ -221,21 +236,22 @@ export class HeaderView {
     toggle.setAttribute('aria-controls', input.id);
     toggle.setAttribute('aria-expanded', 'false');
     const searchIcon = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="m20 20-4-4"></path>
       </svg>
     `;
-    const closeIcon = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="m18 6-12 12M6 6l12 12"></path>
+    const collapseIcon = `
+      <svg data-icon="collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m15 18-6-6 6-6"></path>
       </svg>
     `;
     const setExpanded = (expanded) => {
       form.classList.toggle('q-header-search--expanded', expanded);
+      clearButton.hidden = !expanded || !input.value;
       toggle.setAttribute('aria-expanded', String(expanded));
       toggle.setAttribute('aria-label', expanded ? 'Cerrar búsqueda' : 'Abrir búsqueda');
-      toggle.innerHTML = expanded ? closeIcon : searchIcon;
+      toggle.innerHTML = expanded ? collapseIcon : searchIcon;
       if (expanded) {
         input.focus();
       } else {
@@ -264,7 +280,7 @@ export class HeaderView {
       this.viewModel.triggerSearch();
     });
 
-    form.append(input, toggle);
+    form.append(toggle, input, clearButton);
     return form;
   }
 
