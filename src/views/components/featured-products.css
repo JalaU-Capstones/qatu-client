@@ -130,3 +130,20 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.q-featured-eyebrow,
+.q-featured-link {
+  color: var(--q-accent);
+}
+
+.q-featured-eyebrow {
+  letter-spacing: 0.08em;
+}
+
+.q-featured-link {
+  font-weight: 600;
+}
+
+.q-featured-link:hover {
+  color: var(--q-accent-hover);
+}

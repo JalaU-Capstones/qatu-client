@@ -28,29 +28,34 @@ export class HomeView {
     this._featuredProducts = null;
     this._shippingBanner = null;
     this._stores = null;
+    this.element = null;
   }
 
   /**
    * @param {HTMLElement} container
    */
   mount(container) {
+    this.element = document.createElement('div');
+    this.element.className = 'q-home';
+    container.appendChild(this.element);
+
     this._hero = new HeroView();
     this._hero.viewModel.onSearch = (term) => this.onSearch(term);
-    this._hero.mount(container);
+    this._hero.mount(this.element);
 
     this._categories = new CategoriesView();
-    this._categories.mount(container);
+    this._categories.mount(this.element);
 
     this._featuredProducts = new FeaturedProductsView();
     this._featuredProducts.viewModel.onAddToCart = (product) => this.onAddToCart(product, 1);
-    this._featuredProducts.mount(container);
+    this._featuredProducts.mount(this.element);
     this._featuredProducts.viewModel.load();
 
     this._shippingBanner = new ShippingBannerView();
-    this._shippingBanner.mount(container);
+    this._shippingBanner.mount(this.element);
 
     this._stores = new FeaturedStoresView();
-    this._stores.mount(container);
+    this._stores.mount(this.element);
   }
 
   destroy() {
@@ -74,5 +79,7 @@ export class HomeView {
       this._hero.destroy();
       this._hero = null;
     }
+    this.element?.remove();
+    this.element = null;
   }
 }

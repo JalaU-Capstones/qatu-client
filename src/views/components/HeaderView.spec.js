@@ -618,6 +618,23 @@ describe('HeaderView', () => {
       expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
     });
 
+    it('closes the expanded search with Escape and returns focus to the toggle', () => {
+      const el = view.mount(container);
+      const form = el.querySelector('.q-header-search');
+      const input = el.querySelector('.q-header-search__input');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      );
+
+      expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+      expect(document.activeElement).toBe(toggle);
+    });
+
     describe('restored search checks', () => {
       it('search toggle updates its label and focuses the expanded input', () => {
         const el = view.mount(container);

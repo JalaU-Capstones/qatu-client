@@ -273,3 +273,84 @@ a.q-store-card__cta:focus-visible {
     margin: -17px -17px 16px;
   }
 }
+
+a.q-featured-stores__see-all {
+  color: var(--q-accent);
+  font-weight: 600;
+}
+
+a.q-featured-stores__see-all:hover {
+  color: var(--q-accent-hover);
+}
+
+.q-store-card {
+  min-height: 280px;
+  padding: 0 20px 18px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--q-bg-elevated) 88%, transparent);
+}
+
+.q-store-card__header {
+  height: 72px;
+  flex: 0 0 72px;
+  margin: 0 -20px 0;
+  padding: 0 20px;
+  border-radius: 0;
+}
+
+.q-store-card__avatar {
+  width: 58px;
+  height: 58px;
+  margin-top: 44px;
+  border: 3px solid var(--q-bg-elevated);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(22, 19, 28, 0.12);
+}
+
+.q-store-card__name {
+  margin: 16px 0 4px;
+  font-size: 18px;
+}
+
+.q-store-card__category {
+  margin-bottom: 8px;
+}
+
+.q-store-card__rating {
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+a.q-store-card__cta {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--q-accent);
+  font-weight: 600;
+  text-align: left;
+}
+
+a.q-store-card__cta::after {
+  content: '→';
+}
+
+a.q-store-card__cta:hover {
+  background: transparent;
+  color: var(--q-accent-hover) !important;
+}
+
+@media (max-width: 768px) {
+  .q-store-card {
+    padding: 0 16px 16px;
+  }
+
+  .q-store-card__header {
+    margin-right: -16px;
+    margin-left: -16px;
+  }
+}

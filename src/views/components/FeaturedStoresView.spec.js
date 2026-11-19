@@ -36,7 +36,7 @@ describe('FeaturedStoresView', () => {
     expect(title).not.toBeNull();
     expect(title.textContent).toBe('Tiendas destacadas');
     expect(seeAll).not.toBeNull();
-    expect(seeAll.textContent).toContain('Ver tiendas');
+    expect(seeAll.textContent).toContain('Ver todas');
     expect(seeAll.getAttribute('href')).toBe('/tiendas');
   });
 
@@ -101,7 +101,7 @@ describe('FeaturedStoresView', () => {
     expect(category.textContent).toBe('Textiles artesanales');
     expect(rating).not.toBeNull();
     expect(star.querySelector('svg')).not.toBeNull();
-    expect(rating.textContent).toContain('4.8 · 132 reseñas');
+    expect(rating.textContent).toContain('4.8 · 132 ventas');
     expect(cta).not.toBeNull();
     expect(cta.textContent).toBe('Ver tienda');
     expect(cta.getAttribute('href')).toBe('/tiendas/tejidos-illimani');

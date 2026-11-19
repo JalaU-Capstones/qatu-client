@@ -133,15 +133,20 @@ describe('HeroView', () => {
     expect(label).not.toBeNull();
     expect(label.textContent).toBe('Hecho en Latinoamérica');
     expect(cta).not.toBeNull();
-    expect(cta.textContent).toContain('Ver más sobre');
+    expect(el.querySelector('.q-hero__floating-card-sublabel').textContent).toBe(
+      'por productores locales'
+    );
+    expect(cta.textContent).toBe('→');
+    expect(cta.getAttribute('aria-label')).toBe('Ver más sobre');
   });
 
   it('should render visual image with q-hero__visual-img class and valid src', () => {
     const el = view.render();
-    const img = el.querySelector('.q-hero__visual-img');
+    const img = el.querySelector('.q-hero__collage-card--pottery .q-hero__visual-img');
 
     expect(img).not.toBeNull();
     expect(img.getAttribute('src')).toBe('https://picsum.photos/seed/qatu-hero/900/700');
+    expect(el.querySelectorAll('.q-hero__collage-card').length).toBe(3);
   });
 
   it('should mount into container correctly', () => {
@@ -170,7 +175,7 @@ describe('HeroView', () => {
     const customVM = new HeroViewModel({ visualImageUrl: 'https://invalid.example/broken.jpg' });
     const customView = new HeroView(customVM);
     const el = customView.render();
-    const img = el.querySelector('.q-hero__visual-img');
+    const img = el.querySelector('.q-hero__collage-card--pottery .q-hero__visual-img');
     const visual = el.querySelector('.q-hero__visual');
     expect(img).not.toBeNull();
 

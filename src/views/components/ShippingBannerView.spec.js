@@ -38,7 +38,11 @@ describe('ShippingBannerView', () => {
     const el = view.render();
     const title = el.querySelector('.q-shipping-banner__title');
     expect(title).not.toBeNull();
-    expect(title.textContent).toBe('Envío gratis sobre US$ 50');
+    expect(title.textContent).toBe('Envío gratis');
+    expect(el.querySelector('.q-shipping-banner__subtitle').textContent).toBe(
+      'en compras desde US$ 50'
+    );
+    expect(el.querySelector('.q-shipping-banner__icon').textContent).toBe('+');
   });
 
   it('render includes the CTA link with the correct href and label', () => {
@@ -47,7 +51,7 @@ describe('ShippingBannerView', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('/products');
     expect(link.textContent).toContain('A toda Latinoamérica');
-    expect(link.textContent).toContain('Compra ahora');
+    expect(link.textContent).toContain('Compra segura');
   });
 
   it('mount appends to the container', () => {

@@ -28,6 +28,7 @@ describe('FooterView', () => {
     const logo = el.querySelector('.q-footer-col-brand .q-brand-logo');
     expect(logo).not.toBeNull();
     expect(logo.textContent).toBe("Q'atu");
+    expect(logo.querySelector('.q-footer-logo-mark')).not.toBeNull();
 
     const tagline = el.querySelector('.q-footer-tagline');
     expect(tagline).not.toBeNull();
@@ -37,9 +38,10 @@ describe('FooterView', () => {
   it('should render category and help section links', () => {
     const el = view.render();
     const headings = Array.from(el.querySelectorAll('.q-footer-heading')).map((h) => h.textContent);
-    expect(headings).toContain('Comprar y vender');
+    expect(headings).toContain('Comprar');
+    expect(headings).toContain('Vender');
     expect(headings).toContain('Ayuda');
-    expect(headings).toContain('Síguenos');
+    expect(headings).not.toContain('Síguenos');
 
     const links = Array.from(el.querySelectorAll('.q-footer-links a')).map((a) => a.textContent);
     expect(links).toContain('Productos');
@@ -48,21 +50,7 @@ describe('FooterView', () => {
     expect(links).toContain('Preguntas frecuentes');
   });
 
-  it('should render four social links with accessible icons', () => {
-    const el = view.render();
-    const socialLinks = Array.from(el.querySelectorAll('.q-footer-social-btn'));
-    expect(socialLinks.map((link) => link.getAttribute('aria-label'))).toEqual([
-      'Instagram',
-      'Facebook',
-      'TikTok',
-      'X',
-    ]);
-    socialLinks.forEach((link) => {
-      expect(link.querySelector('svg')).not.toBeNull();
-    });
-  });
-
-  it('renders the existing four-column structure and source headings', () => {
+  it('renders the four-column structure and Figma navigation headings', () => {
     const el = view.render();
 
     expect(el.querySelectorAll('.q-footer-grid > .q-footer-col').length).toBe(4);
@@ -70,65 +58,7 @@ describe('FooterView', () => {
     const headings = Array.from(el.querySelectorAll('.q-footer-heading')).map(
       (heading) => heading.textContent
     );
-    expect(headings).toEqual(['Comprar y vender', 'Ayuda', 'Síguenos']);
-  });
-
-  describe('restored behavioral checks', () => {
-    it('renders social links with safe external-link attributes', () => {
-      const el = view.render();
-      const socialLinks = Array.from(el.querySelectorAll('.q-footer-social-btn'));
-
-      socialLinks.forEach((link) => {
-        expect(link.getAttribute('target')).toBe('_blank');
-        expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-      });
-    });
-
-    it('preserves custom social links and adds the missing TikTok link', () => {
-      const customModel = new FooterViewModel({
-        social: {
-          title: 'Síguenos',
-          items: [{ id: 'blog', label: 'Blog', href: 'https://example.com/blog' }],
-        },
-      });
-      const customView = new FooterView(customModel);
-      const el = customView.render();
-
-      expect(el.querySelector('[aria-label="Blog"]').getAttribute('href')).toBe(
-        'https://example.com/blog'
-      );
-      expect(el.querySelector('[aria-label="TikTok"]')).not.toBeNull();
-
-      customView.destroy();
-    });
-  });
-
-  it('renders social links with safe external-link attributes', () => {
-    const el = view.render();
-    const socialLinks = Array.from(el.querySelectorAll('.q-footer-social-btn'));
-
-    socialLinks.forEach((link) => {
-      expect(link.getAttribute('target')).toBe('_blank');
-      expect(link.getAttribute('rel')).toBe('noopener noreferrer');
-    });
-  });
-
-  it('preserves custom social links and adds the missing TikTok link', () => {
-    const customModel = new FooterViewModel({
-      social: {
-        title: 'Síguenos',
-        items: [{ id: 'blog', label: 'Blog', href: 'https://example.com/blog' }],
-      },
-    });
-    const customView = new FooterView(customModel);
-    const el = customView.render();
-
-    expect(el.querySelector('[aria-label="Blog"]').getAttribute('href')).toBe(
-      'https://example.com/blog'
-    );
-    expect(el.querySelector('[aria-label="TikTok"]')).not.toBeNull();
-
-    customView.destroy();
+    expect(headings).toEqual(['Comprar', 'Vender', 'Ayuda']);
   });
 
   it('should render bottom legal bar with copyright and motto', () => {
@@ -139,7 +69,8 @@ describe('FooterView', () => {
 
     const motto = el.querySelector('.q-footer-motto');
     expect(motto).not.toBeNull();
-    expect(motto.textContent).toBe('El mercado de Latinoamérica, en un solo lugar.');
+    expect(copyright.textContent).toBe("© 2026 Q'atu");
+    expect(motto.textContent).toBe('El mercado de Latinoamérica, en un solo lugar');
   });
 
   it('should mount into container correctly', () => {
@@ -153,7 +84,7 @@ describe('FooterView', () => {
     const el = footerView.render();
 
     const venderLink = Array.from(el.querySelectorAll('.q-footer-links a')).find((a) =>
-      a.textContent.toLowerCase().includes('vender')
+      a.textContent.toLowerCase().includes('vende')
     );
     expect(venderLink).not.toBeNull();
     expect(venderLink.getAttribute('href')).toBe('/seller/apply');
@@ -166,7 +97,7 @@ describe('FooterView', () => {
     const el = footerView.render();
 
     const venderLink = Array.from(el.querySelectorAll('.q-footer-links a')).find((a) =>
-      a.textContent.toLowerCase().includes('vender')
+      a.textContent.toLowerCase().includes('vende')
     );
     expect(venderLink).not.toBeNull();
     expect(venderLink.getAttribute('href')).toBe('/seller/products');

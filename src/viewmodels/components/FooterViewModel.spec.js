@@ -12,17 +12,20 @@ describe('FooterViewModel', () => {
     expect(viewModel.brand.tagline).toContain('El mercado de Latinoamérica');
   });
 
-  it('should contain Comprar y vender and Ayuda sections', () => {
-    expect(viewModel.sections.length).toBe(2);
-    expect(viewModel.sections[0].title).toBe('Comprar y vender');
-    expect(viewModel.sections[1].title).toBe('Ayuda');
+  it('should contain Comprar, Vender, and Ayuda sections', () => {
+    expect(viewModel.sections.length).toBe(3);
+    expect(viewModel.sections.map((section) => section.title)).toEqual([
+      'Comprar',
+      'Vender',
+      'Ayuda',
+    ]);
 
     const buyingLinks = viewModel.sections[0].links.map((l) => l.label);
     expect(buyingLinks).toContain('Productos');
     expect(buyingLinks).toContain('Categorías');
     expect(buyingLinks).toContain('Tiendas');
 
-    const helpLinks = viewModel.sections[1].links.map((l) => l.label);
+    const helpLinks = viewModel.sections[2].links.map((l) => l.label);
     expect(helpLinks).toContain('Preguntas frecuentes');
     expect(helpLinks).toContain('Envíos y devoluciones');
     expect(helpLinks).toContain('Contáctanos');
@@ -36,6 +39,6 @@ describe('FooterViewModel', () => {
 
   it('should contain copyright and latinoamerica motto', () => {
     expect(viewModel.bottomBar.copyright).toContain('2026');
-    expect(viewModel.bottomBar.motto).toBe('El mercado de Latinoamérica, en un solo lugar.');
+    expect(viewModel.bottomBar.motto).toBe('El mercado de Latinoamérica, en un solo lugar');
   });
 });

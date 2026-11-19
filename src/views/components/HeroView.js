@@ -50,7 +50,12 @@ export class HeroView {
 
     const eyebrow = document.createElement('p');
     eyebrow.className = 'q-hero__eyebrow';
-    eyebrow.textContent = this.viewModel.eyebrow.toUpperCase();
+    const eyebrowDot = document.createElement('span');
+    eyebrowDot.className = 'q-hero__eyebrow-dot';
+    eyebrowDot.setAttribute('aria-hidden', 'true');
+    const eyebrowText = document.createElement('span');
+    eyebrowText.textContent = this.viewModel.eyebrow.toUpperCase();
+    eyebrow.append(eyebrowDot, eyebrowText);
 
     const title = document.createElement('h1');
     title.id = 'q-hero-title';
@@ -75,6 +80,12 @@ export class HeroView {
     const searchForm = document.createElement('form');
     searchForm.className = 'q-hero__search';
     searchForm.setAttribute('role', 'search');
+
+    const searchIcon = document.createElement('span');
+    searchIcon.className = 'q-hero__search-icon';
+    searchIcon.setAttribute('aria-hidden', 'true');
+    searchIcon.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
 
     const searchLabel = document.createElement('label');
     searchLabel.htmlFor = 'q-hero-search-input';
@@ -103,7 +114,7 @@ export class HeroView {
       this.viewModel.triggerSearch();
     });
 
-    searchForm.appendChild(searchLabel);
+    searchForm.append(searchIcon, searchLabel);
     searchForm.appendChild(searchInput);
     searchForm.appendChild(searchButton);
 
@@ -149,30 +160,35 @@ export class HeroView {
     visual.className = 'q-hero__visual';
     visual.setAttribute('aria-hidden', 'true');
 
-    const visualImg = document.createElement('img');
-    visualImg.className = 'q-hero__visual-img';
-    visualImg.src = this.viewModel.visualImageUrl;
-    visualImg.alt = '';
-    visualImg.loading = 'lazy';
-    visualImg.addEventListener(
-      'error',
-      () => {
-        // Fall back to a plain color block, not a broken-image icon.
-        // Removing the src attribute and swapping the element for a styled
-        // <div> is the simplest robust approach.
-        visualImg.removeAttribute('src');
-        visualImg.alt = '';
-        visualImg.style.display = 'none';
-        // Optionally add a CSS class to the parent that renders a gradient
-        // background (already defined in hero.css as .q-hero__visual background).
-        const parent = visualImg.parentElement;
-        if (parent && !parent.dataset.fallback) {
-          parent.dataset.fallback = 'true';
-          parent.classList.add('q-hero__visual--fallback');
-        }
-      },
-      { once: true }
-    );
+    const collage = document.createElement('div');
+    collage.className = 'q-hero__collage';
+
+    this.viewModel.visualImages.forEach((product, index) => {
+      const card = document.createElement('article');
+      const position = ['coffee', 'bag', 'pottery'][index] || 'extra';
+      card.className = `q-hero__collage-card q-hero__collage-card--${position}`;
+
+      const image = document.createElement('img');
+      image.className = 'q-hero__visual-img';
+      image.src = product.src;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.addEventListener(
+        'error',
+        () => {
+          image.removeAttribute('src');
+          image.style.display = 'none';
+          visual.classList.add('q-hero__visual--fallback');
+        },
+        { once: true }
+      );
+
+      const caption = document.createElement('span');
+      caption.className = 'q-hero__collage-caption';
+      caption.textContent = `${product.label} · ${product.price}`;
+      card.append(image, caption);
+      collage.appendChild(card);
+    });
 
     const badge = document.createElement('div');
     badge.className = 'q-hero__badge';
@@ -199,14 +215,30 @@ export class HeroView {
     floatingCardLabel.className = 'q-hero__floating-card-label';
     floatingCardLabel.textContent = this.viewModel.floatingCardLabel;
 
+    const floatingCardCopy = document.createElement('span');
+    floatingCardCopy.className = 'q-hero__floating-card-copy';
+    floatingCardCopy.appendChild(floatingCardLabel);
+
+    const floatingCardSublabel = document.createElement('span');
+    floatingCardSublabel.className = 'q-hero__floating-card-sublabel';
+    floatingCardSublabel.textContent = this.viewModel.floatingCardSublabel;
+    floatingCardCopy.appendChild(floatingCardSublabel);
+
     const floatingCardCta = document.createElement('span');
     floatingCardCta.className = 'q-hero__floating-card-cta';
-    floatingCardCta.textContent = `${this.viewModel.floatingCardCtaLabel} →`;
+    floatingCardCta.setAttribute('aria-label', this.viewModel.floatingCardCtaLabel);
+    floatingCardCta.setAttribute('aria-hidden', 'true');
+    floatingCardCta.textContent = '→';
 
-    floatingCard.appendChild(floatingCardLabel);
+    const floatingIcon = document.createElement('span');
+    floatingIcon.className = 'q-hero__floating-card-icon';
+    floatingIcon.setAttribute('aria-hidden', 'true');
+    floatingIcon.textContent = '✦';
+
+    floatingCard.append(floatingIcon, floatingCardCopy);
     floatingCard.appendChild(floatingCardCta);
 
-    visual.appendChild(visualImg);
+    visual.appendChild(collage);
     visual.appendChild(badge);
     visual.appendChild(floatingCard);
 

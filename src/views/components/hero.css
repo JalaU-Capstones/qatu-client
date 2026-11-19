@@ -268,3 +268,367 @@ a.q-hero__floating-card:focus-visible {
   background: linear-gradient(135deg, var(--q-accent-light, #fce7f3), var(--q-bg-surface, #ffffff));
   min-height: 320px;
 }
+
+.q-hero {
+  overflow: visible;
+  padding-top: calc(var(--q-header-overlay-height, 72px) + 52px);
+  padding-bottom: 56px;
+}
+
+.q-hero.q-ambient {
+  isolation: auto;
+}
+
+.q-home .q-section-container {
+  max-width: 1288px;
+}
+
+.q-hero__inner {
+  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+  gap: 48px;
+}
+
+.q-hero__content {
+  gap: 0;
+}
+
+.q-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--q-accent);
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  line-height: 17px;
+}
+
+.q-hero__eyebrow-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--q-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--q-accent) 12%, transparent);
+}
+
+.q-hero__title {
+  margin: 18px 0 18px;
+  font-size: clamp(3rem, 4vw, 4.25rem);
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+}
+
+.q-hero__subtitle {
+  max-width: 54ch;
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.q-hero__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 580px;
+  height: 64px;
+  margin-top: 24px;
+  padding: 8px;
+  border: 1px solid var(--q-border-default);
+  border-radius: 999px;
+  background: var(--q-bg-elevated);
+  box-shadow: 0 12px 30px rgba(29, 22, 38, 0.09);
+  box-sizing: border-box;
+}
+
+.q-hero__search-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin-left: 12px;
+  color: var(--q-fg-muted);
+}
+
+.q-hero__search-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.q-hero__search-input {
+  min-width: 0;
+  height: 100%;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.q-hero__search-input:focus-visible {
+  outline: 0;
+  border-color: transparent;
+}
+
+.q-hero__search-button {
+  width: 96px;
+  min-height: 48px;
+  flex: 0 0 96px;
+  border-radius: 999px;
+}
+
+.q-hero__quick-links {
+  margin-top: 18px;
+  gap: 12px;
+}
+
+.q-hero__visual {
+  width: 100%;
+  aspect-ratio: 550 / 430;
+  overflow: visible;
+  background:
+    radial-gradient(
+      ellipse at 53% 46%,
+      color-mix(in srgb, var(--q-accent) 14%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at 74% 66%,
+      color-mix(in srgb, var(--q-ambient-cyan) 48%, transparent),
+      transparent 57%
+    );
+}
+
+.q-hero__collage {
+  position: absolute;
+  inset: 0;
+}
+
+.q-hero__collage-card {
+  position: absolute;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 32px;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--q-border-default) 75%, transparent);
+  border-radius: 20px;
+  background: var(--q-bg-elevated);
+  box-shadow: 0 16px 36px rgba(37, 25, 45, 0.16);
+}
+
+.q-hero__collage-card--coffee {
+  z-index: 1;
+  top: 26%;
+  left: 3%;
+  width: 44%;
+  height: 62%;
+  transform: rotate(-4deg);
+}
+
+.q-hero__collage-card--bag {
+  z-index: 2;
+  top: 25%;
+  right: 2%;
+  width: 44%;
+  height: 62%;
+  transform: rotate(4deg);
+}
+
+.q-hero__collage-card--pottery {
+  z-index: 3;
+  top: 4%;
+  left: 29%;
+  width: 42%;
+  height: 59%;
+}
+
+.q-hero__visual-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: none;
+}
+
+.q-hero__collage-caption {
+  align-self: center;
+  overflow: hidden;
+  padding: 7px 4px 0;
+  color: var(--q-fg-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.q-hero__badge {
+  z-index: 4;
+  top: 7%;
+  right: -3%;
+  width: 96px;
+  height: 96px;
+  background: var(--q-accent);
+  color: #fff;
+  transform: rotate(9deg);
+}
+
+.q-hero__badge-label {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+a.q-hero__floating-card {
+  z-index: 5;
+  bottom: 11%;
+  left: -2%;
+  min-width: 300px;
+  min-height: 76px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--q-bg-elevated);
+  box-shadow: 0 14px 34px rgba(37, 25, 45, 0.16);
+}
+
+.q-hero__floating-card-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--q-accent) 12%, transparent);
+  color: var(--q-accent);
+  font-size: 17px;
+}
+
+.q-hero__floating-card-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.q-hero__floating-card-label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.q-hero__floating-card-sublabel {
+  color: var(--q-fg-muted);
+  font-size: 12px;
+}
+
+.q-hero__floating-card-cta {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--q-accent);
+  color: #fff;
+  font-size: 18px;
+}
+
+[data-theme='dark'] .q-hero__search {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+}
+
+@media (max-width: 1023px) {
+  .q-hero__inner {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .q-hero__visual {
+    width: min(100%, 560px);
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .q-hero {
+    padding-top: calc(var(--q-header-overlay-height, 72px) + 38px);
+    padding-bottom: 40px;
+  }
+
+  .q-hero__title {
+    font-size: clamp(2.35rem, 10vw, 3.25rem);
+    letter-spacing: -0.04em;
+  }
+
+  .q-hero__search {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 7px;
+    height: 58px;
+    padding: 6px;
+  }
+
+  .q-hero__search-input {
+    width: 0;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .q-hero__search-icon {
+    margin-left: 8px;
+  }
+
+  .q-hero__search-button {
+    width: auto;
+    min-width: 82px;
+    min-height: 44px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    padding: 0 16px;
+  }
+
+  .q-hero__quick-links {
+    gap: 8px;
+  }
+
+  .q-hero__visual {
+    display: block;
+    width: min(100%, 420px);
+    aspect-ratio: 1.15;
+  }
+
+  .q-hero__collage-card {
+    border-radius: 16px;
+    padding: 6px;
+  }
+
+  .q-hero__collage-card--coffee,
+  .q-hero__collage-card--bag {
+    height: 64%;
+  }
+
+  .q-hero__collage-card--pottery {
+    height: 60%;
+  }
+
+  .q-hero__collage-caption {
+    font-size: 9px;
+  }
+
+  .q-hero__badge {
+    width: 76px;
+    height: 76px;
+    font-size: 13px;
+  }
+
+  a.q-hero__floating-card {
+    left: 0;
+    min-width: 0;
+    min-height: 62px;
+    padding: 10px 12px;
+  }
+}

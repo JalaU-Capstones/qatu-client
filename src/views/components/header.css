@@ -370,10 +370,15 @@ a.q-header-brand:hover .q-brand-logo {
   .q-header__pill {
     gap: 8px;
     padding: 0 12px;
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    align-content: center;
   }
 
   .q-header__left {
     gap: 8px;
+    order: 1;
   }
 
   .q-header .q-navbar-burger {
@@ -382,13 +387,20 @@ a.q-header-brand:hover .q-brand-logo {
     height: 32px;
   }
 
+  .q-header-actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+    order: 2;
+  }
+
   .q-header-search {
     width: 32px;
     max-width: 32px;
     height: 32px;
     flex: 0 0 32px;
     justify-content: center;
-    margin: 0 0 0 auto;
+    margin: 0;
+    order: 3;
     padding: 0;
     border-color: transparent;
     background: transparent;
@@ -406,23 +418,35 @@ a.q-header-brand:hover .q-brand-logo {
   }
 
   .q-header-search.q-header-search--expanded {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    left: 12px;
-    z-index: 3;
-    width: auto;
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    z-index: auto;
+    width: 100%;
     max-width: none;
-    flex: none;
+    flex: 0 0 100%;
     justify-content: flex-start;
     margin: 0;
     padding: 0 10px;
     border-color: var(--q-border-default);
     background: var(--q-bg-surface);
+    order: 3;
+  }
+
+  .q-header-search--expanded + .q-header-actions {
+    order: 2;
+  }
+
+  .q-header__pill:has(.q-header-search--expanded) {
+    gap: 8px;
+    padding-block: 8px;
   }
 
   .q-header-search--expanded .q-header-search__input {
     display: block;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
@@ -433,6 +457,10 @@ a.q-header-brand:hover .q-brand-logo {
 
   .q-header-actions {
     gap: 2px;
+  }
+
+  body:has(.q-header-search--expanded) .q-main {
+    padding-top: calc(var(--q-header-overlay-height, 72px) + 56px);
   }
 }
 
@@ -460,16 +488,49 @@ a.q-header-brand:hover .q-brand-logo {
     gap: 4px;
   }
 
-  .q-header-theme-btn {
-    display: none;
+  .q-header-brand .q-brand-logo {
+    gap: 5px;
+    font-size: 16px;
+  }
+
+  .q-header-brand .q-brand-logo::before {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+  }
+
+  .q-header .q-navbar-burger,
+  .q-header-search,
+  .q-header-search__toggle {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
   }
 
   .q-header-actions {
-    gap: 4px;
+    gap: 2px;
   }
 
-  .q-header-login-btn {
-    padding: 0 10px;
-    font-size: 12px;
+  .q-header-actions .q-header-icon-btn {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .q-header .q-header-login-btn,
+  .q-header .q-header-login-btn--mobile {
+    min-height: 32px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .q-header-search.q-header-search--expanded {
+    width: 100%;
+    height: 40px;
+    flex-basis: 100%;
+  }
+
+  .q-header__pill:has(.q-header-search--expanded) {
+    padding: 8px;
   }
 }

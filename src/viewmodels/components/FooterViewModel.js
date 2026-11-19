@@ -1,6 +1,6 @@
 /**
  * ViewModel for Footer component.
- * Manages brand info, categorical links, support links, social channels, and legal notices.
+ * Manages brand info, categorical links, and legal notices.
  */
 export class FooterViewModel {
   /**
@@ -15,13 +15,19 @@ export class FooterViewModel {
 
     this.sections = options.sections || [
       {
-        id: 'buying-selling',
-        title: 'Comprar y vender',
+        id: 'buy',
+        title: 'Comprar',
         links: [
           { label: 'Productos', href: '/products' },
           { label: 'Categorías', href: '/categorias' },
           { label: 'Tiendas', href: '/tiendas' },
-          { label: 'Vender en Q’atu', href: '/vender' },
+        ],
+      },
+      {
+        id: 'sell',
+        title: 'Vender',
+        links: [
+          { label: 'Vende en Q’atu', href: '/vender' },
           { label: 'Centro de ayuda', href: '/ayuda' },
           { label: 'Comisiones', href: '/comisiones' },
         ],
@@ -47,8 +53,8 @@ export class FooterViewModel {
     };
 
     this.bottomBar = options.bottomBar || {
-      copyright: '© 2026 Q’atu',
-      motto: 'El mercado de Latinoamérica, en un solo lugar.',
+      copyright: "© 2026 Q'atu",
+      motto: 'El mercado de Latinoamérica, en un solo lugar',
     };
 
     this._listeners = new Set();

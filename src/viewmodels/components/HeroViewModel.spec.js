@@ -17,7 +17,7 @@ describe('HeroViewModel', () => {
     expect(viewModel.quickLinksLabel).toBe('Explora:');
     expect(viewModel.quickLinks.length).toBe(5);
     expect(viewModel.visualBadgeLabel).toBe('100%');
-    expect(viewModel.visualBadgeSublabel).toBe('único');
+    expect(viewModel.visualBadgeSublabel).toBe('LOCAL');
     expect(viewModel.floatingCardLabel).toBe('Hecho en Latinoamérica');
     expect(viewModel.floatingCardCtaLabel).toBe('Ver más sobre');
     expect(viewModel.floatingCardHref).toBe('/nosotros');

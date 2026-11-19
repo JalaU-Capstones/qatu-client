@@ -326,6 +326,37 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.q-home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background: var(--q-bg-page);
+}
+
+.q-home::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 -480px;
+  background:
+    radial-gradient(
+      ellipse 500px 430px at 5% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 72%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 480px 560px at 100% 28%,
+      color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 600px 430px at 70% 92%,
+      color-mix(in srgb, var(--q-ambient-pink) 24%, transparent),
+      transparent 75%
+    );
+  content: '';
+  pointer-events: none;
+}
+
 /* Utility label for ImageWithFallback placeholder text.
    Neutralizes default <p> margin/font so consumers can style their
    own label class on top without inheriting block-element defaults. */

@@ -25,6 +25,8 @@ describe('HomeView', () => {
 
     // Home content sections are present
     expect(container.querySelector('.q-hero, .q-hero-banner, [class*="hero"]')).not.toBeNull();
+    expect(container.querySelector('.q-home')).not.toBeNull();
+    expect(container.querySelectorAll('.q-home > section').length).toBe(5);
 
     view.destroy();
   });

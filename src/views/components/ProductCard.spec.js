@@ -24,6 +24,40 @@ describe('ProductCard', () => {
     expect(card.querySelector('.product-card__rating').textContent).toContain('12');
   });
 
+  it('renders the featured product layout with seller origin, status, wishlist, and compact cart action', () => {
+    const card = new ProductCard({
+      product: {
+        ...product,
+        seller: { full_name: 'Tejidos Illimani', country: 'Bolivia' },
+        is_best_seller: true,
+      },
+      variant: 'featured',
+    }).render();
+
+    expect(card.classList.contains('product-card--featured')).toBe(true);
+    expect(card.querySelector('.product-card__category').textContent).toBe(
+      'Tejidos Illimani · Bolivia'
+    );
+    expect(card.querySelector('.product-card__status-pill').textContent).toBe('Más vendido');
+    expect(card.querySelector('.product-card__favorite')).not.toBeNull();
+    expect(card.querySelector('.product-card__footer .product-card__price').textContent).toBe(
+      'US$ 42.50'
+    );
+    expect(card.querySelector('.product-card__add-button').textContent).toBe('');
+    expect(card.querySelector('.product-card__add-button').classList.contains('is-fullwidth')).toBe(
+      false
+    );
+  });
+
+  it('toggles the featured wishlist button state', () => {
+    const card = new ProductCard({ product, variant: 'featured' }).render();
+    const favorite = card.querySelector('.product-card__favorite');
+
+    favorite.click();
+    expect(favorite.getAttribute('aria-pressed')).toBe('true');
+    expect(favorite.classList.contains('is-saved')).toBe(true);
+  });
+
   it('uses the default Bolivian currency when no currency is supplied', () => {
     const card = new ProductCard({ product: { name: 'Bag', price: 2 } }).render();
 

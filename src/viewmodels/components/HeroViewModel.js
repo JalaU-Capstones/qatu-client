@@ -17,9 +17,15 @@ export class HeroViewModel {
       { id: 'tecnologia', label: 'Tecnología', href: '/categorias/tecnologia' },
     ];
     this.visualImageUrl = options.visualImageUrl || 'https://picsum.photos/seed/qatu-hero/900/700';
+    this.visualImages = options.visualImages || [
+      { src: 'https://picsum.photos/seed/qatu-coffee/600/600', label: 'Café', price: 'US$ 14.00' },
+      { src: 'https://picsum.photos/seed/qatu-bag/600/600', label: 'Bolso', price: 'US$ 85.00' },
+      { src: this.visualImageUrl, label: 'Jarrón', price: 'US$ 38.00' },
+    ];
     this.visualBadgeLabel = options.visualBadgeLabel || '100%';
-    this.visualBadgeSublabel = options.visualBadgeSublabel || 'único';
+    this.visualBadgeSublabel = options.visualBadgeSublabel || 'LOCAL';
     this.floatingCardLabel = options.floatingCardLabel || 'Hecho en Latinoamérica';
+    this.floatingCardSublabel = options.floatingCardSublabel || 'por productores locales';
     this.floatingCardCtaLabel = options.floatingCardCtaLabel || 'Ver más sobre';
     this.floatingCardHref = options.floatingCardHref || '/nosotros';
     this.searchValue = '';

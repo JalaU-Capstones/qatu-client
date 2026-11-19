@@ -36,7 +36,9 @@ export class ProductCard {
     hideAddToCart = false,
   } = {}) {
     this.product = product || {};
-    this.variant = ['default', 'compact', 'seller'].includes(variant) ? variant : 'default';
+    this.variant = ['default', 'compact', 'seller', 'featured'].includes(variant)
+      ? variant
+      : 'default';
     this.onAddToCart = onAddToCart;
     this.onView = onView;
     this.onEdit = onEdit;
@@ -55,10 +57,12 @@ export class ProductCard {
     body.className = 'product-card__body';
 
     const categoryName = this.product.category?.name;
-    if (categoryName) {
+    const sellerLine =
+      this.variant === 'featured' ? this._getSellerLine(categoryName) : categoryName;
+    if (sellerLine) {
       const category = document.createElement('p');
       category.className = 'product-card__category';
-      category.textContent = categoryName;
+      category.textContent = sellerLine;
       body.appendChild(category);
     }
 
@@ -73,6 +77,7 @@ export class ProductCard {
       titlePrice.appendChild(title);
     }
 
+    let rating = null;
     if (
       this.product.average_rating !== undefined &&
       this.product.average_rating !== null &&
@@ -80,7 +85,7 @@ export class ProductCard {
     ) {
       const ratingValue = Number(this.product.average_rating);
       if (Number.isFinite(ratingValue)) {
-        const rating = document.createElement('p');
+        rating = document.createElement('p');
         rating.className = 'product-card__rating';
 
         const value = document.createElement('span');
@@ -91,22 +96,25 @@ export class ProductCard {
         const count = document.createElement('span');
         count.textContent = `(${Number(this.product.ratings_count) || 0})`;
         rating.append(value, star, count);
-        body.appendChild(rating);
       }
     }
 
+    let hasPrice = false;
     if (
       this.product.price !== undefined &&
       this.product.price !== null &&
       this.product.price !== '' &&
       Number.isFinite(Number(this.product.price))
     ) {
+      hasPrice = true;
       const price = document.createElement('p');
       price.className = 'product-card__price';
       price.textContent = this._formatPrice();
-      titlePrice.appendChild(price);
+      if (this.variant !== 'featured') titlePrice.appendChild(price);
     }
+    if (rating && this.variant !== 'featured') body.appendChild(rating);
     if (titlePrice.childNodes.length > 0) body.appendChild(titlePrice);
+    if (rating && this.variant === 'featured') body.appendChild(rating);
 
     if (this.variant === 'seller') {
       body.appendChild(this._renderSellerControls());
@@ -114,7 +122,7 @@ export class ProductCard {
 
     card.appendChild(body);
 
-    const footer = this._renderFooter();
+    const footer = this._renderFooter({ hasPrice });
     if (footer.childNodes.length > 0) card.appendChild(footer);
 
     return card;
@@ -159,7 +167,35 @@ export class ProductCard {
     frame.appendChild(this._wrapWithViewLink(image));
     media.appendChild(frame);
 
-    if (this.product.stock === 0) {
+    if (this.variant === 'featured') {
+      const badgeLabel = this._getFeaturedBadge();
+      if (badgeLabel) {
+        const badge = document.createElement('span');
+        badge.className = 'product-card__status-pill';
+        badge.textContent = badgeLabel;
+        media.appendChild(badge);
+      }
+
+      const favorite = document.createElement('button');
+      favorite.type = 'button';
+      favorite.className = 'product-card__favorite';
+      favorite.setAttribute('aria-label', `Guardar ${this.product.name || 'producto'}`);
+      favorite.setAttribute('aria-pressed', 'false');
+      favorite.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8Z"/></svg>';
+      favorite.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const isSaved = favorite.getAttribute('aria-pressed') !== 'true';
+        favorite.setAttribute('aria-pressed', String(isSaved));
+        favorite.setAttribute(
+          'aria-label',
+          `${isSaved ? 'Quitar de favoritos' : 'Guardar'} ${this.product.name || 'producto'}`
+        );
+        favorite.classList.toggle('is-saved', isSaved);
+      });
+      media.appendChild(favorite);
+    } else if (this.product.stock === 0) {
       const badge = document.createElement('span');
       badge.className = 'product-card__stock-badge';
       badge.textContent = 'Agotado';
@@ -184,20 +220,35 @@ export class ProductCard {
     return controls;
   }
 
-  _renderFooter() {
+  _renderFooter({ hasPrice = false } = {}) {
     const footer = document.createElement('footer');
     footer.className = 'product-card__footer';
+
+    if (this.variant === 'featured' && hasPrice) {
+      const price = document.createElement('p');
+      price.className = 'product-card__price';
+      price.textContent = this._formatPrice();
+      footer.appendChild(price);
+    }
 
     if (!this.hideAddToCart) {
       const addButton = document.createElement('button');
       addButton.type = 'button';
       addButton.className =
-        this.variant === 'default'
-          ? 'button is-primary is-fullwidth'
-          : this.variant === 'compact'
-            ? 'button is-small is-primary'
-            : 'button is-small';
-      addButton.textContent = 'Añadir';
+        this.variant === 'featured'
+          ? 'product-card__add-button'
+          : this.variant === 'default'
+            ? 'button is-primary is-fullwidth'
+            : this.variant === 'compact'
+              ? 'button is-small is-primary'
+              : 'button is-small';
+      if (this.variant === 'featured') {
+        addButton.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.5a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>';
+      } else {
+        addButton.textContent = 'Añadir';
+      }
+      if (this.variant === 'featured') addButton.classList.add('product-card__cart-action');
       addButton.setAttribute('aria-label', `Añadir ${this.product.name || 'producto'} al carrito`);
       addButton.disabled = this._isUnavailable();
       addButton.addEventListener('click', async () => {
@@ -278,6 +329,44 @@ export class ProductCard {
 
   _formatPrice() {
     return formatPrice(this.product.price, this.product.currency || 'BOB');
+  }
+
+  _getSellerLine(categoryName) {
+    const seller = this.product.seller || this.product.store || this.product.seller_name;
+    if (!seller) return categoryName || '';
+    if (typeof seller === 'string') return seller;
+
+    const sellerName = seller.full_name || seller.username || seller.name || seller.store_name;
+    const countryValue = seller.country;
+    const country =
+      seller.country_name ||
+      (typeof countryValue === 'string' ? countryValue : countryValue?.name) ||
+      seller.countryName ||
+      this.product.country_name;
+    return [sellerName, country].filter(Boolean).join(' · ') || categoryName || '';
+  }
+
+  _getFeaturedBadge() {
+    const explicitBadge = this.product.badge || this.product.tag;
+    if (['Más vendido', 'Nuevo', 'Últimas unidades', 'Oferta', 'Agotado'].includes(explicitBadge)) {
+      return explicitBadge;
+    }
+    if (this.product.stock === 0) return 'Agotado';
+    if (this.product.is_best_seller || this.product.isBestSeller || this.product.best_seller) {
+      return 'Más vendido';
+    }
+    if (
+      Number(this.product.discount_price) > 0 ||
+      Number(this.product.sale_price) > 0 ||
+      Number(this.product.discount_percentage) > 0
+    ) {
+      return 'Oferta';
+    }
+    if (this.product.is_new || this.product.isNew) return 'Nuevo';
+    if (Number(this.product.stock) > 0 && Number(this.product.stock) <= 5) {
+      return 'Últimas unidades';
+    }
+    return '';
   }
 
   _showAddError(footer, error) {

@@ -220,17 +220,40 @@ export class HeaderView {
     toggle.setAttribute('aria-label', 'Abrir búsqueda');
     toggle.setAttribute('aria-controls', input.id);
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.innerHTML = `
+    const searchIcon = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
         <path d="m20 20-4-4"></path>
       </svg>
     `;
-    toggle.addEventListener('click', () => {
-      const expanded = form.classList.toggle('q-header-search--expanded');
+    const closeIcon = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m18 6-12 12M6 6l12 12"></path>
+      </svg>
+    `;
+    const setExpanded = (expanded) => {
+      form.classList.toggle('q-header-search--expanded', expanded);
       toggle.setAttribute('aria-expanded', String(expanded));
       toggle.setAttribute('aria-label', expanded ? 'Cerrar búsqueda' : 'Abrir búsqueda');
-      if (expanded) input.focus();
+      toggle.innerHTML = expanded ? closeIcon : searchIcon;
+      if (expanded) {
+        input.focus();
+      } else {
+        input.blur();
+        toggle.focus();
+      }
+    };
+
+    toggle.innerHTML = searchIcon;
+    toggle.addEventListener('click', () => {
+      setExpanded(!form.classList.contains('q-header-search--expanded'));
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && form.classList.contains('q-header-search--expanded')) {
+        event.preventDefault();
+        setExpanded(false);
+      }
     });
 
     form.addEventListener('submit', (e) => {
