@@ -20,6 +20,7 @@ import './views/pages/seller-orders.css';
 import './views/pages/seller-products.css';
 import './views/pages/seller-product-form.css';
 import './views/pages/seller-apply.css';
+import './views/pages/admin-reports.css';
 import './views/pages/admin-seller-applications.css';
 import './views/pages/profile.css';
 import './views/components/product-card.css';
@@ -52,6 +53,7 @@ import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { AdminReportsPageView } from './views/pages/AdminReportsPageView.js';
 import { AdminSellerApplicationsPageView } from './views/pages/AdminSellerApplicationsPageView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
@@ -88,6 +90,7 @@ if (app) {
 
   const header = new HeaderView();
   header.viewModel.setIsSeller(authStore.isSeller());
+  header.viewModel.setIsAdmin(authStore.isAdmin());
   header.viewModel.setUser(buildHeaderUser(authStore));
   header.viewModel.setCartCount(cartStore.getCount());
   header.mount(app);
@@ -401,6 +404,32 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderAdminReports = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/admin/reports') return;
+
+    const access = getAdminRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/admin/reports');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+
+    currentPageView = new AdminReportsPageView({
+      onNavigate: (path) => router.navigate(path),
+    });
+
+    if (access === 'forbidden') {
+      currentPageView.render();
+      mainEl.appendChild(currentPageView.element);
+      currentPageView._renderForbidden();
+      return;
+    }
+
+    currentPageView.mount(mainEl);
+  };
+
   const renderAdminSellerApplications = async () => {
     clearCurrentView();
     await sessionReady;
@@ -470,6 +499,7 @@ if (app) {
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
   router.addRoute('/seller/apply', () => renderSellerApply());
+  router.addRoute('/admin/reports', () => renderAdminReports());
   router.addRoute('/admin/seller-applications', () => renderAdminSellerApplications());
 
   router.addRoute('/auth/callback', () => {
@@ -500,6 +530,7 @@ if (app) {
   header.viewModel.onCategoryClick = (categoryId) =>
     router.navigate('/products?category=' + encodeURIComponent(categoryId));
   header.viewModel.onSellerApplyClick = () => router.navigate('/seller/apply');
+  header.viewModel.onAdminReportsClick = () => router.navigate('/admin/reports');
   header.viewModel.onAdminSellerApplicationsClick = () =>
     router.navigate('/admin/seller-applications');
 
@@ -546,6 +577,7 @@ if (app) {
 
   authStore.subscribe((store) => {
     header.viewModel.setIsSeller(store.isSeller());
+    header.viewModel.setIsAdmin(store.isAdmin());
     header.viewModel.setUser(buildHeaderUser(store));
     syncCartWithSession(store);
   });

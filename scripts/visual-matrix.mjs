@@ -57,7 +57,54 @@ const ROUTES = [
     authenticated: true,
     roles: ['seller'],
   },
+  { name: 'admin-reports', path: '/admin/reports', authenticated: true, roles: ['admin'] },
 ];
+
+const ADMIN_REPORTS = {
+  sales: {
+    currency: 'BOB',
+    total_revenue: 184320,
+    total_orders: 128,
+    revenue_by_currency: [{ currency: 'BOB', revenue: 184320, order_count: 128 }],
+    period_breakdown: [
+      { period: '2026-06', revenue: 12000, order_count: 10 },
+      { period: '2026-07', revenue: 18000, order_count: 14 },
+      { period: '2026-08', revenue: 22000, order_count: 16 },
+      { period: '2026-09', revenue: 26000, order_count: 20 },
+      { period: '2026-10', revenue: 31000, order_count: 24 },
+      { period: '2026-11', revenue: 34000, order_count: 28 },
+    ],
+    top_products: [{ product_id: 'p1', title: 'Manta de alpaca', revenue: 4200, units_sold: 18 }],
+    top_sellers: [{ seller_id: 's1', display_name: 'Taller Illimani', revenue: 9000 }],
+  },
+  users: {
+    total_users: 40,
+    new_registrations: 6,
+    buyer_count: 40,
+    seller_count: 8,
+    active_buyers: 12,
+    active_sellers: 5,
+    pending_seller_applications: 2,
+  },
+  products: {
+    total_products: 24,
+    published_products: 16,
+    draft_products: 5,
+    unpublished_products: 2,
+    archived_products: 1,
+    new_listings: 3,
+    top_selling_products: [{ product_id: 'p1', title: 'Manta de alpaca', units_sold: 18 }],
+    top_categories: [{ category_id: 'c1', name: 'Textiles', product_count: 9 }],
+    top_rated_products: [],
+  },
+};
+
+function adminReportBody(url) {
+  const meta = { timestamp: '2026-11-18T12:00:00.000Z' };
+  if (url.includes('/admin/reports/users')) return { data: ADMIN_REPORTS.users, meta };
+  if (url.includes('/admin/reports/products')) return { data: ADMIN_REPORTS.products, meta };
+  return { data: ADMIN_REPORTS.sales, meta };
+}
 
 /** Orders returned for `GET /v1/orders?view=seller` (long names exercise the mobile layout). */
 const SELLER_SAMPLE_ORDERS = [
@@ -267,7 +314,8 @@ for (const route of activeRoutes) {
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
             url.includes('/v1/seller/products') ||
-            url.includes('/v1/categories'))
+            url.includes('/v1/categories') ||
+            url.includes('/v1/admin/reports'))
         ) {
           if (req.method() === 'OPTIONS') {
             return req.respond({
@@ -332,6 +380,8 @@ for (const route of activeRoutes) {
                 timestamp: '2026-10-14T12:00:00.000Z',
               },
             };
+          } else if (url.includes('/v1/admin/reports')) {
+            body = adminReportBody(url);
           } else {
             body = {
               data: sampleProfile,
@@ -389,7 +439,8 @@ for (const route of activeRoutes) {
                   url.includes('/v1/cart') ||
                   url.includes('/v1/seller/products') ||
                   url.includes('/v1/categories') ||
-                  url.includes('/v1/orders')
+                  url.includes('/v1/orders') ||
+                  url.includes('/v1/admin/reports')
                 ) {
                   let body;
                   if (url.includes('/v1/auth/me')) {
@@ -436,6 +487,8 @@ for (const route of activeRoutes) {
                         timestamp: '2026-10-14T12:00:00.000Z',
                       },
                     };
+                  } else if (url.includes('/v1/admin/reports')) {
+                    body = adminReportBody(url);
                   } else {
                     body = {
                       data: profile,

@@ -41,6 +41,7 @@ export class HeaderViewModel {
     this.onSellerProductsClick = options.onSellerProductsClick || null;
     this.onSellerApplyClick = options.onSellerApplyClick || null;
     this.onAdminSellerApplicationsClick = options.onAdminSellerApplicationsClick || null;
+    this.onAdminReportsClick = options.onAdminReportsClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
     this.categories = options.categories || [];
@@ -190,6 +191,15 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onSellerApplyClick === 'function') {
       this.onSellerApplyClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to the admin reports dashboard. */
+  triggerAdminReports() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminReportsClick === 'function') {
+      this.onAdminReportsClick();
     }
     this._notify();
   }

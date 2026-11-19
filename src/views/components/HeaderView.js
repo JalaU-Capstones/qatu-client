@@ -297,6 +297,20 @@ export class HeaderView {
     return link;
   }
 
+  _createAdminReportsLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-admin-reports-btn';
+    link.href = '/admin/reports';
+    link.dataset.route = '';
+    link.textContent = 'Reportes';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerAdminReports();
+    });
+    return link;
+  }
+
   _createAdminSellerApplicationsLink() {
     const link = document.createElement('a');
     link.className = 'q-header-dropdown-item q-header-admin-applications-btn';
@@ -317,34 +331,37 @@ export class HeaderView {
     const existingApply = dropdown.querySelector('.q-header-seller-apply-btn');
     const existingProducts = dropdown.querySelector('.q-header-seller-products-btn');
     const existingOrders = dropdown.querySelector('.q-header-seller-orders-btn');
+    const existingAdminReports = dropdown.querySelector('.q-header-admin-reports-btn');
     const existingAdminApps = dropdown.querySelector('.q-header-admin-applications-btn');
     const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
+    const adminAnchor = existingAdminReports || existingAdminApps || logoutBtn;
 
     if (vm.isSeller) {
       if (existingApply) existingApply.remove();
       if (!existingProducts) {
-        dropdown.insertBefore(
-          this._createSellerProductsLink(),
-          existingOrders || existingAdminApps || logoutBtn
-        );
+        dropdown.insertBefore(this._createSellerProductsLink(), existingOrders || adminAnchor);
       }
       if (!existingOrders) {
-        dropdown.insertBefore(this._createSellerOrdersLink(), existingAdminApps || logoutBtn);
+        dropdown.insertBefore(this._createSellerOrdersLink(), adminAnchor);
       }
     } else {
       if (existingProducts) existingProducts.remove();
       if (existingOrders) existingOrders.remove();
       if (!existingApply) {
-        dropdown.insertBefore(this._createSellerApplyLink(), existingAdminApps || logoutBtn);
+        dropdown.insertBefore(this._createSellerApplyLink(), adminAnchor);
       }
     }
 
     if (vm.isAdmin) {
+      if (!existingAdminReports) {
+        dropdown.insertBefore(this._createAdminReportsLink(), existingAdminApps || logoutBtn);
+      }
       if (!existingAdminApps) {
         dropdown.insertBefore(this._createAdminSellerApplicationsLink(), logoutBtn);
       }
-    } else if (existingAdminApps) {
-      existingAdminApps.remove();
+    } else {
+      if (existingAdminReports) existingAdminReports.remove();
+      if (existingAdminApps) existingAdminApps.remove();
     }
   }
 
@@ -464,6 +481,7 @@ export class HeaderView {
     }
 
     if (this.viewModel.isAdmin) {
+      dropdown.appendChild(this._createAdminReportsLink());
       dropdown.appendChild(this._createAdminSellerApplicationsLink());
     }
 
