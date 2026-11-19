@@ -672,4 +672,22 @@ describe('HeaderView', () => {
       expect(viewModel.triggerSearch).not.toHaveBeenCalled();
     });
   });
+
+  describe('admin reports link', () => {
+    it('is shown only for an admin and points at /admin/reports', () => {
+      viewModel.setUser({ username: 'ada' });
+      const el = view.render();
+      expect(el.querySelector('.q-header-admin-reports-btn')).toBeNull();
+
+      viewModel.setIsAdmin(true);
+      const link = el.querySelector('.q-header-admin-reports-btn');
+      expect(link).not.toBeNull();
+      expect(link.textContent).toBe('Reportes');
+      expect(link.getAttribute('href')).toBe('/admin/reports');
+      expect(el.querySelectorAll('.q-header-admin-reports-btn').length).toBe(1);
+
+      viewModel.setIsAdmin(false);
+      expect(el.querySelector('.q-header-admin-reports-btn')).toBeNull();
+    });
+  });
 });

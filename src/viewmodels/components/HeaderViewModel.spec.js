@@ -35,6 +35,22 @@ describe('HeaderViewModel', () => {
     expect(notifications).toBe(2);
   });
 
+  it('is not an admin by default and setIsAdmin notifies only on a real change', () => {
+    expect(viewModel.isAdmin).toBe(false);
+
+    let notifications = 0;
+    viewModel.subscribe(() => {
+      notifications += 1;
+    });
+
+    viewModel.setIsAdmin(true);
+    expect(viewModel.isAdmin).toBe(true);
+    expect(notifications).toBe(1);
+
+    viewModel.setIsAdmin(true);
+    expect(notifications).toBe(1);
+  });
+
   it('accepts isSeller as a constructor option and coerces it to boolean', () => {
     expect(new HeaderViewModel({ isSeller: true }).isSeller).toBe(true);
     expect(new HeaderViewModel({ isSeller: 'yes' }).isSeller).toBe(true);
