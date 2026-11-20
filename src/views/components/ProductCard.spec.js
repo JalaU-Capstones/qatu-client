@@ -75,7 +75,51 @@ describe('ProductCard', () => {
     const image = card.querySelector('img');
 
     expect(image.src).toContain('product-placeholder.svg');
+    expect(image.classList.contains('product-card__image--placeholder')).toBe(true);
     expect(image.alt).toBe('Woven bag');
+  });
+
+  it('prioritizes primary_image_path over gallery images for home and catalog cards', () => {
+    ['featured', 'default', 'compact'].forEach((variant) => {
+      const card = new ProductCard({
+        product: {
+          ...product,
+          primary_image_path: 'https://cdn.example.test/primary.jpg',
+        },
+        variant,
+      }).render();
+
+      expect(card.querySelector('img').src).toBe('https://cdn.example.test/primary.jpg');
+    });
+  });
+
+  it('falls back to the first gallery URL when primary_image_path is empty', () => {
+    const card = new ProductCard({
+      product: { ...product, primary_image_path: '  ' },
+    }).render();
+
+    expect(card.querySelector('img').src).toBe('https://example.test/bag.jpg');
+  });
+
+  it('resolves a relative primary image path against the API origin', () => {
+    const card = new ProductCard({
+      product: { ...product, primary_image_path: 'product-images/item/main.jpg' },
+    }).render();
+
+    expect(card.querySelector('img').src).toContain('/product-images/item/main.jpg');
+    expect(card.querySelector('img').src).toMatch(/^https?:\/\//);
+  });
+
+  it('uses the product placeholder when the selected image fails to load', () => {
+    const card = new ProductCard({
+      product: { ...product, primary_image_path: 'https://cdn.example.test/missing.jpg' },
+    }).render();
+    const image = card.querySelector('img');
+
+    image.dispatchEvent(new Event('error'));
+
+    expect(image.src).toContain('product-placeholder.svg');
+    expect(image.classList.contains('product-card__image--placeholder')).toBe(true);
   });
 
   it('uses a generic alt label when the product name is empty', () => {

@@ -144,6 +144,7 @@ describe('ProductCardView', () => {
 
     const placeholder = el.querySelector('.q-product-card-placeholder-img');
     expect(placeholder).not.toBeNull();
+    expect(placeholder.classList.contains('product-card__image--placeholder')).toBe(true);
     expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
     expect(placeholder.alt).toBe('Item without photo');
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
@@ -186,6 +187,7 @@ describe('ProductCardView', () => {
     expect(el.querySelector('.q-product-card-photo')).toBeNull();
     const placeholder = el.querySelector('.q-product-card-placeholder-img');
     expect(placeholder).not.toBeNull();
+    expect(placeholder.classList.contains('product-card__image--placeholder')).toBe(true);
     expect(placeholder.getAttribute('src')).toContain('product-placeholder.svg');
     expect(placeholder.alt).toBe('Item');
   });

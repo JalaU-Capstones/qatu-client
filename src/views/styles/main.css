@@ -70,15 +70,32 @@
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html,
+body,
+#app {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  flex: 1 0 auto;
+}
+
 .q-app {
   --q-header-overlay-height: calc(var(--q-header-height, 64) * 1px + 8px);
   display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
   min-height: 100vh;
 }
 
 .q-main {
-  flex: 1;
+  flex: 1 0 auto;
   padding-top: var(--q-header-overlay-height, 72px);
 }
 
@@ -336,7 +353,7 @@ body {
 .q-home::before {
   position: absolute;
   z-index: -1;
-  inset: 0 0 -480px;
+  inset: 0;
   background:
     radial-gradient(
       ellipse 500px 430px at 5% 2%,

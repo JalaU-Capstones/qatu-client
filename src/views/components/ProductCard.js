@@ -1,4 +1,5 @@
 import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 
 const PRODUCT_PLACEHOLDER_SRC = new URL(
   '../../assets/icons/product-placeholder.svg',
@@ -138,11 +139,7 @@ export class ProductCard {
         ? 'product-card__image-frame q-seller-products__thumb-wrap'
         : 'product-card__image-frame';
 
-    const imageSource =
-      this.product.images?.[0]?.url ||
-      this.product.images?.[0]?.image_path ||
-      this.product.images?.[0]?.path ||
-      this.product.primary_image_path;
+    const imageSource = getProductImageUrl(this.product);
     const image = document.createElement('img');
     image.className = imageSource
       ? this.variant === 'seller'

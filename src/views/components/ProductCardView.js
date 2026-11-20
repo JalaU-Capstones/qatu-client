@@ -1,8 +1,7 @@
 import { createImageWithFallback } from './ImageWithFallback.js';
 
 /**
- * Product card — single reusable renderer used by Home (featured variant)
- * and Catalog (/products, default variant).
+ * Product card renderer used by the Catalog (/products, default variant).
  *
  * Pure renderer: caller formats the data before passing it in.
  * Caller also wires the callbacks.
@@ -220,7 +219,8 @@ export class ProductCardView {
         src: this.data.imageUrl,
         alt: this.data.name || 'Imagen del producto',
         imageClassName: 'q-product-card-photo',
-        placeholderImageClassName: 'q-product-card-placeholder-img',
+        placeholderImageClassName:
+          'q-product-card-placeholder-img product-card__image--placeholder',
         placeholderAlt: this.data.name || 'Imagen del producto',
       })
     );

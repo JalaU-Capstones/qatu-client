@@ -157,6 +157,43 @@ describe('CatalogView', () => {
     view.destroy();
   });
 
+  it('uses the primary relative image path before gallery images in Catalog cards', () => {
+    mockViewModel.products = [
+      {
+        id: 'primary-image',
+        name: 'Primary image',
+        primary_image_path: 'product-images/primary.jpg',
+        images: [{ url: 'https://cdn.example.test/gallery.jpg' }],
+      },
+    ];
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const image = container.querySelector('.q-product-card-photo');
+    expect(image.src).toContain('/product-images/primary.jpg');
+    expect(image.src).not.toContain('gallery.jpg');
+
+    view.destroy();
+  });
+
+  it('falls back to gallery image paths in Catalog cards when primary image is empty', () => {
+    mockViewModel.products = [
+      {
+        id: 'gallery-image',
+        name: 'Gallery image',
+        primary_image_path: '',
+        images: [{ url: ' ', image_path: 'product-images/gallery.jpg' }],
+      },
+    ];
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const image = container.querySelector('.q-product-card-photo');
+    expect(image.src).toContain('/product-images/gallery.jpg');
+
+    view.destroy();
+  });
+
   it('catalog cards render as ProductCardView instances', () => {
     mockViewModel.products = [
       { id: '1', name: 'Aguayo', price: 40, currency: 'BOB' },

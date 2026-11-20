@@ -1,4 +1,6 @@
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { apiFetch } from './client.js';
+import { OrdersApi } from './OrdersApi.js';
 
 /**
  * Products API client.
@@ -12,10 +14,18 @@ export class ProductsApi {
   /**
    * @param {Object} [options]
    * @param {Function} [options.apiFetchFn] Override for tests; defaults to the real apiFetch.
+   * @param {OrdersApi} [options.ordersApi] Orders API used for weekly purchase ranking.
+   * @param {Object} [options.authStore] Auth store used to avoid guest-only order requests.
    */
-  constructor({ apiFetchFn = apiFetch } = {}) {
+  constructor({
+    apiFetchFn = apiFetch,
+    ordersApi = new OrdersApi(),
+    authStore = defaultAuthStore,
+  } = {}) {
     if (!apiFetchFn) throw new Error('apiFetchFn is required');
     this._fetch = apiFetchFn;
+    this._ordersApi = ordersApi;
+    this._authStore = authStore;
   }
 
   /**
@@ -45,15 +55,105 @@ export class ProductsApi {
   }
 
   /**
-   * Fetches the products shown in the "Destacados" section. Contract:
-   * GET /v1/products with a small page size.
+   * Fetches and ranks the published products shown in the "Destacados"
+   * section by weekly purchases, then by most recently updated.
    *
    * @param {number} [limit=8]
    * @returns {Promise<Array<Object>>}
    */
   async getFeaturedProducts(limit = 8) {
-    const response = await this.getProducts({ page: 1, limit });
-    return Array.isArray(response.data) ? response.data : [];
+    const response = await this.getProducts({ page: 1, limit: 100 });
+    const products = Array.isArray(response.data) ? response.data : [];
+    const weeklyCounts = new Map();
+
+    if (this._authStore?.isAuthenticated?.()) {
+      try {
+        const ordersResponse = await this._ordersApi.listOrders({ page: 1, limit: 100 });
+        for (const [productId, count] of this._countWeeklyPurchases(ordersResponse?.data)) {
+          weeklyCounts.set(productId, count);
+        }
+      } catch (error) {
+        const statusCode = error?.statusCode ?? error?.status;
+        if (statusCode !== 401 && statusCode !== 403) {
+          // eslint-disable-next-line no-console
+          console.warn('[ProductsApi] failed to fetch weekly purchases:', error?.message || error);
+        }
+      }
+    }
+
+    const weeklyCount = (product) =>
+      Math.max(this._getProductWeeklyCount(product), weeklyCounts.get(product.id) || 0);
+    const updatedTime = (product) => {
+      const updatedAt = Date.parse(product.updated_at || '');
+      if (Number.isFinite(updatedAt)) return updatedAt;
+      const createdAt = Date.parse(product.created_at || '');
+      return Number.isFinite(createdAt) ? createdAt : 0;
+    };
+
+    return products
+      .map((product, index) => ({ product, index }))
+      .sort((left, right) => {
+        const countDifference = weeklyCount(right.product) - weeklyCount(left.product);
+        if (countDifference !== 0) return countDifference;
+        const updatedDifference = updatedTime(right.product) - updatedTime(left.product);
+        return updatedDifference || left.index - right.index;
+      })
+      .slice(0, limit)
+      .map(({ product }) => product);
+  }
+
+  /**
+   * Counts unique product purchases in non-cancelled orders from the last week.
+   * @param {Array<Object>} orders
+   * @returns {Map<string, number>}
+   * @private
+   */
+  _countWeeklyPurchases(orders) {
+    const counts = new Map();
+    const now = Date.now();
+    const cutoff = now - 7 * 24 * 60 * 60 * 1000;
+
+    (Array.isArray(orders) ? orders : []).forEach((order) => {
+      if (!order || ['cancelled', 'canceled'].includes(order.status)) return;
+      const createdAt = Date.parse(order.created_at || order.createdAt || '');
+      if (!Number.isFinite(createdAt) || createdAt < cutoff || createdAt > now) return;
+
+      const productIds = new Set(
+        (Array.isArray(order.items) ? order.items : [])
+          .map((item) => item?.product_id || item?.productId)
+          .filter(Boolean)
+      );
+      productIds.forEach((productId) => {
+        counts.set(productId, (counts.get(productId) || 0) + 1);
+      });
+    });
+
+    return counts;
+  }
+
+  /**
+   * Reads weekly purchase metrics when supplied by the public product payload.
+   * @param {Object} product
+   * @returns {number}
+   * @private
+   */
+  _getProductWeeklyCount(product) {
+    const fields = [
+      product?.weeklyOrdersCount,
+      product?.weekly_orders_count,
+      product?.weeklyPurchaseCount,
+      product?.weekly_purchase_count,
+      product?.weeklyPurchases,
+      product?.weekly_purchases,
+      product?.weeklySalesCount,
+      product?.weekly_sales_count,
+      product?.weeklySales,
+      product?.weekly_sales,
+    ];
+    return fields.reduce((maximum, value) => {
+      const count = Number(value);
+      return Number.isFinite(count) && count > maximum ? count : maximum;
+    }, 0);
   }
 
   /**

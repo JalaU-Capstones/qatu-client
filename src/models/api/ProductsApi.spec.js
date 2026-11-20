@@ -160,7 +160,7 @@ describe('ProductsApi', () => {
   // ─── getFeaturedProducts ────────────────────────────────────────────────────
 
   describe('getFeaturedProducts', () => {
-    it('should call GET /products with a small page and return the data list', async () => {
+    it('fetches the first 100 published products and returns the limited featured list', async () => {
       const mockProducts = [
         { id: 'p1', name: 'Aguayo', slug: 'aguayo' },
         { id: 'p2', name: 'Café', slug: 'cafe' },
@@ -172,8 +172,118 @@ describe('ProductsApi', () => {
 
       const products = await api.getFeaturedProducts();
 
-      expect(fetchSpy).toHaveBeenCalledWith('/products?page=1&limit=8');
+      expect(fetchSpy).toHaveBeenCalledWith('/products?page=1&limit=100');
       expect(products).toEqual(mockProducts);
+    });
+
+    it('ranks products by non-cancelled purchases in the last seven days', async () => {
+      const products = [
+        { id: 'p1', updated_at: '2026-11-18T12:00:00Z' },
+        { id: 'p2', updated_at: '2026-11-16T12:00:00Z' },
+        { id: 'p3', updated_at: '2026-11-17T12:00:00Z' },
+      ];
+      const recent = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const ordersApi = {
+        listOrders: jasmine.createSpy('listOrders').and.resolveTo({
+          data: [
+            { status: 'pending', created_at: recent, items: [{ product_id: 'p2' }] },
+            { status: 'delivered', created_at: recent, items: [{ product_id: 'p2' }] },
+            { status: 'confirmed', created_at: recent, items: [{ product_id: 'p3' }] },
+            { status: 'cancelled', created_at: recent, items: [{ product_id: 'p1' }] },
+            {
+              status: 'delivered',
+              created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+              items: [{ product_id: 'p1' }],
+            },
+          ],
+        }),
+      };
+      api = new ProductsApi({
+        apiFetchFn: jasmine.createSpy('apiFetchFn').and.resolveTo(listResponse(products)),
+        ordersApi,
+        authStore: { isAuthenticated: () => true },
+      });
+
+      const ranked = await api.getFeaturedProducts(2);
+
+      expect(ordersApi.listOrders).toHaveBeenCalledWith({ page: 1, limit: 100 });
+      expect(ranked.map((product) => product.id)).toEqual(['p2', 'p3']);
+    });
+
+    it('uses updated_at descending when every product has zero weekly purchases', async () => {
+      const products = [
+        { id: 'old', created_at: '2026-11-01T00:00:00Z', updated_at: '2026-11-10T00:00:00Z' },
+        { id: 'new', created_at: '2026-11-01T00:00:00Z', updated_at: '2026-11-18T00:00:00Z' },
+        { id: 'created-fallback', created_at: '2026-11-15T00:00:00Z' },
+      ];
+      const ordersApi = {
+        listOrders: jasmine.createSpy('listOrders').and.resolveTo({ data: [] }),
+      };
+      api = new ProductsApi({
+        apiFetchFn: jasmine.createSpy('apiFetchFn').and.resolveTo(listResponse(products)),
+        ordersApi,
+        authStore: { isAuthenticated: () => true },
+      });
+
+      const ranked = await api.getFeaturedProducts();
+
+      expect(ranked.map((product) => product.id)).toEqual(['new', 'created-fallback', 'old']);
+    });
+
+    it('uses weekly product metrics and still returns products when orders are unauthorized', async () => {
+      const products = [
+        { id: 'p1', updated_at: '2026-11-18T00:00:00Z', weekly_sales: 2 },
+        { id: 'p2', updated_at: '2026-11-17T00:00:00Z', weekly_orders_count: 7 },
+      ];
+      const ordersApi = {
+        listOrders: jasmine
+          .createSpy('listOrders')
+          .and.rejectWith(Object.assign(new Error('Forbidden'), { statusCode: 403 })),
+      };
+      const warnSpy = spyOn(console, 'warn');
+      api = new ProductsApi({
+        apiFetchFn: jasmine.createSpy('apiFetchFn').and.resolveTo(listResponse(products)),
+        ordersApi,
+        authStore: { isAuthenticated: () => true },
+      });
+
+      const ranked = await api.getFeaturedProducts();
+
+      expect(ranked.map((product) => product.id)).toEqual(['p2', 'p1']);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns products if weekly order data is unavailable', async () => {
+      const products = [{ id: 'p1', updated_at: '2026-11-18T00:00:00Z' }];
+      const ordersApi = {
+        listOrders: jasmine
+          .createSpy('listOrders')
+          .and.rejectWith(new Error('Network unavailable')),
+      };
+      const warnSpy = spyOn(console, 'warn');
+      api = new ProductsApi({
+        apiFetchFn: jasmine.createSpy('apiFetchFn').and.resolveTo(listResponse(products)),
+        ordersApi,
+        authStore: { isAuthenticated: () => true },
+      });
+
+      const featured = await api.getFeaturedProducts();
+
+      expect(featured).toEqual(products);
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('does not request private order data for guest users', async () => {
+      const ordersApi = { listOrders: jasmine.createSpy('listOrders') };
+      api = new ProductsApi({
+        apiFetchFn: jasmine.createSpy('apiFetchFn').and.resolveTo(listResponse([])),
+        ordersApi,
+        authStore: { isAuthenticated: () => false },
+      });
+
+      await api.getFeaturedProducts();
+
+      expect(ordersApi.listOrders).not.toHaveBeenCalled();
     });
   });
 

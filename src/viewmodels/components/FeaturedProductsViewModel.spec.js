@@ -1,3 +1,4 @@
+import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { FeaturedProductsViewModel } from './FeaturedProductsViewModel.js';
 
 /** Contract-shaped products (OpenAPI Product schema, list endpoint). */
@@ -114,6 +115,12 @@ const createFeaturedApi = () => ({
     .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
 });
 
+const listProductsResponse = (data) =>
+  new Response(JSON.stringify({ data, meta: {} }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
 describe('FeaturedProductsViewModel', () => {
   let viewModel;
 
@@ -217,6 +224,58 @@ describe('FeaturedProductsViewModel', () => {
       expect(custom.products).toEqual([]);
       expect(custom.status).toBe('ready');
     });
+
+    it('loads weekly-sales-ranked products returned by ProductsApi', async () => {
+      const products = [
+        { id: 'p1', weekly_sales: 1, updated_at: '2026-11-19T00:00:00Z' },
+        { id: 'p2', weekly_sales: 4, updated_at: '2026-11-16T00:00:00Z' },
+      ];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        authStore: { isAuthenticated: () => false },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products.map((product) => product.id)).toEqual(['p2', 'p1']);
+      expect(custom.status).toBe('ready');
+    });
+
+    it('loads all-zero-order products newest updated first', async () => {
+      const products = [
+        { id: 'old', updated_at: '2026-11-10T00:00:00Z' },
+        { id: 'new', updated_at: '2026-11-19T00:00:00Z' },
+      ];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        authStore: { isAuthenticated: () => false },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products.map((product) => product.id)).toEqual(['new', 'old']);
+    });
+
+    it('keeps the home section available if order data is unauthorized', async () => {
+      const products = [{ id: 'p1', updated_at: '2026-11-19T00:00:00Z' }];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        ordersApi: {
+          listOrders: () =>
+            Promise.reject(Object.assign(new Error('Unauthorized'), { statusCode: 401 })),
+        },
+        authStore: { isAuthenticated: () => true },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products).toEqual(products);
+      expect(custom.status).toBe('ready');
+      expect(custom.errorMessage).toBe('');
+    });
   });
 
   describe('formatting', () => {
@@ -286,10 +345,22 @@ describe('FeaturedProductsViewModel', () => {
     });
 
     describe('getImageUrl', () => {
-      it('should return the contract primary_image_path', () => {
-        expect(viewModel.getImageUrl({ primary_image_path: 'https://cdn/p1.jpg' })).toBe(
-          'https://cdn/p1.jpg'
-        );
+      it('should prioritize primary_image_path over gallery images', () => {
+        expect(
+          viewModel.getImageUrl({
+            primary_image_path: 'https://cdn/p1.jpg',
+            images: [{ url: 'https://cdn/gallery.jpg' }],
+          })
+        ).toBe('https://cdn/p1.jpg');
+      });
+
+      it('should use the gallery image when primary_image_path is empty', () => {
+        expect(
+          viewModel.getImageUrl({
+            primary_image_path: ' ',
+            images: [{ url: '  ', image_path: 'product-images/p1.jpg' }],
+          })
+        ).toContain('/product-images/p1.jpg');
       });
 
       it('should return null when the product has no image', () => {

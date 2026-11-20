@@ -1,6 +1,7 @@
 import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
 import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 
@@ -474,7 +475,7 @@ export class CatalogView {
               { length: 5 },
               (_, i) => Number(product.average_rating || 0) >= i + 0.5
             ),
-            imageUrl: product.primary_image_path || null,
+            imageUrl: getProductImageUrl(product),
             isNew: Boolean(product.is_new || product.isNew),
             badgeLabel: this._getProductBadge(product),
             stock: typeof product.stock === 'number' ? product.stock : null,
