@@ -10,9 +10,24 @@ import {
 
 describe('profileValidation', () => {
   describe('validateAvatarPath', () => {
-    it('accepts paths at the API limit and rejects longer paths after trimming', () => {
-      expect(validateAvatarPath(` ${'a'.repeat(AVATAR_MAX_LENGTH)} `)).toBeUndefined();
-      expect(validateAvatarPath('a'.repeat(AVATAR_MAX_LENGTH + 1))).toBe(
+    it('accepts supported storage paths and HTTP URLs, and rejects unsupported formats', () => {
+      expect(validateAvatarPath('avatars/user/avatar.webp')).toBeUndefined();
+      expect(validateAvatarPath('https://localhost/assets/avatar-preset.svg')).toBeUndefined();
+      expect(validateAvatarPath('/assets/avatar-preset.svg')).toBe(
+        'Usa una ruta válida (avatars/...) o una URL HTTP/HTTPS.'
+      );
+      expect(validateAvatarPath('avatars/../private/avatar.webp')).toBe(
+        'Usa una ruta válida (avatars/...) o una URL HTTP/HTTPS.'
+      );
+    });
+
+    it('accepts supported paths at the API limit and rejects longer paths after trimming', () => {
+      const pathAtLimit = `avatars/${'a'.repeat(AVATAR_MAX_LENGTH - 13)}.webp`;
+      const pathOverLimit = `avatars/${'a'.repeat(AVATAR_MAX_LENGTH - 12)}.webp`;
+
+      expect(pathAtLimit.length).toBe(AVATAR_MAX_LENGTH);
+      expect(validateAvatarPath(` ${pathAtLimit} `)).toBeUndefined();
+      expect(validateAvatarPath(pathOverLimit)).toBe(
         `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`
       );
     });

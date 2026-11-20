@@ -27,6 +27,8 @@ Allows authenticated buyers to view and edit their profile information (`full_na
 
 - Avatars are stored in Supabase Storage (`avatars` bucket) — for bucket configuration and storage setup, see the backend [`SUPABASE-STORAGE-SETUP.md`](../../api/.docs/SUPABASE-STORAGE-SETUP.md)
 - `avatar_path` contains the full public URL and is rendered directly in `<img src={profile.avatar_path}>` without path rewriting
+- `PATCH /v1/profiles/me` accepts `avatar_path` as either an `avatars/...` storage path with a supported raster extension or an absolute HTTP(S) URL (maximum 500 characters; paths containing `..` are rejected). Root-relative paths and `data:` URIs are not accepted. Static avatar presets are served from `/assets/avatar-presets/` and saved as absolute same-origin URLs.
+- Uploaded avatar files continue to use `POST /v1/profiles/me/avatar`.
 
 ## Error Codes
 

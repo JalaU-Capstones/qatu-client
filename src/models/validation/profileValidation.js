@@ -14,6 +14,8 @@ export const ALLOWED_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp
 export const ALLOWED_AVATAR_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
 const LOCALE_PATTERN = /^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})?$/;
+const AVATAR_STORAGE_PATH_PATTERN = /^avatars\/[a-zA-Z0-9/_-]+\.(?:jpg|jpeg|png|webp)$/i;
+const AVATAR_URL_PATTERN = /^https?:\/\/[^\s<>"']+$/i;
 
 /**
  * Returns a validation message when an avatar path exceeds the API limit.
@@ -25,6 +27,14 @@ export function validateAvatarPath(rawAvatar) {
 
   if (avatarPath.length > AVATAR_MAX_LENGTH) {
     return `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`;
+  }
+
+  if (
+    avatarPath &&
+    (avatarPath.includes('..') ||
+      (!AVATAR_STORAGE_PATH_PATTERN.test(avatarPath) && !AVATAR_URL_PATTERN.test(avatarPath)))
+  ) {
+    return 'Usa una ruta válida (avatars/...) o una URL HTTP/HTTPS.';
   }
 
   return undefined;

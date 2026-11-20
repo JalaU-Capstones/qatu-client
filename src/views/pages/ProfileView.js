@@ -103,18 +103,20 @@ export class ProfileView {
               <div id="q-profile-avatar-studio" class="q-profile-avatar-studio" hidden>
                 <p class="q-profile-studio-label">Avatares rápidos</p>
                 <div class="q-profile-avatar-presets" aria-label="Avatares predefinidos">
-                  ${AVATAR_PRESETS.map(
-                    ({ label, src }) => `
+                  ${AVATAR_PRESETS.map(({ label, src }) => {
+                    const avatarPath = new URL(src, window.location.origin).href;
+
+                    return `
                     <button
                       type="button"
                       class="q-profile-avatar-preset"
-                      data-avatar-path="${src}"
+                      data-avatar-path="${avatarPath}"
                       aria-label="Usar avatar ${label}"
                     >
                       <img src="${src}" alt="" />
                     </button>
-                  `
-                  ).join('')}
+                  `;
+                  }).join('')}
                 </div>
                 <div class="q-profile-field q-profile-avatar-url-field">
                   <label class="q-profile-label" for="q-profile-avatar-url">URL o ruta personalizada</label>

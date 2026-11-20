@@ -242,6 +242,7 @@ describe('ProfileView', () => {
       preset.click();
       expect(viewModel.formData.avatar_path).toBe(preset.dataset.avatarPath);
       expect(preset.getAttribute('aria-pressed')).toBe('true');
+      expect(new URL(preset.dataset.avatarPath).origin).toBe(window.location.origin);
       expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
         preset.dataset.avatarPath
       );
@@ -259,7 +260,9 @@ describe('ProfileView', () => {
       const presets = Array.from(el.querySelectorAll('.q-profile-avatar-preset'));
       expect(presets.length).toBe(3);
       presets.forEach((preset) => {
-        expect(preset.dataset.avatarPath.startsWith('/assets/avatar-presets/')).toBe(true);
+        const presetUrl = new URL(preset.dataset.avatarPath);
+        expect(presetUrl.origin).toBe(window.location.origin);
+        expect(presetUrl.pathname.startsWith('/assets/avatar-presets/')).toBe(true);
         expect(preset.dataset.avatarPath.length).toBeLessThan(AVATAR_MAX_LENGTH);
         expect(preset.dataset.avatarPath.startsWith('data:')).toBe(false);
       });
@@ -275,6 +278,39 @@ describe('ProfileView', () => {
         `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`
       );
       expect(urlInput.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('saves a selected preset with an absolute same-origin URL', async () => {
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+      el.querySelector('.q-profile-studio-toggle').click();
+
+      const preset = el.querySelector('.q-profile-avatar-preset');
+      preset.click();
+      const avatarPath = preset.dataset.avatarPath;
+
+      expect(await viewModel.saveProfile()).toBe(true);
+      expect(mockProfilesApi.updateMe).toHaveBeenCalledWith({ avatar_path: avatarPath });
+      expect(el.querySelector('.q-profile-alert-success').textContent).toContain(
+        'Perfil actualizado correctamente'
+      );
+      expect(el.querySelector('.q-profile-alert-error').hasAttribute('hidden')).toBe(true);
+    });
+
+    it('blocks root-relative custom paths before sending a profile update', async () => {
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+      el.querySelector('.q-profile-studio-toggle').click();
+
+      const urlInput = el.querySelector('#q-profile-avatar-url');
+      urlInput.value = '/assets/avatar-presets/avatar-preset-orchid.svg';
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const error = el.querySelector('[data-error-for="avatar_path"]');
+      expect(error.hasAttribute('hidden')).toBe(false);
+      expect(error.textContent).toBe('Usa una ruta válida (avatars/...) o una URL HTTP/HTTPS.');
+      expect(await viewModel.saveProfile()).toBe(false);
+      expect(mockProfilesApi.updateMe).not.toHaveBeenCalled();
     });
 
     it('opens the avatar studio and focuses its URL field when avatar-path validation fails', async () => {
