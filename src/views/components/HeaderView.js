@@ -200,10 +200,12 @@ export class HeaderView {
     form.setAttribute('aria-label', "Buscar en Q'atu");
 
     const input = document.createElement('input');
-    input.type = 'search';
+    input.type = 'text';
     input.id = 'q-header-search-input';
     input.name = 'q';
     input.className = 'q-header-search__input';
+    input.setAttribute('inputmode', 'search');
+    input.setAttribute('enterkeyhint', 'search');
     input.placeholder = "Buscar en Q'atu";
     input.setAttribute('aria-label', 'Buscar productos, tiendas y categorías');
     if (this.viewModel.searchValue) {

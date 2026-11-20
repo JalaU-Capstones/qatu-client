@@ -591,6 +591,16 @@ describe('HeaderView', () => {
       expect(onSearch).toHaveBeenCalledWith('cerámica');
     });
 
+    it('uses a text input with the mobile search keyboard hints', () => {
+      const el = view.render();
+      const input = el.querySelector('.q-header-search__input');
+
+      expect(el.querySelector('.q-header-search').getAttribute('role')).toBe('search');
+      expect(input.type).toBe('text');
+      expect(input.getAttribute('inputmode')).toBe('search');
+      expect(input.getAttribute('enterkeyhint')).toBe('search');
+    });
+
     it('search toggle exposes the input and updates its expanded state', () => {
       const el = view.render();
       const form = el.querySelector('.q-header-search');

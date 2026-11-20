@@ -500,12 +500,12 @@ a.q-header-brand:hover .q-brand-logo {
     color: var(--q-fg-primary);
   }
 
-  .q-header-search__input::-webkit-search-cancel-button,
-  .q-header-search__input::-webkit-search-decoration,
-  .q-header-search__input::-ms-clear {
-    display: none;
-    appearance: none;
-    -webkit-appearance: none;
+  input[type='search'].q-header-search__input::-webkit-search-cancel-button,
+  input[type='search'].q-header-search__input::-webkit-search-decoration,
+  input[type='search'].q-header-search__input::-ms-clear {
+    display: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
   }
 }
 
