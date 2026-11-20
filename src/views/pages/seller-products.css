@@ -225,14 +225,37 @@
 }
 
 .q-seller-products__thumb-placeholder-img {
-  padding: 12%;
+  width: 52%;
+  height: 52%;
+  padding: 0;
+  border-radius: calc(var(--q-radius-sm, 4) * 1px);
   object-fit: contain;
 }
 
 .product-card--seller .product-card__status {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--q-geist-space-3x, 12) * 1px);
+  left: calc(var(--q-geist-space-3x, 12) * 1px);
   border-color: var(--q-border-default);
   background: color-mix(in srgb, var(--q-bg-page) 78%, transparent);
   font-weight: var(--q-font-weight-semibold, 600);
+}
+
+.product-card--seller .product-card__title-price {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: calc(var(--q-geist-space, 4) * 1px) calc(var(--q-geist-space-3x, 12) * 1px);
+}
+
+.product-card--seller .product-card__title {
+  grid-column: 1 / -1;
+}
+
+.product-card--seller .product-card__price {
+  grid-column: 1;
+  font-size: calc(var(--q-text-base, 16) * 1px);
 }
 
 .q-seller-products [data-product-state='published'] .product-card__status {
@@ -252,8 +275,47 @@
 }
 
 .q-seller-products__stock {
+  grid-column: 2;
+  justify-self: end;
   color: var(--q-fg-muted);
   font-size: calc(var(--q-text-xs, 12) * 1px);
+  white-space: nowrap;
+}
+
+.product-card--seller .q-seller-products__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--q-geist-space-2x, 8) * 1px);
+  width: 100%;
+  margin-top: auto;
+  padding-top: calc(var(--q-geist-space-2x, 8) * 1px);
+}
+
+.q-seller-products__actions > .q-btn {
+  width: 100%;
+  min-width: 0;
+  padding-right: calc(var(--q-geist-space-2x, 8) * 1px);
+  padding-left: calc(var(--q-geist-space-2x, 8) * 1px);
+}
+
+.q-seller-products [data-product-state='draft'] .q-seller-products__publish-btn,
+.q-seller-products [data-product-state='unpublished'] .q-seller-products__publish-btn {
+  grid-column: 1 / -1;
+}
+
+.q-seller-products__delete-btn {
+  border-color: var(--q-color-red-56, #dc3545);
+  color: var(--q-color-red-56, #dc3545);
+}
+
+.q-seller-products__delete-btn:hover {
+  border-color: var(--q-color-red-56, #dc3545);
+  background: color-mix(in srgb, var(--q-color-red-56, #dc3545) 10%, transparent);
+  color: var(--q-color-red-56, #dc3545);
+}
+
+.q-seller-products__actions .q-seller-products__publish-error {
+  grid-column: 1 / -1;
 }
 
 .product-card__seller-controls .q-seller-products__unpublish-btn {

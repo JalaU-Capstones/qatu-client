@@ -138,6 +138,41 @@ describe('SellerProductsPageView', () => {
     expect(container.querySelectorAll('[role="listitem"]').length).toBe(2);
   });
 
+  it('renders visible seller actions in state-specific order without cart actions', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [
+        mockProduct({ id: 'draft', state: 'draft' }),
+        mockProduct({ id: 'published', state: 'published' }),
+        mockProduct({ id: 'unpublished', state: 'unpublished' }),
+      ],
+      meta: { page: 1, per_page: 20, total: 3, total_pages: 1 },
+    });
+
+    view.mount(container);
+    await tick();
+
+    const actionsFor = (id) =>
+      Array.from(
+        container.querySelector(`[data-product-id="${id}"] .q-seller-products__actions`).children
+      )
+        .filter((element) => element.matches('button'))
+        .map((button) => button.textContent);
+
+    expect(actionsFor('draft')).toEqual(['Publicar', 'Editar', 'Eliminar']);
+    expect(actionsFor('published')).toEqual(['Despublicar', 'Editar', 'Eliminar', 'Ver']);
+    expect(actionsFor('unpublished')).toEqual(['Publicar', 'Editar', 'Eliminar']);
+    expect(
+      container.querySelector('.product-card--seller button[aria-label^="Añadir"]')
+    ).toBeNull();
+    expect(container.querySelector('.product-card__dropdown')).toBeNull();
+
+    const publishedMedia = container.querySelector(
+      '[data-product-id="published"] .product-card__media'
+    );
+    expect(publishedMedia.firstElementChild.classList.contains('product-card__status')).toBe(true);
+    expect(publishedMedia.querySelector('.q-seller-products__thumb-wrap')).not.toBeNull();
+  });
+
   it('3. triggers setFilter when a filter tab is clicked', async () => {
     view.mount(container);
     await tick();
@@ -432,8 +467,7 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    container.querySelector('button[aria-label^="Acciones de"]').click();
-    const editBtn = container.querySelector('button[aria-label^="Editar"]');
+    const editBtn = container.querySelector('.q-seller-products__edit-btn');
     expect(editBtn).not.toBeNull();
     expect(editBtn.textContent).toBe('Editar');
 
@@ -456,8 +490,7 @@ describe('SellerProductsPageView', () => {
     view.mount(container);
     await tick();
 
-    container.querySelector('button[aria-label^="Acciones de"]').click();
-    const deleteBtn = container.querySelector('button[aria-label^="Eliminar"]');
+    const deleteBtn = container.querySelector('.q-seller-products__delete-btn');
     expect(deleteBtn).not.toBeNull();
     expect(deleteBtn.textContent).toBe('Eliminar');
 

@@ -26,6 +26,7 @@ export class ProductCard {
    * @param {Function} [options.onEdit]
    * @param {Function} [options.onDelete]
    * @param {boolean} [options.hideAddToCart]
+   * @param {boolean} [options.hideSellerActions]
    */
   constructor({
     product = {},
@@ -35,6 +36,7 @@ export class ProductCard {
     onEdit,
     onDelete,
     hideAddToCart = false,
+    hideSellerActions = false,
   } = {}) {
     this.product = product || {};
     this.variant = ['default', 'compact', 'seller', 'featured'].includes(variant)
@@ -45,6 +47,7 @@ export class ProductCard {
     this.onEdit = onEdit;
     this.onDelete = onDelete;
     this.hideAddToCart = hideAddToCart;
+    this.hideSellerActions = hideSellerActions;
   }
 
   render() {
@@ -267,7 +270,7 @@ export class ProductCard {
       footer.appendChild(addButton);
     }
 
-    if (this.variant === 'seller') {
+    if (this.variant === 'seller' && !this.hideSellerActions) {
       const dropdown = document.createElement('div');
       dropdown.className = 'dropdown is-right product-card__dropdown';
 

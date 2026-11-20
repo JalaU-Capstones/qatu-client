@@ -643,6 +643,12 @@ for (const route of activeRoutes) {
                 filterTabs: check('.q-seller-products__filter'),
                 grid: check('.q-seller-products__grid'),
                 cards: check('.product-card--seller'),
+                sellerActions: check('.q-seller-products__actions'),
+                editAction: check('.q-seller-products__edit-btn'),
+                deleteAction: check('.q-seller-products__delete-btn'),
+                publishAction: check('.q-seller-products__publish-btn'),
+                unpublishAction: check('.q-seller-products__unpublish-btn'),
+                viewAction: check('.q-seller-products__view-btn'),
                 footer: check('.q-footer'),
               };
             case 'seller-product-new':

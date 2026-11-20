@@ -353,63 +353,90 @@ export class SellerProductsPageView {
     const card = new ProductCard({
       product,
       variant: 'seller',
+      hideAddToCart: true,
+      hideSellerActions: true,
       onView: product.slug ? () => this.onViewProduct?.(product.slug) : undefined,
-      onEdit: (item) => this.onEditProduct?.(item.id),
-      onDelete: (item) => this.onDeleteProduct?.(item.id),
     }).render();
     card.dataset.productId = product.id;
     card.dataset.productState = product.state;
 
+    const body = card.querySelector('.product-card__body');
+    const media = card.querySelector('.product-card__media');
+    const sellerControls = card.querySelector('.product-card__seller-controls');
+    const status = sellerControls.querySelector('.product-card__status');
+    if (status) {
+      media.prepend(status);
+    }
+    sellerControls.remove();
+
     const stock = document.createElement('span');
     stock.className = 'q-seller-products__stock';
     stock.textContent = `Stock: ${product.stock ?? 0}`;
-    const controls = card.querySelector('.product-card__seller-controls');
-    controls.appendChild(stock);
+    const details = card.querySelector('.product-card__title-price') || body;
+    details.appendChild(stock);
+
+    const actions = document.createElement('div');
+    actions.className = 'product-card__seller-controls q-seller-products__actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', `Acciones para ${product.name || 'producto'}`);
+
+    const addAction = (label, className, onClick) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = className;
+      button.textContent = label;
+      button.setAttribute('aria-label', `${label} ${product.name || 'producto'}`);
+      button.addEventListener('click', onClick);
+      actions.appendChild(button);
+      return button;
+    };
 
     if (product.state === 'published') {
-      const unpublishBtn = document.createElement('button');
-      unpublishBtn.type = 'button';
-      unpublishBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__unpublish-btn';
       const isUnpublishing = this.viewModel.publishingId === product.id;
-      unpublishBtn.textContent = isUnpublishing ? 'Despublicando…' : 'Despublicar';
+      const unpublishBtn = addAction(
+        isUnpublishing ? 'Despublicando…' : 'Despublicar',
+        'q-btn q-btn--outline q-btn--sm q-seller-products__unpublish-btn',
+        () => this.viewModel.unpublishProduct(product.id)
+      );
       unpublishBtn.disabled = isUnpublishing;
-      unpublishBtn.addEventListener('click', () => this.viewModel.unpublishProduct(product.id));
-      controls.appendChild(unpublishBtn);
     } else if (product.state === 'draft' || product.state === 'unpublished') {
-      const publishBtn = document.createElement('button');
-      publishBtn.type = 'button';
-      publishBtn.className = 'q-btn q-btn--primary q-btn--sm q-seller-products__publish-btn';
       const isPublishing = this.viewModel.publishingId === product.id;
       const canPublish = this.viewModel.canPublish(product);
-      publishBtn.textContent = isPublishing ? 'Publicando…' : 'Publicar';
+      const publishBtn = addAction(
+        isPublishing ? 'Publicando…' : 'Publicar',
+        'q-btn q-btn--primary q-btn--sm q-seller-products__publish-btn',
+        () => this.viewModel.publishProduct(product.id)
+      );
       if (!canPublish || isPublishing) {
         publishBtn.disabled = true;
         if (!canPublish) {
           publishBtn.title = this.viewModel.publishTooltip;
         }
       }
-      publishBtn.addEventListener('click', () => this.viewModel.publishProduct(product.id));
-      controls.appendChild(publishBtn);
     }
 
+    addAction('Editar', 'q-btn q-btn--neutral q-btn--sm q-seller-products__edit-btn', () =>
+      this.onEditProduct?.(product.id)
+    );
+    addAction('Eliminar', 'q-btn q-btn--outline q-btn--sm q-seller-products__delete-btn', () =>
+      this.onDeleteProduct?.(product.id)
+    );
+
     if (product.state === 'published' && product.slug) {
-      const viewBtn = document.createElement('button');
-      viewBtn.type = 'button';
-      viewBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn';
-      viewBtn.textContent = 'Ver';
-      viewBtn.addEventListener('click', () => {
-        this.onViewProduct?.(product.slug);
-      });
-      controls.appendChild(viewBtn);
+      addAction('Ver', 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn', () =>
+        this.onViewProduct?.(product.slug)
+      );
     }
 
     if (this.viewModel.publishErrors[product.id]) {
       const errorSpan = document.createElement('span');
       errorSpan.className = 'q-seller-products__publish-error';
       errorSpan.textContent = this.viewModel.publishErrors[product.id];
-      controls.appendChild(errorSpan);
+      errorSpan.setAttribute('role', 'alert');
+      actions.appendChild(errorSpan);
     }
 
+    body.appendChild(actions);
     return card;
   }
 }
