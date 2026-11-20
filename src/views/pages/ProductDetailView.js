@@ -293,7 +293,7 @@ export class ProductDetailView {
       createImageWithFallback({
         src: frame?.path,
         alt: frame?.label || '',
-        size: large ? 40 : 20,
+        size: large ? 160 : 56,
         imageClassName: large
           ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
           : 'q-product-detail__image-photo',

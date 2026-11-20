@@ -522,13 +522,25 @@ describe('ProductDetailView', () => {
   });
 
   it('renders fallback placeholder when image path is missing', () => {
-    viewModel.getGallery = () => [{ path: null, label: 'Sin imagen' }];
+    viewModel.getGallery = () => [
+      { path: null, label: 'Sin imagen' },
+      { path: null, label: 'Vista lateral' },
+    ];
     view.mount(container);
 
-    const placeholder = container.querySelector('.q-product-detail__image-placeholder');
-    expect(placeholder).not.toBeNull();
-    expect(placeholder.querySelector('.q-product-detail__image-label').textContent).toBe(
+    const mainPlaceholder = container.querySelector('.q-product-detail__image-placeholder--large');
+    const mainMark = mainPlaceholder.querySelector('.q-product-detail__image-mark img');
+    expect(mainMark.getAttribute('width')).toBe('160');
+    expect(mainMark.getAttribute('height')).toBe('160');
+    expect(mainPlaceholder.querySelector('.q-product-detail__image-label').textContent).toBe(
       'Sin imagen'
     );
+
+    const thumbnailPlaceholder = container.querySelector(
+      '.q-product-detail__thumbnail .q-product-detail__image-placeholder'
+    );
+    const thumbnailMark = thumbnailPlaceholder.querySelector('.q-product-detail__image-mark img');
+    expect(thumbnailMark.getAttribute('width')).toBe('56');
+    expect(thumbnailMark.getAttribute('height')).toBe('56');
   });
 });
