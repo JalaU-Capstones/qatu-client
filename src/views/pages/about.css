@@ -1,8 +1,29 @@
 .q-about {
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
   padding-bottom: clamp(64px, 9vw, 112px);
   color: var(--q-fg-primary);
+}
+
+.q-about::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: clamp(680px, 80vw, 980px);
+  background:
+    radial-gradient(
+      ellipse at 18% 0%,
+      color-mix(in srgb, var(--q-ambient-pink) 70%, transparent),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 88% 55%,
+      color-mix(in srgb, var(--q-ambient-cyan) 75%, transparent),
+      transparent 48%
+    );
+  content: '';
+  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, transparent 100%);
+  pointer-events: none;
 }
 
 .q-about__container {
@@ -16,25 +37,24 @@
 
 .q-about__hero {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   min-height: 470px;
   align-items: stretch;
   justify-content: center;
-  overflow: hidden;
-  padding: clamp(68px, 10vw, 132px) 24px clamp(72px, 10vw, 132px);
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  overflow: visible;
+  padding: calc(var(--q-header-overlay-height, 72px) + clamp(68px, 10vw, 132px)) 24px
+    clamp(72px, 10vw, 132px);
   isolation: isolate;
-  background:
-    radial-gradient(
-      ellipse at 18% 0%,
-      color-mix(in srgb, var(--q-ambient-pink) 70%, transparent),
-      transparent 48%
-    ),
-    radial-gradient(
-      ellipse at 88% 100%,
-      color-mix(in srgb, var(--q-ambient-cyan) 75%, transparent),
-      transparent 48%
-    );
+}
+
+.q-about__story,
+.q-about__team,
+.q-about__open-source {
+  position: relative;
+  z-index: 1;
 }
 
 .q-about__hero-content {
@@ -409,7 +429,7 @@
 
   .q-about__hero {
     min-height: 0;
-    padding: 68px 18px 78px;
+    padding: calc(var(--q-header-overlay-height, 72px) + 68px) 18px 78px;
   }
 
   .q-about__hero h1 {
