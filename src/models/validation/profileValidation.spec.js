@@ -4,10 +4,20 @@ import {
   FULL_NAME_MAX_LENGTH,
   MAX_AVATAR_FILE_SIZE,
   validateAvatarFile,
+  validateAvatarPath,
   validateProfileUpdate,
 } from './profileValidation.js';
 
 describe('profileValidation', () => {
+  describe('validateAvatarPath', () => {
+    it('accepts paths at the API limit and rejects longer paths after trimming', () => {
+      expect(validateAvatarPath(` ${'a'.repeat(AVATAR_MAX_LENGTH)} `)).toBeUndefined();
+      expect(validateAvatarPath('a'.repeat(AVATAR_MAX_LENGTH + 1))).toBe(
+        `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`
+      );
+    });
+  });
+
   describe('validateProfileUpdate', () => {
     it('should validate and normalize valid profile fields including locale', () => {
       const result = validateProfileUpdate({

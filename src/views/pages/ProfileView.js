@@ -1,13 +1,10 @@
-import oceanAvatar from '../../assets/avatar-presets/avatar-preset-ocean.svg';
-import orchidAvatar from '../../assets/avatar-presets/avatar-preset-orchid.svg';
-import terracottaAvatar from '../../assets/avatar-presets/avatar-preset-terracotta.svg';
-import { BIO_MAX_LENGTH } from '../../models/validation/profileValidation.js';
+import { BIO_MAX_LENGTH, validateAvatarPath } from '../../models/validation/profileValidation.js';
 import { ProfileViewModel } from '../../viewmodels/pages/ProfileViewModel.js';
 
 const AVATAR_PRESETS = [
-  { label: 'Lavanda', src: orchidAvatar },
-  { label: 'Océano', src: oceanAvatar },
-  { label: 'Terracota', src: terracottaAvatar },
+  { label: 'Lavanda', src: '/assets/avatar-presets/avatar-preset-orchid.svg' },
+  { label: 'Océano', src: '/assets/avatar-presets/avatar-preset-ocean.svg' },
+  { label: 'Terracota', src: '/assets/avatar-presets/avatar-preset-terracotta.svg' },
 ];
 
 /**
@@ -530,7 +527,11 @@ export class ProfileView {
 
     // 4. Field validation errors
     this._updateFieldError('full_name', fullNameInput, vm.fieldErrors.full_name);
-    this._updateFieldError('avatar_path', avatarInput, vm.fieldErrors.avatar_path);
+    this._updateFieldError(
+      'avatar_path',
+      avatarInput,
+      vm.fieldErrors.avatar_path || validateAvatarPath(vm.formData.avatar_path)
+    );
     this._updateFieldError('locale', localeSelect, vm.fieldErrors.locale);
     this._updateFieldError('bio', bioInput, vm.fieldErrors.bio);
     this._updateFieldError('avatar', avatarDropzone, vm.fieldErrors.avatar);

@@ -16,6 +16,21 @@ export const ALLOWED_AVATAR_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 const LOCALE_PATTERN = /^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})?$/;
 
 /**
+ * Returns a validation message when an avatar path exceeds the API limit.
+ * @param {string|null|undefined} rawAvatar
+ * @returns {string|undefined}
+ */
+export function validateAvatarPath(rawAvatar) {
+  const avatarPath = typeof rawAvatar === 'string' ? rawAvatar.trim() : '';
+
+  if (avatarPath.length > AVATAR_MAX_LENGTH) {
+    return `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`;
+  }
+
+  return undefined;
+}
+
+/**
  * Normalizes and validates profile update form fields.
  *
  * @param {Object} [raw={}]
@@ -48,8 +63,9 @@ export function validateProfileUpdate(raw = {}) {
     errors.bio = 'La biografía no puede exceder 500 caracteres';
   }
 
-  if (rawAvatar.length > AVATAR_MAX_LENGTH) {
-    errors.avatar_path = `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`;
+  const avatarPathError = validateAvatarPath(rawAvatar);
+  if (avatarPathError) {
+    errors.avatar_path = avatarPathError;
   }
 
   if (hasLocale) {

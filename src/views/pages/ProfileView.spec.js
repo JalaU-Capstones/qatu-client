@@ -1,3 +1,4 @@
+import { AVATAR_MAX_LENGTH } from '../../models/validation/profileValidation.js';
 import { AuthStore } from '../../store/authStore.js';
 import { ProfileViewModel } from '../../viewmodels/pages/ProfileViewModel.js';
 import { ProfileView } from './ProfileView.js';
@@ -249,6 +250,31 @@ describe('ProfileView', () => {
       urlInput.value = 'avatars/camila/custom.webp';
       urlInput.dispatchEvent(new Event('input', { bubbles: true }));
       expect(viewModel.formData.avatar_path).toBe('avatars/camila/custom.webp');
+    });
+
+    it('uses short static preset paths and validates an overlong URL as it is entered', async () => {
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+
+      const presets = Array.from(el.querySelectorAll('.q-profile-avatar-preset'));
+      expect(presets.length).toBe(3);
+      presets.forEach((preset) => {
+        expect(preset.dataset.avatarPath.startsWith('/assets/avatar-presets/')).toBe(true);
+        expect(preset.dataset.avatarPath.length).toBeLessThan(AVATAR_MAX_LENGTH);
+        expect(preset.dataset.avatarPath.startsWith('data:')).toBe(false);
+      });
+
+      el.querySelector('.q-profile-studio-toggle').click();
+      const urlInput = el.querySelector('#q-profile-avatar-url');
+      urlInput.value = 'a'.repeat(AVATAR_MAX_LENGTH + 1);
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      const error = el.querySelector('[data-error-for="avatar_path"]');
+      expect(error.hasAttribute('hidden')).toBe(false);
+      expect(error.textContent).toBe(
+        `La ruta o URL del avatar no puede superar los ${AVATAR_MAX_LENGTH} caracteres.`
+      );
+      expect(urlInput.getAttribute('aria-invalid')).toBe('true');
     });
 
     it('opens the avatar studio and focuses its URL field when avatar-path validation fails', async () => {
