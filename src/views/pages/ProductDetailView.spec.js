@@ -4,6 +4,7 @@ const createProduct = (overrides = {}) => ({
   id: 'p1',
   name: 'Aguayo tradicional',
   seller_id: 'seller-10',
+  state: 'published',
   seller: 'Tejidos Illimani',
   country: 'Bolivia',
   rating: 4.8,
@@ -11,7 +12,7 @@ const createProduct = (overrides = {}) => ({
   price: 40,
   currency: 'USD',
   imageUrl: null,
-  category: 'Textiles',
+  category: { name: 'Textiles' },
   stock: 10,
   description: 'Pieza tejida a mano.',
   attributes: [{ label: 'Material', value: 'Lana de oveja' }],
@@ -39,6 +40,10 @@ const createMockViewModel = (overrides = {}) => {
     selectedImage: 0,
     isAdding: false,
     feedback: '',
+    isUnpublishing: false,
+    isDeleting: false,
+    ownerActionFeedback: '',
+    ownerActionFeedbackType: 'status',
     tabs: [
       { id: 'description', label: 'Descripción' },
       { id: 'features', label: 'Características' },
@@ -49,6 +54,14 @@ const createMockViewModel = (overrides = {}) => {
     setTab: jasmine.createSpy('setTab'),
     setSelectedImage: jasmine.createSpy('setSelectedImage'),
     addToCart: jasmine.createSpy('addToCart').and.resolveTo({ status: 'added' }),
+    deleteProduct: jasmine.createSpy('deleteProduct').and.resolveTo({ status: 'success' }),
+    unpublishProduct: jasmine.createSpy('unpublishProduct').and.callFake(async () => {
+      vm.product = { ...vm.product, state: 'unpublished' };
+      vm.ownerActionFeedback =
+        'Producto despublicado. Ya no está disponible en el endpoint público products/{id}.';
+      vm.notify();
+      return { status: 'success' };
+    }),
     isOutOfStock: () => false,
     getMaxQuantity: () => 10,
     getPriceLabel: () => 'US$ 40.00',
@@ -103,6 +116,9 @@ describe('ProductDetailView', () => {
 
     expect(container.querySelector('section.q-product-detail')).not.toBeNull();
     expect(container.querySelector('.q-breadcrumb')).not.toBeNull();
+    expect(container.querySelector('.q-product-detail__context').textContent).toBe(
+      'PRODUCTOS / Textiles'
+    );
     expect(container.querySelector('.q-product-detail__title').textContent).toBe(
       'Aguayo tradicional'
     );
@@ -116,6 +132,7 @@ describe('ProductDetailView', () => {
     expect(container.querySelector('.q-product-detail__add').textContent).toBe(
       'Agregar al carrito'
     );
+    expect(container.querySelectorAll('.q-product-detail__tab')[0].textContent).toBe('Descripción');
     expect(container.querySelectorAll('.q-product-detail__tab').length).toBe(3);
     expect(container.querySelector('.q-product-detail__seller-card')).not.toBeNull();
     expect(container.querySelectorAll('[role="listitem"]').length).toBe(3);
@@ -181,6 +198,18 @@ describe('ProductDetailView', () => {
 
     expect(viewModel.addToCart).toHaveBeenCalled();
     expect(onBuyNow).toHaveBeenCalled();
+  });
+
+  it('clicking "Comprar ahora" as a guest triggers the auth-required callback', async () => {
+    const onAuthRequired = jasmine.createSpy('onAuthRequired');
+    viewModel.addToCart = jasmine.createSpy('addToCart').and.resolveTo({ status: 'auth-required' });
+    view = new ProductDetailView({ viewModel, onAuthRequired });
+    view.mount(container);
+
+    container.querySelector('.q-product-detail__buy-now').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onAuthRequired).toHaveBeenCalled();
   });
 
   it('clicking a tab calls setTab', () => {
@@ -334,7 +363,7 @@ describe('ProductDetailView', () => {
     };
   }
 
-  it('C5-1: guest viewing any product → "Agregar al carrito" and "Comprar ahora" present', () => {
+  it('C5-1: guest viewing any product can browse the detail and sees guarded purchase controls', () => {
     const authStore = makeAuthStore(null);
     const v = new ProductDetailView({ viewModel, authStore });
     v.mount(container);
@@ -342,35 +371,83 @@ describe('ProductDetailView', () => {
     expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__buy-now')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__feedback')).toBeNull();
+    expect(container.querySelectorAll('.q-product-detail__tab').length).toBe(3);
+    expect(container.querySelector('.q-product-detail__similar')).not.toBeNull();
     v.destroy();
   });
 
-  it('C5-2: seller viewing OWN product → buttons absent, notice present', () => {
-    viewModel.product = createProduct({ seller_id: 'seller-10' });
-    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
-    const v = new ProductDetailView({ viewModel, authStore });
-    v.mount(container);
-
-    expect(container.querySelector('.q-product-detail__add')).toBeNull();
-    expect(container.querySelector('.q-product-detail__buy-now')).toBeNull();
-    const notice = container.querySelector('.q-product-detail__feedback');
-    expect(notice).not.toBeNull();
-    expect(notice.textContent).toBe('Este es tu producto. No puedes comprarlo.');
-    v.destroy();
-  });
-
-  it("C5-3: seller viewing ANOTHER seller's product → buttons present", () => {
+  it('buyer viewing another seller product sees stock and purchase controls', () => {
     viewModel.product = createProduct({ seller_id: 'seller-99' });
-    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
+    const authStore = makeAuthStore({ id: 'buyer-10', username: 'comprador' });
     const v = new ProductDetailView({ viewModel, authStore });
     v.mount(container);
 
+    expect(container.querySelector('.q-product-detail__stock').textContent).toBe('10 disponibles');
+    expect(container.querySelector('.q-quantity-selector')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__buy-now')).not.toBeNull();
     v.destroy();
   });
 
-  it('C5-4: authStore change after render → re-renders notice when user becomes the seller', () => {
+  it('C5-2: product owner sees dedicated edit, unpublish and delete actions', () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
+    const onEditProduct = jasmine.createSpy('onEditProduct');
+    const onDeleteProduct = jasmine.createSpy('onDeleteProduct');
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.onEditProduct = onEditProduct;
+    v.onDeleteProduct = onDeleteProduct;
+    v.mount(container);
+
+    expect(container.querySelector('.q-product-detail__add')).toBeNull();
+    expect(container.querySelector('.q-product-detail__buy-now')).toBeNull();
+    expect(container.querySelector('.q-product-detail__owner-actions')).not.toBeNull();
+    const edit = container.querySelector('.q-product-detail__owner-button--edit');
+    const unpublish = container.querySelector('.q-product-detail__owner-button--unpublish');
+    const remove = container.querySelector('.q-product-detail__owner-button--delete');
+    expect(edit.querySelector('svg').getAttribute('stroke-width')).toBe('1.75');
+    edit.click();
+    unpublish.click();
+    remove.click();
+    expect(onEditProduct).toHaveBeenCalledWith('p1');
+    expect(viewModel.unpublishProduct).toHaveBeenCalled();
+    expect(onDeleteProduct).toHaveBeenCalledWith('p1');
+    v.destroy();
+  });
+
+  it('product owner delete action delegates to the confirmation flow without deleting directly', () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    const authStore = makeAuthStore({ id: 'seller-10' });
+    const onDeleteProduct = jasmine.createSpy('onDeleteProduct');
+    const v = new ProductDetailView({ viewModel, authStore, onDeleteProduct });
+    v.mount(container);
+
+    container.querySelector('.q-product-detail__owner-button--delete').click();
+
+    expect(onDeleteProduct).toHaveBeenCalledWith('p1');
+    expect(viewModel.deleteProduct).not.toHaveBeenCalled();
+    v.destroy();
+  });
+
+  it('product owner sees an unpublish success alert with direct seller-products navigation', async () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    const authStore = makeAuthStore({ id: 'seller-10', username: 'yo' });
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    container.querySelector('.q-product-detail__owner-button--unpublish').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const alert = container.querySelector('.q-product-detail__owner-feedback');
+    expect(alert.getAttribute('role')).toBe('status');
+    expect(alert.textContent).toContain('endpoint público products/{id}');
+    const link = alert.querySelector('a');
+    expect(link.getAttribute('href')).toBe('/seller/products');
+    expect(link.dataset.route).toBe('');
+    v.destroy();
+  });
+
+  it('authStore change after render re-renders owner controls when user becomes the seller', () => {
     viewModel.product = createProduct({ seller_id: 'seller-10' });
     let currentUser = null;
     const authListeners = new Set();
@@ -391,11 +468,9 @@ describe('ProductDetailView', () => {
     currentUser = { id: 'seller-10', username: 'yo' };
     authListeners.forEach((fn) => fn());
 
-    // Buttons gone, notice shown
+    // Purchase actions are replaced by the seller toolbar
     expect(container.querySelector('.q-product-detail__add')).toBeNull();
-    expect(container.querySelector('.q-product-detail__feedback').textContent).toBe(
-      'Este es tu producto. No puedes comprarlo.'
-    );
+    expect(container.querySelector('.q-product-detail__owner-actions')).not.toBeNull();
     v.destroy();
   });
 

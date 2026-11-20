@@ -181,6 +181,28 @@ if (app) {
       viewModel: productDetailViewModel,
       productSlug,
       onBuyNow: () => router.navigate('/cart'),
+      onEditProduct: (productId) => {
+        const modal = new EditProductModal({
+          productId,
+          productsApi,
+          categoriesApi,
+          onSaved: () => {
+            void productDetailViewModel.load(productSlug);
+          },
+        });
+        void modal.open();
+      },
+      onDeleteProduct: (productId) => {
+        const product = productDetailViewModel.product;
+        const modal = new DeleteConfirmModal({
+          productId,
+          productName: product?.name || 'este producto',
+          onConfirm: () => productDetailViewModel.deleteProduct(),
+        });
+        void modal.open().then(({ confirmed }) => {
+          if (confirmed) router.navigate('/seller/products');
+        });
+      },
       onAuthRequired: () => {
         authRedirectStore.setReturnTo(window.location.pathname);
         router.navigate('/login');

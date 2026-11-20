@@ -48,6 +48,8 @@ const createApi = ({
   getSimilarProducts: jasmine
     .createSpy('getSimilarProducts')
     .and.callFake(() => (error ? Promise.reject(error) : Promise.resolve(similar))),
+  unpublishProduct: jasmine.createSpy('unpublishProduct').and.resolveTo({ data: {} }),
+  deleteProduct: jasmine.createSpy('deleteProduct').and.resolveTo(undefined),
 });
 
 const createCartService = ({ result = { status: 'added' } } = {}) => ({
@@ -70,7 +72,7 @@ describe('ProductDetailViewModel', () => {
     expect(vm.product).toBeNull();
     expect(vm.similarProducts).toEqual([]);
     expect(vm.quantity).toBe(1);
-    expect(vm.activeTab).toBe('features');
+    expect(vm.activeTab).toBe('description');
   });
 
   it('load() resolves the product by slug and three recommendations', async () => {
@@ -82,7 +84,7 @@ describe('ProductDetailViewModel', () => {
     expect(vm.product.slug).toBe('aguayo-tradicional');
     expect(vm.similarProducts.length).toBe(3);
     expect(vm.quantity).toBe(1);
-    expect(vm.activeTab).toBe('features');
+    expect(vm.activeTab).toBe('description');
     expect(vm.selectedImage).toBe(0);
   });
 
@@ -150,13 +152,13 @@ describe('ProductDetailViewModel', () => {
     const listener = jasmine.createSpy('listener');
     vm.subscribe(listener);
 
-    vm.setTab('description');
-    expect(vm.activeTab).toBe('description');
+    vm.setTab('features');
+    expect(vm.activeTab).toBe('features');
     expect(listener).toHaveBeenCalled();
 
     listener.calls.reset();
     vm.setTab('unknown');
-    expect(vm.activeTab).toBe('description');
+    expect(vm.activeTab).toBe('features');
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -288,5 +290,53 @@ describe('ProductDetailViewModel', () => {
     expect(result.status).toBe('error');
     expect(vm.feedback).toBe('No pudimos añadir el producto al carrito.');
     expect(vm.isAdding).toBe(false);
+  });
+
+  it('unpublishProduct calls the API and exposes the public-endpoint notice', async () => {
+    await vm.load('aguayo-tradicional');
+
+    const result = await vm.unpublishProduct();
+
+    expect(result.status).toBe('success');
+    expect(api.unpublishProduct).toHaveBeenCalledWith('p1');
+    expect(vm.product.state).toBe('unpublished');
+    expect(vm.ownerActionFeedback).toContain('endpoint público products/{id}');
+    expect(vm.ownerActionFeedbackType).toBe('status');
+    expect(vm.isUnpublishing).toBe(false);
+  });
+
+  it('unpublishProduct surfaces API errors and prevents duplicate mutations', async () => {
+    await vm.load('aguayo-tradicional');
+    api.unpublishProduct.and.rejectWith(new Error('No autorizado'));
+
+    const result = await vm.unpublishProduct();
+
+    expect(result.status).toBe('error');
+    expect(api.unpublishProduct).toHaveBeenCalledTimes(1);
+    expect(vm.ownerActionFeedback).toBe('No autorizado');
+    expect(vm.ownerActionFeedbackType).toBe('alert');
+    expect(vm.isUnpublishing).toBe(false);
+  });
+
+  it('does not unpublish a product that is not published', async () => {
+    vm.product = createProduct({ state: 'unpublished' });
+
+    const result = await vm.unpublishProduct();
+
+    expect(result.status).toBe('error');
+    expect(api.unpublishProduct).not.toHaveBeenCalled();
+  });
+
+  it('deleteProduct deletes the loaded product and reports failures', async () => {
+    await vm.load('aguayo-tradicional');
+
+    expect((await vm.deleteProduct()).status).toBe('success');
+    expect(api.deleteProduct).toHaveBeenCalledWith('p1');
+
+    api.deleteProduct.and.rejectWith(new Error('No autorizado'));
+    const result = await vm.deleteProduct();
+    expect(result.status).toBe('error');
+    expect(result.error.message).toBe('No autorizado');
+    expect(vm.isDeleting).toBe(false);
   });
 });

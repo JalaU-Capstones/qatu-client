@@ -16,6 +16,8 @@ export class ProductDetailView {
    * @param {Function} [options.onBuyNow] Called after a successful "Comprar ahora".
    * @param {Function} [options.onAuthRequired] Called when a guest tries to add
    *   the product to the cart — the shell redirects to `/login`.
+   * @param {Function} [options.onEditProduct] Opens the existing edit modal.
+   * @param {Function} [options.onDeleteProduct] Opens the existing delete confirmation.
    * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
@@ -23,12 +25,16 @@ export class ProductDetailView {
     productSlug = null,
     onBuyNow = null,
     onAuthRequired = null,
+    onEditProduct = null,
+    onDeleteProduct = null,
     authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
     this.productSlug = productSlug;
     this.onBuyNow = onBuyNow;
     this.onAuthRequired = onAuthRequired;
+    this.onEditProduct = onEditProduct;
+    this.onDeleteProduct = onDeleteProduct;
     this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
@@ -105,6 +111,7 @@ export class ProductDetailView {
         )
       );
     } else {
+      container.appendChild(this._renderProductContext());
       container.appendChild(this._renderMain());
       container.appendChild(this._renderTabs());
       container.appendChild(this._renderSellerCard());
@@ -146,6 +153,18 @@ export class ProductDetailView {
     nav.appendChild(this._renderBreadcrumbSeparator());
     nav.appendChild(current);
     return nav;
+  }
+
+  /**
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderProductContext() {
+    const context = document.createElement('p');
+    context.className = 'q-product-detail__context';
+    const category = this.viewModel.product?.category?.name;
+    context.textContent = category ? `PRODUCTOS / ${category}` : 'PRODUCTOS';
+    return context;
   }
 
   /**
@@ -293,7 +312,7 @@ export class ProductDetailView {
     const vm = this.viewModel;
     const product = vm.product;
     const info = document.createElement('div');
-    info.className = 'q-product-detail__info';
+    info.className = 'q-product-detail__info q-glass-panel';
 
     const seller = document.createElement('p');
     seller.className = 'q-product-detail__seller-line';
@@ -337,13 +356,7 @@ export class ProductDetailView {
     const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
 
     if (isOwn) {
-      // Seller viewing their own product: replace buy controls with an informational notice.
-      // "Envío gratis" is also hidden — it only applies to buyers, not the seller themselves.
-      const notice = document.createElement('p');
-      notice.className = 'q-product-detail__feedback';
-      notice.setAttribute('role', 'status');
-      notice.textContent = 'Este es tu producto. No puedes comprarlo.';
-      purchase.appendChild(notice);
+      purchase.appendChild(this._renderOwnerActions(product));
     } else {
       const quantityRow = document.createElement('div');
       quantityRow.className = 'q-product-detail__quantity-row';
@@ -395,6 +408,8 @@ export class ProductDetailView {
         const result = await vm.addToCart();
         if (result.status === 'added' && typeof this.onBuyNow === 'function') {
           this.onBuyNow();
+        } else if (result.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+          this.onAuthRequired();
         }
       });
       actions.appendChild(buyButton);
@@ -409,7 +424,7 @@ export class ProductDetailView {
 
     info.appendChild(purchase);
 
-    if (vm.feedback) {
+    if (!isOwn && vm.feedback) {
       const feedback = document.createElement('p');
       feedback.className = 'q-product-detail__feedback';
       feedback.setAttribute('role', 'status');
@@ -418,6 +433,116 @@ export class ProductDetailView {
     }
 
     return info;
+  }
+
+  /**
+   * @param {Object} product
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderOwnerActions(product) {
+    const vm = this.viewModel;
+    const actions = document.createElement('section');
+    actions.className = 'q-product-detail__owner-actions';
+    actions.setAttribute('aria-label', 'Acciones del vendedor');
+
+    const heading = document.createElement('h2');
+    heading.className = 'q-product-detail__owner-title';
+    heading.textContent = 'Administrar producto';
+    actions.appendChild(heading);
+
+    const buttons = document.createElement('div');
+    buttons.className = 'q-product-detail__owner-buttons';
+
+    const editButton = this._createOwnerActionButton('edit', 'Editar', 'q-btn--outline');
+    editButton.addEventListener('click', () => this.onEditProduct?.(product.id));
+    buttons.appendChild(editButton);
+
+    const isUnpublished = product.state === 'unpublished';
+    const unpublishButton = this._createOwnerActionButton(
+      'unpublish',
+      vm.isUnpublishing ? 'Despublicando…' : isUnpublished ? 'Despublicado' : 'Despublicar',
+      'q-btn--outline'
+    );
+    unpublishButton.disabled = vm.isUnpublishing || isUnpublished || product.state !== 'published';
+    unpublishButton.addEventListener('click', () => {
+      void vm.unpublishProduct();
+    });
+    buttons.appendChild(unpublishButton);
+
+    const deleteButton = this._createOwnerActionButton(
+      'delete',
+      vm.isDeleting ? 'Eliminando…' : 'Eliminar',
+      'q-btn--danger'
+    );
+    deleteButton.disabled = vm.isDeleting;
+    deleteButton.addEventListener('click', () => this.onDeleteProduct?.(product.id));
+    buttons.appendChild(deleteButton);
+
+    actions.appendChild(buttons);
+
+    if (vm.ownerActionFeedback) {
+      const notice = document.createElement('div');
+      notice.className = `q-product-detail__owner-feedback q-product-detail__owner-feedback--${vm.ownerActionFeedbackType}`;
+      notice.setAttribute('role', vm.ownerActionFeedbackType === 'alert' ? 'alert' : 'status');
+
+      const message = document.createElement('p');
+      message.textContent = vm.ownerActionFeedback;
+      notice.appendChild(message);
+
+      if (vm.ownerActionFeedbackType !== 'alert') {
+        const productsLink = document.createElement('a');
+        productsLink.href = '/seller/products';
+        productsLink.dataset.route = '';
+        productsLink.textContent = 'Ir a Mis productos';
+        notice.appendChild(productsLink);
+      }
+
+      actions.appendChild(notice);
+    }
+
+    return actions;
+  }
+
+  /**
+   * @param {'edit'|'unpublish'|'delete'} action
+   * @param {string} label
+   * @param {string} buttonVariant
+   * @returns {HTMLButtonElement}
+   * @private
+   */
+  _createOwnerActionButton(action, label, buttonVariant) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `q-btn ${buttonVariant} q-product-detail__owner-button q-product-detail__owner-button--${action}`;
+    button.setAttribute('aria-label', label);
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('width', '18');
+    icon.setAttribute('height', '18');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.75');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+
+    const paths = {
+      edit: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z'],
+      unpublish: ['M3 5.5h18v14H3z', 'M3 9h5l2 3h4l2-3h5', 'M12 2.5v6', 'm9.5 6 2.5 2.5L14.5 6'],
+      delete: ['M3 6h18', 'M8 6V4h8v2', 'm19 6-1 14H6L5 6', 'M10 11v5', 'M14 11v5'],
+    };
+    paths[action].forEach((pathData) => {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      icon.appendChild(path);
+    });
+
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.append(icon, text);
+    return button;
   }
 
   /**

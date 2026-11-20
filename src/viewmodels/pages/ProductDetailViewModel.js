@@ -3,8 +3,8 @@ import { cartService as defaultCartService } from '../../services/CartService.js
 import { formatPrice } from '../../utils/formatCurrency.js';
 
 const TABS = [
-  { id: 'features', label: 'Características' },
   { id: 'description', label: 'Descripción' },
+  { id: 'features', label: 'Características' },
   { id: 'reviews', label: 'Reseñas' },
 ];
 
@@ -38,10 +38,14 @@ export class ProductDetailViewModel {
     this.errorMessage = '';
 
     this.quantity = 1;
-    this.activeTab = 'features';
+    this.activeTab = 'description';
     this.selectedImage = 0;
     this.isAdding = false;
     this.feedback = '';
+    this.isUnpublishing = false;
+    this.isDeleting = false;
+    this.ownerActionFeedback = '';
+    this.ownerActionFeedbackType = 'status';
 
     this.tabs = TABS;
     this._listeners = new Set();
@@ -58,8 +62,9 @@ export class ProductDetailViewModel {
     this.errorMessage = '';
     this.product = null;
     this.similarProducts = [];
+    this.ownerActionFeedback = '';
     this.quantity = 1;
-    this.activeTab = 'features';
+    this.activeTab = 'description';
     this.selectedImage = 0;
     this._notify();
 
@@ -153,6 +158,59 @@ export class ProductDetailViewModel {
       return { status: 'error', error };
     } finally {
       this.isAdding = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Unpublishes the current product for its owner.
+   * @returns {Promise<{ status: 'success'|'error', error?: Error }>}
+   */
+  async unpublishProduct() {
+    if (!this.product || this.isUnpublishing || this.product.state !== 'published') {
+      return { status: 'error', error: new Error('El producto no se puede despublicar.') };
+    }
+
+    this.isUnpublishing = true;
+    this.ownerActionFeedback = '';
+    this.ownerActionFeedbackType = 'status';
+    this._notify();
+
+    try {
+      await this.productsApi.unpublishProduct(this.product.id);
+      this.product = { ...this.product, state: 'unpublished' };
+      this.ownerActionFeedback =
+        'Producto despublicado. Ya no está disponible en el endpoint público products/{id}; puedes verlo y administrarlo en Mis productos.';
+      return { status: 'success' };
+    } catch (error) {
+      this.ownerActionFeedback =
+        error instanceof Error ? error.message : 'No pudimos despublicar el producto.';
+      this.ownerActionFeedbackType = 'alert';
+      return { status: 'error', error };
+    } finally {
+      this.isUnpublishing = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Permanently deletes the current product after caller confirmation.
+   * @returns {Promise<{ status: 'success'|'error', error?: Error }>}
+   */
+  async deleteProduct() {
+    if (!this.product || this.isDeleting) {
+      return { status: 'error', error: new Error('El producto no se puede eliminar.') };
+    }
+
+    this.isDeleting = true;
+    this._notify();
+    try {
+      await this.productsApi.deleteProduct(this.product.id);
+      return { status: 'success' };
+    } catch (error) {
+      return { status: 'error', error };
+    } finally {
+      this.isDeleting = false;
       this._notify();
     }
   }
