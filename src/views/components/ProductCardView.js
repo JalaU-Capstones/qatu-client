@@ -19,6 +19,7 @@ import { createImageWithFallback } from './ImageWithFallback.js';
  * @property {boolean[]} starsFilled
  * @property {string|null} imageUrl
  * @property {boolean}  [isNew]
+ * @property {string|null} [badgeLabel]
  * @property {number|null} [stock]     null = unknown → allow click
  * @property {string}   [state]        'published' | 'draft' | 'unpublished'
  */
@@ -26,6 +27,7 @@ import { createImageWithFallback } from './ImageWithFallback.js';
 /**
  * @typedef {Object} ProductCardOptions
  * @property {'featured'|'default'} [variant='default']
+ * @property {boolean} [showCatalogActions=false]
  * @property {Function} [onAddToCart]     Called with productId
  * @property {Function} [onToggleFavorite]
  * @property {string} [detailHref]        When set, the title links to the product detail page.
@@ -42,6 +44,7 @@ export class ProductCardView {
   constructor(data = {}, options = {}) {
     this.data = data;
     this.variant = options.variant || 'default';
+    this.showCatalogActions = Boolean(options.showCatalogActions);
     this.onAddToCart = options.onAddToCart || null;
     this.onToggleFavorite = options.onToggleFavorite || null;
     this.detailHref = options.detailHref || null;
@@ -68,24 +71,37 @@ export class ProductCardView {
 
     media.appendChild(this._renderImage());
 
-    if (variant === 'featured' && this.data.isNew) {
-      const badge = document.createElement('span');
-      badge.className = 'q-product-card-new-badge';
-      badge.textContent = 'Nuevo';
-      badge.setAttribute('aria-label', 'Producto nuevo');
-      media.appendChild(badge);
+    if ((variant === 'featured' && this.data.isNew) || this.showCatalogActions) {
+      const badgeLabel =
+        this.data.badgeLabel ||
+        (this.data.isNew ? 'Nuevo' : this.data.stock === 0 ? 'Agotado' : '');
+      if (badgeLabel) {
+        const badge = document.createElement('span');
+        badge.className = 'q-product-card-new-badge';
+        badge.textContent = badgeLabel;
+        badge.setAttribute('aria-label', `Producto: ${badgeLabel.toLowerCase()}`);
+        media.appendChild(badge);
+      }
     }
 
-    if (variant === 'featured') {
+    if (variant === 'featured' || this.showCatalogActions) {
       const heartBtn = document.createElement('button');
       heartBtn.type = 'button';
       heartBtn.className = 'q-product-card-heart-btn';
       heartBtn.setAttribute('aria-label', `Guardar ${this.data.name} en favoritos`);
+      heartBtn.setAttribute('aria-pressed', 'false');
       heartBtn.innerHTML =
         '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
       heartBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        const isSaved = heartBtn.getAttribute('aria-pressed') !== 'true';
+        heartBtn.setAttribute('aria-pressed', String(isSaved));
+        heartBtn.classList.toggle('is-saved', isSaved);
+        heartBtn.setAttribute(
+          'aria-label',
+          `${isSaved ? 'Quitar de favoritos' : 'Guardar'} ${this.data.name} en favoritos`
+        );
         if (typeof this.onToggleFavorite === 'function') {
           this.onToggleFavorite(this.data.id);
         }
@@ -180,7 +196,9 @@ export class ProductCardView {
     });
 
     info.appendChild(title);
-    info.appendChild(rating);
+    if (this.data.ratingLabel) {
+      info.appendChild(rating);
+    }
     info.appendChild(price);
     // hideCartButton: true → seller viewing own product (C5); button absent from DOM,
     // not disabled. Backend still rejects self-purchase via 422 CANNOT_BUY_OWN_PRODUCT.

@@ -409,6 +409,85 @@ describe('CatalogView', () => {
     view.destroy();
   });
 
+  it('keeps the return link in the title row and places sorting above the product grid', () => {
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const headerRow = container.querySelector('.q-catalog__header-row');
+    const toolbar = container.querySelector('.q-catalog__toolbar');
+    expect(headerRow.contains(container.querySelector('.q-catalog__back'))).toBe(true);
+    expect(headerRow.querySelector('.q-catalog__sort')).toBeNull();
+    expect(toolbar.querySelector('.q-catalog__sort')).not.toBeNull();
+    expect(toolbar.nextElementSibling).toBe(container.querySelector('.q-catalog__grid'));
+    expect(container.querySelector('.q-catalog__chips').parentElement).toBe(
+      container.querySelector('.q-catalog__header')
+    );
+
+    view.destroy();
+  });
+
+  it('provides filter-toggle icon, centered price placeholders, and no redundant max-price hint', () => {
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const toggle = container.querySelector('.q-catalog__filters-toggle');
+    expect(toggle.querySelector('.q-catalog__filters-toggle-icon svg')).not.toBeNull();
+    expect(toggle.querySelector('.q-catalog__filters-chevron svg')).not.toBeNull();
+    expect(container.querySelector('#q-catalog-filter-min-price').placeholder).toBe('Bs 0');
+    expect(container.querySelector('#q-catalog-filter-max-price').placeholder).toBe('Bs 2.000');
+    expect(container.querySelector('.q-catalog__filters-hint')).toBeNull();
+    toggle.click();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.parentElement.classList.contains('q-catalog__filters--open')).toBe(true);
+
+    view.destroy();
+  });
+
+  it('renders catalog card badge and favorite action when the product has matching metadata', () => {
+    mockViewModel.products = [
+      {
+        id: 'p-new',
+        name: 'Producto nuevo',
+        price: 20,
+        currency: 'BOB',
+        is_new: true,
+        stock: 5,
+      },
+    ];
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const card = container.querySelector('.q-product-card');
+    expect(card.querySelector('.q-product-card-new-badge').textContent).toBe('Nuevo');
+    const favorite = card.querySelector('.q-product-card-heart-btn');
+    expect(favorite).not.toBeNull();
+    favorite.click();
+    expect(favorite.getAttribute('aria-pressed')).toBe('true');
+
+    view.destroy();
+  });
+
+  it('uses the product category as subtitle when no seller name is available and omits empty ratings', () => {
+    mockViewModel.categories = [{ id: 'cat-textiles', name: 'Textiles', slug: 'textiles' }];
+    mockViewModel.products = [
+      {
+        id: 'p-textile',
+        name: 'Manta andina',
+        price: 20,
+        category_id: 'cat-textiles',
+      },
+    ];
+
+    const view = new CatalogView(mockViewModel);
+    view.mount(container);
+
+    const card = container.querySelector('.q-product-card');
+    expect(card.querySelector('.q-product-card-seller').textContent).toBe('Textiles');
+    expect(card.querySelector('.q-product-card-rating')).toBeNull();
+
+    view.destroy();
+  });
+
   it("renders 'Todos los productos' when no search query", () => {
     mockViewModel.filters = { search: '', category: '', minPrice: null, maxPrice: null };
 

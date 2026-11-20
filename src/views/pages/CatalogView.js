@@ -66,6 +66,15 @@ export class CatalogView {
     const results = document.createElement('div');
     results.className = 'q-catalog__results';
 
+    const toolbar = document.createElement('div');
+    toolbar.className = 'q-catalog__toolbar';
+    const toolbarLabel = document.createElement('p');
+    toolbarLabel.className = 'q-catalog__toolbar-label';
+    toolbarLabel.textContent = 'Productos destacados para ti';
+    toolbar.appendChild(toolbarLabel);
+    toolbar.appendChild(this._createSortControl());
+    results.appendChild(toolbar);
+
     const grid = document.createElement('ul');
     grid.className = 'q-catalog__grid';
     grid.id = 'q-catalog-grid';
@@ -149,8 +158,20 @@ export class CatalogView {
     chips.className = 'q-catalog__chips q-catalog__active-filters';
     chips.setAttribute('aria-label', 'Filtros aplicados');
     this._refs.chips = chips;
-    heading.appendChild(chips);
 
+    titleRow.appendChild(heading);
+    titleRow.appendChild(backLink);
+    headerDiv.appendChild(titleRow);
+    headerDiv.appendChild(chips);
+
+    return headerDiv;
+  }
+
+  /**
+   * @returns {HTMLLabelElement}
+   * @private
+   */
+  _createSortControl() {
     const sortLabel = document.createElement('label');
     sortLabel.className = 'q-catalog__sort';
     const srOnly = document.createElement('span');
@@ -176,13 +197,7 @@ export class CatalogView {
     this._refs.sortSelect = sortSelect;
     sortLabel.appendChild(srOnly);
     sortLabel.appendChild(sortSelect);
-
-    titleRow.appendChild(heading);
-    titleRow.appendChild(sortLabel);
-
-    headerDiv.appendChild(backLink);
-    headerDiv.appendChild(titleRow);
-    return headerDiv;
+    return sortLabel;
   }
 
   /**
@@ -250,7 +265,19 @@ export class CatalogView {
     toggle.className = 'q-catalog__filters-toggle';
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-controls', 'q-catalog-filters-body');
-    toggle.textContent = 'Filtros';
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'q-catalog__filters-toggle-icon';
+    toggleIcon.innerHTML = ICONS.filter;
+    toggleIcon.setAttribute('aria-hidden', 'true');
+    const toggleText = document.createElement('span');
+    toggleText.className = 'q-catalog__filters-toggle-label';
+    toggleText.textContent = 'Filtros';
+    const toggleChevron = document.createElement('span');
+    toggleChevron.className = 'q-catalog__filters-chevron';
+    toggleChevron.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    toggleChevron.setAttribute('aria-hidden', 'true');
+    toggle.append(toggleIcon, toggleText, toggleChevron);
     toggle.addEventListener('click', () => {
       const open = panel.classList.toggle('q-catalog__filters--open');
       toggle.setAttribute('aria-expanded', String(open));
@@ -274,8 +301,12 @@ export class CatalogView {
     categorySelect.className = 'q-catalog__field-control';
     this._refs.categorySelect = categorySelect;
 
-    const minPriceInput = this._createPriceInput('q-catalog-filter-min-price', 'minPrice', '0');
-    const maxPriceInput = this._createPriceInput('q-catalog-filter-max-price', 'maxPrice', '2000');
+    const minPriceInput = this._createPriceInput('q-catalog-filter-min-price', 'minPrice', 'Bs 0');
+    const maxPriceInput = this._createPriceInput(
+      'q-catalog-filter-max-price',
+      'maxPrice',
+      'Bs 2.000'
+    );
     this._refs.minPriceInput = minPriceInput;
     this._refs.maxPriceInput = maxPriceInput;
 
@@ -283,17 +314,7 @@ export class CatalogView {
     fields.className = 'q-catalog__filters-fields';
     fields.appendChild(this._createField('Categoría', categorySelect));
     fields.appendChild(this._createField('Precio mínimo', minPriceInput));
-
-    const maxField = this._createField('Precio máximo', maxPriceInput);
-    const maxHint = document.createElement('span');
-    maxHint.className = 'q-catalog__filters-hint';
-    maxHint.textContent = 'Bs 2.000';
-    maxHint.hidden = false;
-    maxField.appendChild(maxHint);
-    maxPriceInput.addEventListener('input', () => {
-      maxHint.hidden = Boolean(maxPriceInput.value);
-    });
-    fields.appendChild(maxField);
+    fields.appendChild(this._createField('Precio máximo', maxPriceInput));
 
     const stockLabel = document.createElement('label');
     stockLabel.className = 'q-catalog__stock-label';
@@ -441,7 +462,7 @@ export class CatalogView {
           {
             id: product.id,
             name: product.name,
-            sellerLine: product.seller?.full_name || product.seller || '',
+            sellerLine: this._getSellerLine(product, vm.categories),
             priceLabel: formatPrice(product.price, product.currency || 'BOB'),
             ratingLabel: product.average_rating
               ? `${rating.toFixed(1)} (${product.ratings_count || 0})`
@@ -454,12 +475,14 @@ export class CatalogView {
               (_, i) => Number(product.average_rating || 0) >= i + 0.5
             ),
             imageUrl: product.primary_image_path || null,
-            isNew: false,
+            isNew: Boolean(product.is_new || product.isNew),
+            badgeLabel: this._getProductBadge(product),
             stock: typeof product.stock === 'number' ? product.stock : null,
             state: product.state || 'published',
           },
           {
             variant: 'default',
+            showCatalogActions: true,
             onAddToCart: () => this.onAddToCart(product, 1),
             detailHref: `/products/${product.slug || product.id}`,
             hideCartButton: isOwn,
@@ -470,6 +493,55 @@ export class CatalogView {
     }
 
     this._updatePagination(vm);
+  }
+
+  /**
+   * @param {Object} product
+   * @param {Object[]} [categories]
+   * @returns {string}
+   * @private
+   */
+  _getSellerLine(product, categories) {
+    const seller = product.seller || product.store;
+    if (typeof seller === 'string') return seller;
+    if (seller && typeof seller === 'object') {
+      const sellerName = seller.full_name || seller.store_name || seller.username || seller.name;
+      if (sellerName) return sellerName;
+    }
+
+    return (
+      product.seller_name ||
+      product.store_name ||
+      product.category?.name ||
+      product.category_name ||
+      categories?.find((category) => category.id === product.category_id)?.name ||
+      ''
+    );
+  }
+
+  /**
+   * @param {Object} product
+   * @returns {string|null}
+   * @private
+   */
+  _getProductBadge(product) {
+    const explicitBadge = product.badge || product.tag;
+    if (['Más vendido', 'Nuevo', 'Oferta', 'Agotado'].includes(explicitBadge)) {
+      return explicitBadge;
+    }
+    if (product.stock === 0) return 'Agotado';
+    if (product.is_best_seller || product.isBestSeller || product.best_seller) {
+      return 'Más vendido';
+    }
+    if (
+      Number(product.discount_price) > 0 ||
+      Number(product.sale_price) > 0 ||
+      Number(product.discount_percentage) > 0
+    ) {
+      return 'Oferta';
+    }
+    if (product.is_new || product.isNew) return 'Nuevo';
+    return null;
   }
 
   /**

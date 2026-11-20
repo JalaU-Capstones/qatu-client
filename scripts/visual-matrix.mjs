@@ -658,14 +658,16 @@ for (const route of activeRoutes) {
           combo.errors.push('MISSING_ELEMENTS: ' + missing.join(','));
         }
 
-        // ── Validation 3: no non-empty alt in product images (leak guard)
+        // ── Validation 3: failed images must not expose their alt text
         const altLeak = await page.evaluate(() => {
           const imgs = document.querySelectorAll('.q-product-card-photo');
-          return Array.from(imgs).filter((img) => (img.getAttribute('alt') || '').length > 0)
-            .length;
+          return Array.from(imgs).filter(
+            (img) =>
+              img.complete && img.naturalWidth === 0 && (img.getAttribute('alt') || '').length > 0
+          ).length;
         });
         if (altLeak > 0) {
-          combo.errors.push(`ALT_TEXT_LEAK: ${altLeak} img with non-empty alt`);
+          combo.errors.push(`ALT_TEXT_LEAK: ${altLeak} failed img with non-empty alt`);
         }
 
         // ── Validation 4: theme actually applied
