@@ -1,7 +1,9 @@
 import { authStore as realAuthStore } from '../../store/authStore.js';
+import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
 import { createImageWithFallback } from '../components/ImageWithFallback.js';
-import { ProductCard } from '../components/ProductCard.js';
+import { ProductCardView } from '../components/ProductCardView.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
 
 /**
@@ -18,6 +20,7 @@ export class ProductDetailView {
    *   the product to the cart — the shell redirects to `/login`.
    * @param {Function} [options.onEditProduct] Opens the existing edit modal.
    * @param {Function} [options.onDeleteProduct] Opens the existing delete confirmation.
+   * @param {Function} [options.onAddToCart] Adds a similar product to the cart.
    * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
@@ -27,6 +30,7 @@ export class ProductDetailView {
     onAuthRequired = null,
     onEditProduct = null,
     onDeleteProduct = null,
+    onAddToCart = null,
     authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
@@ -35,6 +39,7 @@ export class ProductDetailView {
     this.onAuthRequired = onAuthRequired;
     this.onEditProduct = onEditProduct;
     this.onDeleteProduct = onDeleteProduct;
+    this.onAddToCart = onAddToCart;
     this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
@@ -757,18 +762,55 @@ export class ProductDetailView {
       return section;
     }
 
-    const grid = document.createElement('div');
-    grid.className = 'q-product-detail__similar-grid';
+    const grid = document.createElement('ul');
+    grid.className = 'q-product-detail__similar-grid q-catalog__grid';
     grid.setAttribute('role', 'list');
 
     this.viewModel.similarProducts.forEach((product) => {
-      grid.appendChild(
-        new ProductCard({
-          product,
-          variant: 'compact',
-          onView: () => {},
-        }).render()
+      const rating = Number(product.average_rating || 0);
+      const ratingCount = Number(product.ratings_count) || 0;
+      const ratingLabel = product.average_rating
+        ? `${rating.toFixed(1)} (${ratingCount})`
+        : undefined;
+      const seller = product.seller || product.store;
+      const sellerLine =
+        (typeof seller === 'string' && seller) ||
+        seller?.full_name ||
+        seller?.store_name ||
+        seller?.username ||
+        seller?.name ||
+        product.seller_name ||
+        product.store_name ||
+        product.category?.name ||
+        product.category_name ||
+        '';
+      const user = this.authStore.getUser();
+      const isOwn = Boolean(user?.id && product.seller_id && user.id === product.seller_id);
+      const card = new ProductCardView(
+        {
+          id: product.id,
+          name: product.name,
+          sellerLine,
+          priceLabel: formatPrice(product.price, product.currency || 'BOB'),
+          ratingLabel,
+          ratingAccessible: ratingLabel
+            ? `Calificación ${rating.toFixed(1)} de 5, ${ratingCount} reseñas`
+            : undefined,
+          starsFilled: this.viewModel.getStarsForRating(rating),
+          imageUrl: getProductImageUrl(product),
+          isNew: Boolean(product.is_new || product.isNew),
+          badgeLabel: product.badge || product.tag || null,
+          stock: typeof product.stock === 'number' ? product.stock : null,
+          state: product.state || 'published',
+        },
+        {
+          variant: 'default',
+          onAddToCart: () => this.onAddToCart?.(product, 1),
+          detailHref: `/products/${encodeURIComponent(product.slug || product.id)}`,
+          hideCartButton: isOwn,
+        }
       );
+      grid.appendChild(card.render());
     });
 
     section.appendChild(grid);

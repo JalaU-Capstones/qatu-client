@@ -7,7 +7,8 @@
   isolation: isolate;
   width: 100%;
   background-color: color-mix(in srgb, var(--q-bg-page) 96%, var(--q-cat-amber) 4%);
-  padding-top: calc(var(--q-geist-space-8x, 32) * 1px);
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  padding-top: calc(var(--q-header-overlay-height, 72px) + calc(var(--q-geist-space-8x, 32) * 1px));
   padding-bottom: calc(var(--q-geist-space-16x, 64) * 1px);
   box-sizing: border-box;
 }
@@ -727,7 +728,9 @@
 
 @media (max-width: 767px) {
   .q-product-detail {
-    padding-top: calc(var(--q-geist-space-6x, 24) * 1px);
+    padding-top: calc(
+      var(--q-header-overlay-height, 72px) + calc(var(--q-geist-space-6x, 24) * 1px)
+    );
     padding-bottom: calc(var(--q-geist-space-12x, 48) * 1px);
   }
 

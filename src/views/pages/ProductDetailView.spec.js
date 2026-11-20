@@ -135,7 +135,7 @@ describe('ProductDetailView', () => {
     expect(container.querySelectorAll('.q-product-detail__tab')[0].textContent).toBe('Descripción');
     expect(container.querySelectorAll('.q-product-detail__tab').length).toBe(3);
     expect(container.querySelector('.q-product-detail__seller-card')).not.toBeNull();
-    expect(container.querySelectorAll('[role="listitem"]').length).toBe(3);
+    expect(container.querySelectorAll('.q-product-detail__similar-grid > li').length).toBe(3);
   });
 
   it('renders the loading state', () => {
@@ -245,12 +245,46 @@ describe('ProductDetailView', () => {
   it('recommendation cards link to each product detail by slug', () => {
     view.mount(container);
 
-    const cards = container.querySelectorAll('[role="listitem"]');
+    const cards = container.querySelectorAll('.q-product-detail__similar-grid > li');
     const links = Array.from(cards, (card) => card.querySelector('a'));
     expect(links.length).toBe(3);
     expect(links[0].getAttribute('href')).toBe('/products/huipil');
     expect(links[1].getAttribute('href')).toBe('/products/bolso');
     expect(links[2].getAttribute('href')).toBe('/products/mochila');
+  });
+
+  it('renders recommendation products with catalog cards and the placeholder image', () => {
+    viewModel.similarProducts = createSimilar().map((product, index) => ({
+      ...product,
+      primary_image_path: index === 0 ? null : `/products/${product.id}.jpg`,
+      average_rating: 4.5,
+      ratings_count: 12,
+    }));
+    view.mount(container);
+
+    const grid = container.querySelector('.q-product-detail__similar-grid');
+    const cards = grid.querySelectorAll('.q-product-card--default');
+    expect(grid.classList.contains('q-catalog__grid')).toBe(true);
+    expect(cards.length).toBe(3);
+    expect(cards[0].querySelector('.q-product-card-price').textContent).toBe('US$ 65.00');
+    expect(cards[0].querySelector('.q-product-card-rating-value').textContent).toBe('4.5 (12)');
+    expect(cards[0].querySelector('.q-product-card-placeholder-img').src).toContain(
+      'product-placeholder.svg'
+    );
+    expect(cards[1].querySelector('.q-product-card-photo').getAttribute('src')).toContain(
+      '/products/p3.jpg'
+    );
+  });
+
+  it('adds a recommendation to cart through the supplied cart handler', async () => {
+    const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+    view = new ProductDetailView({ viewModel, onAddToCart });
+    view.mount(container);
+
+    container.querySelector('.q-product-card-action').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onAddToCart).toHaveBeenCalledWith(viewModel.similarProducts[0], 1);
   });
 
   it('renders the real gallery photos when the frames have an image_path', () => {

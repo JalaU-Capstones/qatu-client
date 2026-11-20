@@ -590,7 +590,7 @@ for (const route of activeRoutes) {
                 quantity: check('.q-quantity-selector'),
                 addToCart: check('.q-product-detail__add'),
                 tabs: check('.q-product-detail__tablist'),
-                recommendations: check('.q-recommendation-card'),
+                recommendations: check('.q-product-detail__similar-grid .q-product-card'),
                 footer: check('.q-footer'),
               };
             case 'cart':

@@ -207,6 +207,7 @@ if (app) {
         authRedirectStore.setReturnTo(window.location.pathname);
         router.navigate('/login');
       },
+      onAddToCart: onAddToCartHandler,
     });
     currentPageView.mount(mainEl);
   };
