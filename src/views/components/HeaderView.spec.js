@@ -642,16 +642,19 @@ describe('HeaderView', () => {
     it('search toggle exposes the input and updates its expanded state', () => {
       const el = view.render();
       const form = el.querySelector('.q-header-search');
+      const pill = el.querySelector('.q-header__pill');
       const toggle = el.querySelector('.q-header-search__toggle');
 
       toggle.click();
       expect(form.classList.contains('q-header-search--expanded')).toBe(true);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(true);
       expect(toggle.getAttribute('aria-expanded')).toBe('true');
       expect(form.firstElementChild).toBe(toggle);
       expect(toggle.querySelector('[data-icon="collapse"]')).not.toBeNull();
 
       toggle.click();
       expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(false);
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(toggle.querySelector('[data-icon="search"]')).not.toBeNull();
     });
@@ -705,6 +708,7 @@ describe('HeaderView', () => {
     it('closes the expanded search with Escape and returns focus to the toggle', () => {
       const el = view.mount(container);
       const form = el.querySelector('.q-header-search');
+      const pill = el.querySelector('.q-header__pill');
       const input = el.querySelector('.q-header-search__input');
       const toggle = el.querySelector('.q-header-search__toggle');
 
@@ -714,6 +718,7 @@ describe('HeaderView', () => {
       );
 
       expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(false);
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
       expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
       expect(document.activeElement).toBe(toggle);

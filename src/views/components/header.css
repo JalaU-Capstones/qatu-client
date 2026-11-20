@@ -21,6 +21,7 @@
   max-width: 1320px;
   margin: 0 auto;
   width: 100%;
+  min-width: 0;
   background: transparent;
   box-shadow: none;
   pointer-events: auto;
@@ -30,6 +31,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 16px;
   height: 56px;
   padding: 0 24px;
@@ -71,6 +73,7 @@
   display: flex;
   flex: 0 0 auto;
   align-items: center;
+  min-width: 0;
   gap: 16px;
 }
 
@@ -87,13 +90,15 @@ a.q-header-brand .q-brand-logo-svg {
   height: 32px;
 }
 
-a.q-header-brand:hover .q-brand-logo {
+a.q-header-brand:hover,
+a.q-header-brand:hover .q-brand-logo-svg {
   color: var(--q-fg-primary);
 }
 
 .q-header-nav {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .q-header .q-navbar-burger {
@@ -123,6 +128,7 @@ a.q-header-brand:hover .q-brand-logo {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  min-width: 0;
 }
 
 .q-header-icon-btn,
@@ -189,6 +195,8 @@ a.q-header-brand:hover .q-brand-logo {
   transition:
     background-color 150ms ease,
     color 150ms ease;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .q-header-login-btn:hover {
@@ -198,6 +206,10 @@ a.q-header-brand:hover .q-brand-logo {
 
 .q-header-avatar-wrapper {
   position: relative;
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
 }
 
 .q-header-avatar,
@@ -376,12 +388,14 @@ a.q-header-brand:hover .q-brand-logo {
   height: 36px;
   flex: 1 1 320px;
   align-items: center;
+  min-width: 0;
   gap: 8px;
   margin: 0 auto 0 16px;
   padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--q-border-default) 72%, transparent);
   border-radius: 9999px;
   background: color-mix(in srgb, var(--q-bg-surface) 92%, transparent);
+  box-sizing: border-box;
 }
 
 .q-header-search__input {
@@ -428,10 +442,9 @@ a.q-header-brand:hover .q-brand-logo {
   .q-header__pill {
     gap: 8px;
     padding: 0 12px;
-    height: auto;
+    height: 56px;
     min-height: 56px;
-    flex-wrap: wrap;
-    align-content: center;
+    flex-wrap: nowrap;
   }
 
   .q-header__left {
@@ -439,16 +452,23 @@ a.q-header-brand:hover .q-brand-logo {
     order: 1;
   }
 
+  a.q-header-brand .q-brand-logo-svg {
+    width: 100px;
+    height: 28px;
+  }
+
   .q-header .q-navbar-burger {
     display: flex;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
   }
 
   .q-header-actions {
     flex: 0 0 auto;
-    margin-left: auto;
-    order: 2;
+    margin-left: 0;
+    order: 3;
+    gap: 4px;
   }
 
   .q-header-search {
@@ -457,8 +477,8 @@ a.q-header-brand:hover .q-brand-logo {
     height: 32px;
     flex: 0 0 32px;
     justify-content: center;
-    margin: 0;
-    order: 3;
+    margin: 0 0 0 auto;
+    order: 2;
     padding: 0;
     border-color: transparent;
     background: transparent;
@@ -513,11 +533,19 @@ a.q-header-brand:hover .q-brand-logo {
 
   .q-header-search--expanded + .q-header-actions {
     order: 2;
+    margin-left: auto;
   }
 
-  .q-header__pill:has(.q-header-search--expanded) {
+  .q-header__pill--search-expanded {
+    height: auto;
+    flex-wrap: wrap;
+    align-content: center;
     gap: 8px;
     padding-block: 8px;
+  }
+
+  .q-header__pill--search-expanded .q-header-search {
+    order: 3;
   }
 
   .q-header-search--expanded .q-header-search__input {
@@ -570,32 +598,35 @@ a.q-header-brand:hover .q-brand-logo {
 }
 
 /* Mobile login button: prevent text truncation in the pill */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .q-header-login-btn,
   .q-header-login-btn--mobile {
-    flex-shrink: 0;
     white-space: nowrap;
-    padding: 0 12px;
-    font-size: 13px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 7px;
+    font-size: 11px;
   }
+
   .q-header-actions {
     flex-shrink: 0;
+  }
+
+  .q-header-actions .q-header-icon-btn {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
   }
 }
 
 @media (max-width: 400px) {
   .q-header__pill {
-    gap: 4px;
-    padding: 0 8px;
+    gap: 2px;
+    padding: 0 6px;
   }
 
   .q-header__left {
     gap: 4px;
-  }
-
-  .q-header-brand .q-brand-logo-svg {
-    width: 100px;
-    height: 28px;
   }
 
   .q-header .q-navbar-burger,
@@ -610,17 +641,11 @@ a.q-header-brand:hover .q-brand-logo {
     gap: 2px;
   }
 
-  .q-header-actions .q-header-icon-btn {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
-  }
-
   .q-header .q-header-login-btn,
   .q-header .q-header-login-btn--mobile {
     min-height: 32px;
-    padding: 0 7px;
-    font-size: 11px;
+    padding: 0 5px;
+    font-size: 10px;
   }
 
   .q-header-search.q-header-search--expanded {
@@ -629,7 +654,51 @@ a.q-header-brand:hover .q-brand-logo {
     flex-basis: 100%;
   }
 
-  .q-header__pill:has(.q-header-search--expanded) {
+  .q-header__pill--search-expanded {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 359px) {
+  .q-header__pill {
+    gap: 1px;
+    padding: 0 4px;
+  }
+
+  .q-header__left {
+    gap: 2px;
+  }
+
+  a.q-header-brand .q-brand-logo-svg {
+    width: 85px;
+    height: 24px;
+  }
+
+  .q-header .q-navbar-burger,
+  .q-header-search,
+  .q-header-search__toggle {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+  }
+
+  .q-header-actions {
+    gap: 1px;
+  }
+
+  .q-header-actions .q-header-icon-btn {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .q-header .q-header-login-btn,
+  .q-header .q-header-login-btn--mobile {
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  .q-header__pill--search-expanded {
     padding: 8px;
   }
 }

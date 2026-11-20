@@ -263,6 +263,9 @@ export class HeaderView {
     `;
     const setExpanded = (expanded) => {
       form.classList.toggle('q-header-search--expanded', expanded);
+      form
+        .closest('.q-header__pill')
+        ?.classList.toggle('q-header__pill--search-expanded', expanded);
       clearButton.hidden = !expanded || !input.value;
       toggle.setAttribute('aria-expanded', String(expanded));
       toggle.setAttribute('aria-label', expanded ? 'Cerrar búsqueda' : 'Abrir búsqueda');
