@@ -308,6 +308,26 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('shows the signed-in role and inline icons for each dropdown action', () => {
+    viewModel.setUser({
+      username: 'seller',
+      full_name: 'Seller Name',
+      email: 'seller@example.qatu.pe',
+    });
+    viewModel.setIsSeller(true);
+    const el = view.render();
+    const dropdown = el.querySelector('.q-header-dropdown');
+
+    expect(dropdown.querySelector('.q-header-dropdown-name').textContent).toBe('Seller Name');
+    expect(dropdown.querySelector('.q-header-dropdown-role').textContent).toBe('Vendedor');
+    expect(dropdown.querySelectorAll('.q-header-dropdown-icon').length).toBeGreaterThan(0);
+    expect(dropdown.querySelector('.q-header-dropdown-separator')).not.toBeNull();
+    expect(dropdown.querySelector('.q-header-logout-btn .q-header-dropdown-icon')).not.toBeNull();
+
+    viewModel.setIsAdmin(true);
+    expect(dropdown.querySelector('.q-header-dropdown-role').textContent).toBe('Admin');
+  });
+
   it('clicking outside the header closes the dropdown', () => {
     const loggedInVM = new HeaderViewModel({
       user: { username: 'tomas', email: 'tomas@q.com' },

@@ -1,5 +1,14 @@
+import oceanAvatar from '../../assets/avatar-presets/avatar-preset-ocean.svg';
+import orchidAvatar from '../../assets/avatar-presets/avatar-preset-orchid.svg';
+import terracottaAvatar from '../../assets/avatar-presets/avatar-preset-terracotta.svg';
 import { BIO_MAX_LENGTH } from '../../models/validation/profileValidation.js';
 import { ProfileViewModel } from '../../viewmodels/pages/ProfileViewModel.js';
+
+const AVATAR_PRESETS = [
+  { label: 'Lavanda', src: orchidAvatar },
+  { label: 'Océano', src: oceanAvatar },
+  { label: 'Terracota', src: terracottaAvatar },
+];
 
 /**
  * View for the Buyer Profile page (`/profile`).
@@ -18,6 +27,7 @@ export class ProfileView {
     this.autoLoad = options.autoLoad !== false;
     this.element = null;
     this._unsubscribe = null;
+    this._avatarStudioOpen = false;
   }
 
   /**
@@ -35,22 +45,30 @@ export class ProfileView {
 
     section.innerHTML = `
       <header class="q-profile-header">
-        <p class="q-profile-eyebrow">Mi cuenta</p>
-        <h1 id="q-profile-heading" class="q-profile-title">Mi Perfil</h1>
-        <p class="q-profile-subtitle">Consulta y actualiza tu información personal en Q'atu.</p>
+        <div class="q-profile-heading-copy">
+          <p class="q-profile-eyebrow">Cuenta personal</p>
+          <h1 id="q-profile-heading" class="q-profile-title">Mi perfil</h1>
+          <p class="q-profile-subtitle">Gestiona tu información y mantén tu cuenta al día.</p>
+        </div>
+        <a class="q-profile-home-link" href="/" data-route="">Volver al inicio →</a>
       </header>
 
       <div class="q-profile-grid">
         <aside class="q-profile-card q-profile-summary-card" aria-label="Resumen de perfil">
-          <div class="q-profile-avatar-frame"></div>
           <h2 class="q-profile-display-name"></h2>
           <p class="q-profile-username"></p>
           <p class="q-profile-display-bio"></p>
 
           <div class="q-profile-avatar-upload">
-            <label class="q-profile-btn q-profile-select-avatar-btn" for="q-profile-avatar-file">
-              Cambiar foto de perfil
-            </label>
+            <button type="button" class="q-profile-dropzone" aria-describedby="q-profile-avatar-hint q-profile-error-avatar">
+              <span class="q-profile-dropzone-content">
+                <span class="q-profile-avatar-frame"></span>
+                <span class="q-profile-dropzone-copy">
+                  <strong>Arrastra tu foto aquí</strong>
+                  <span>o haz clic para elegir una imagen</span>
+                </span>
+              </span>
+            </button>
             <input
               id="q-profile-avatar-file"
               class="q-profile-file-input"
@@ -58,6 +76,8 @@ export class ProfileView {
               name="image"
               accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               aria-describedby="q-profile-error-avatar"
+              tabindex="-1"
+              aria-hidden="true"
             />
             <button
               type="button"
@@ -66,7 +86,7 @@ export class ProfileView {
             >
               Subir imagen
             </button>
-            <p class="q-profile-field-hint">Formatos permitidos: JPEG, PNG, WebP (máx. 2 MB).</p>
+            <p id="q-profile-avatar-hint" class="q-profile-field-hint">JPEG, PNG o WebP · Máximo 2 MB</p>
             <p
               id="q-profile-error-avatar"
               class="q-profile-field-error"
@@ -74,6 +94,48 @@ export class ProfileView {
               role="alert"
               hidden
             ></p>
+            <button
+              type="button"
+              class="q-profile-studio-toggle"
+              aria-controls="q-profile-avatar-studio"
+              aria-expanded="false"
+            >
+              Elegir avatar o URL
+            </button>
+            <div id="q-profile-avatar-studio" class="q-profile-avatar-studio" hidden>
+              <p class="q-profile-studio-label">Avatares rápidos</p>
+              <div class="q-profile-avatar-presets" aria-label="Avatares predefinidos">
+                ${AVATAR_PRESETS.map(
+                  ({ label, src }) => `
+                    <button
+                      type="button"
+                      class="q-profile-avatar-preset"
+                      data-avatar-path="${src}"
+                      aria-label="Usar avatar ${label}"
+                    >
+                      <img src="${src}" alt="" />
+                    </button>
+                  `
+                ).join('')}
+              </div>
+              <div class="q-profile-field q-profile-avatar-url-field">
+                <label class="q-profile-label" for="q-profile-avatar-url">URL o ruta personalizada</label>
+                <input
+                  id="q-profile-avatar-url"
+                  class="q-profile-input"
+                  type="text"
+                  name="avatar_path"
+                  placeholder="https://... o avatars/usuario.webp"
+                  aria-describedby="q-profile-error-avatar_path"
+                />
+                <p
+                  id="q-profile-error-avatar_path"
+                  class="q-profile-field-error"
+                  data-error-for="avatar_path"
+                  hidden
+                ></p>
+              </div>
+            </div>
           </div>
         </aside>
 
@@ -120,24 +182,6 @@ export class ProfileView {
                 id="q-profile-error-full_name"
                 class="q-profile-field-error"
                 data-error-for="full_name"
-                hidden
-              ></p>
-            </div>
-
-            <div class="q-profile-field">
-              <label class="q-profile-label" for="q-profile-avatar">Avatar (ruta o URL)</label>
-              <input
-                id="q-profile-avatar"
-                class="q-profile-input"
-                type="text"
-                name="avatar_path"
-                placeholder="avatars/usuario/avatar.webp"
-                aria-describedby="q-profile-error-avatar_path"
-              />
-              <p
-                id="q-profile-error-avatar_path"
-                class="q-profile-field-error"
-                data-error-for="avatar_path"
                 hidden
               ></p>
             </div>
@@ -231,10 +275,13 @@ export class ProfileView {
     if (!this.element) return;
 
     const fullNameInput = this.element.querySelector('#q-profile-full-name');
-    const avatarInput = this.element.querySelector('#q-profile-avatar');
+    const avatarInput = this.element.querySelector('#q-profile-avatar-url');
     const localeSelect = this.element.querySelector('#q-profile-locale');
     const bioInput = this.element.querySelector('#q-profile-bio');
     const avatarFileInput = this.element.querySelector('#q-profile-avatar-file');
+    const dropzone = this.element.querySelector('.q-profile-dropzone');
+    const studioToggle = this.element.querySelector('.q-profile-studio-toggle');
+    const presets = this.element.querySelectorAll('.q-profile-avatar-preset');
     const uploadBtn = this.element.querySelector('.q-profile-upload-btn');
     const resetBtn = this.element.querySelector('.q-profile-reset-btn');
     const closeAlertBtn = this.element.querySelector('.q-profile-alert-close');
@@ -260,7 +307,43 @@ export class ProfileView {
       const file = e.target.files?.[0] || null;
       if (file) {
         this.viewModel.selectAvatarFile(file);
+        e.target.value = '';
       }
+    });
+
+    dropzone?.addEventListener('click', () => avatarFileInput?.click());
+    ['dragenter', 'dragover'].forEach((eventName) => {
+      dropzone?.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'copy';
+        }
+        dropzone.classList.add('is-dragover');
+      });
+    });
+    dropzone?.addEventListener('dragleave', (event) => {
+      if (!event.relatedTarget || !dropzone.contains(event.relatedTarget)) {
+        dropzone.classList.remove('is-dragover');
+      }
+    });
+    dropzone?.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dropzone.classList.remove('is-dragover');
+      const file = event.dataTransfer?.files?.[0] || null;
+      if (file) {
+        this.viewModel.selectAvatarFile(file);
+      }
+    });
+
+    studioToggle?.addEventListener('click', () => {
+      this._avatarStudioOpen = !this._avatarStudioOpen;
+      this._update(this.viewModel);
+    });
+
+    presets.forEach((preset) => {
+      preset.addEventListener('click', () => {
+        this.viewModel.setField('avatar_path', preset.dataset.avatarPath);
+      });
     });
 
     uploadBtn?.addEventListener('click', (e) => {
@@ -296,9 +379,7 @@ export class ProfileView {
    */
   _focusFirstInvalidField() {
     if (!this.element) return;
-    const firstInvalid = this.element.querySelector(
-      '.q-profile-form [aria-invalid="true"], .q-profile-form .is-invalid'
-    );
+    const firstInvalid = this.element.querySelector('[aria-invalid="true"], .is-invalid');
     if (firstInvalid && typeof firstInvalid.focus === 'function') {
       firstInvalid.focus();
     }
@@ -318,7 +399,7 @@ export class ProfileView {
     const username = viewProfile.username || profile.username || '';
     const displayName = viewProfile.fullName || profile.full_name || username || 'Usuario';
     const bioText = viewProfile.bio || profile.bio || 'Sin biografía registrada.';
-    const avatarSrc = vm.avatarPreviewUrl || viewProfile.avatarPath || profile.avatar_path || '';
+    const avatarSrc = vm.avatarPreviewUrl || vm.formData.avatar_path || '';
 
     // 1. Summary card & avatar preview
     const avatarFrame = this.element.querySelector('.q-profile-avatar-frame');
@@ -374,7 +455,7 @@ export class ProfileView {
 
     // 2. Avatar upload button state
     const uploadBtn = this.element.querySelector('.q-profile-upload-btn');
-    const avatarFileInput = this.element.querySelector('#q-profile-avatar-file');
+    const avatarDropzone = this.element.querySelector('.q-profile-dropzone');
     if (uploadBtn) {
       if (vm.selectedAvatarFile || vm.isUploadingAvatar) {
         uploadBtn.removeAttribute('hidden');
@@ -383,6 +464,9 @@ export class ProfileView {
       }
       uploadBtn.disabled = vm.isUploadingAvatar || vm.isLoading || vm.isSaving;
       uploadBtn.textContent = vm.isUploadingAvatar ? 'Subiendo...' : 'Subir imagen';
+    }
+    if (avatarDropzone) {
+      avatarDropzone.disabled = vm.isUploadingAvatar || vm.isLoading || vm.isSaving;
     }
 
     // 3. Form inputs
@@ -396,10 +480,23 @@ export class ProfileView {
       fullNameInput.value = vm.formData.full_name ?? '';
     }
 
-    const avatarInput = this.element.querySelector('#q-profile-avatar');
+    const avatarInput = this.element.querySelector('#q-profile-avatar-url');
     if (avatarInput && avatarInput.value !== (vm.formData.avatar_path ?? '')) {
       avatarInput.value = vm.formData.avatar_path ?? '';
     }
+    const studioToggle = this.element.querySelector('.q-profile-studio-toggle');
+    const studio = this.element.querySelector('.q-profile-avatar-studio');
+    const studioOpen = this._avatarStudioOpen || Boolean(vm.fieldErrors.avatar_path);
+    if (studioToggle && studio) {
+      studio.hidden = !studioOpen;
+      studioToggle.setAttribute('aria-expanded', String(studioOpen));
+    }
+    this.element.querySelectorAll('.q-profile-avatar-preset').forEach((preset) => {
+      preset.setAttribute(
+        'aria-pressed',
+        String(preset.dataset.avatarPath === (vm.formData.avatar_path ?? ''))
+      );
+    });
 
     const localeSelect = this.element.querySelector('#q-profile-locale');
     if (localeSelect && vm.formData.locale) {
@@ -434,7 +531,7 @@ export class ProfileView {
     this._updateFieldError('avatar_path', avatarInput, vm.fieldErrors.avatar_path);
     this._updateFieldError('locale', localeSelect, vm.fieldErrors.locale);
     this._updateFieldError('bio', bioInput, vm.fieldErrors.bio);
-    this._updateFieldError('avatar', avatarFileInput, vm.fieldErrors.avatar);
+    this._updateFieldError('avatar', avatarDropzone, vm.fieldErrors.avatar);
 
     // 5. Alert banners
     const errorBanner = this.element.querySelector('.q-profile-alert-error');

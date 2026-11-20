@@ -1,6 +1,21 @@
 import { HeaderViewModel } from '../../viewmodels/components/HeaderViewModel.js';
 import { NavbarView } from './NavbarView.js';
 
+const DROPDOWN_ICONS = {
+  user: '<circle cx="12" cy="8" r="4"></circle><path d="M5 21a7 7 0 0 1 14 0"></path>',
+  orders:
+    '<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-5-5z"></path><path d="M16 3v5h5M8 13h8M8 17h8"></path>',
+  products:
+    '<path d="m12 3 9 5-9 5-9-5 9-5z"></path><path d="m3 8 9 5 9-5M3 13l9 5 9-5M3 8v8l9 5 9-5V8"></path>',
+  sales: '<path d="M3 3v18h18"></path><path d="m7 14 4-4 4 3 6-7"></path>',
+  store: '<path d="M3 10h18l-2-6H5l-2 6z"></path><path d="M5 10v10h14V10M9 20v-6h6v6"></path>',
+  reports: '<path d="M4 19V5M4 19h17"></path><path d="m7 15 4-5 4 3 5-7"></path>',
+  people:
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
+  logout:
+    '<path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path>',
+};
+
 /**
  * View component for the Header.
  * Combines Brand Logo, Navbar, Cart Icon, and Iniciar Sesión button or User Avatar.
@@ -296,7 +311,7 @@ export class HeaderView {
     salesBtn.className = 'q-header-dropdown-item q-header-seller-orders-btn';
     salesBtn.href = '/seller/orders';
     salesBtn.dataset.route = '';
-    salesBtn.textContent = 'Mis Ventas';
+    this._setDropdownItemContent(salesBtn, 'Mis Ventas', 'sales');
     salesBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -315,7 +330,7 @@ export class HeaderView {
     link.className = 'q-header-dropdown-item q-header-seller-products-btn';
     link.href = '/seller/products';
     link.dataset.route = '';
-    link.textContent = 'Mis Productos';
+    this._setDropdownItemContent(link, 'Mis Productos', 'products');
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -329,7 +344,7 @@ export class HeaderView {
     link.className = 'q-header-dropdown-item q-header-seller-apply-btn';
     link.href = '/seller/apply';
     link.dataset.route = '';
-    link.textContent = 'Quiero vender';
+    this._setDropdownItemContent(link, 'Quiero vender', 'store');
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -343,7 +358,7 @@ export class HeaderView {
     link.className = 'q-header-dropdown-item q-header-admin-reports-btn';
     link.href = '/admin/reports';
     link.dataset.route = '';
-    link.textContent = 'Reportes';
+    this._setDropdownItemContent(link, 'Reportes', 'reports');
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -357,13 +372,36 @@ export class HeaderView {
     link.className = 'q-header-dropdown-item q-header-admin-applications-btn';
     link.href = '/admin/seller-applications';
     link.dataset.route = '';
-    link.textContent = 'Solicitudes de vendedores';
+    this._setDropdownItemContent(link, 'Solicitudes de vendedores', 'people');
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.viewModel.triggerAdminSellerApplications();
     });
     return link;
+  }
+
+  _setDropdownItemContent(item, label, icon) {
+    const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    iconElement.setAttribute('class', 'q-header-dropdown-icon');
+    iconElement.setAttribute('viewBox', '0 0 24 24');
+    iconElement.setAttribute('fill', 'none');
+    iconElement.setAttribute('stroke', 'currentColor');
+    iconElement.setAttribute('stroke-width', '1.7');
+    iconElement.setAttribute('stroke-linecap', 'round');
+    iconElement.setAttribute('stroke-linejoin', 'round');
+    iconElement.setAttribute('aria-hidden', 'true');
+    iconElement.innerHTML = DROPDOWN_ICONS[icon];
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'q-header-dropdown-label';
+    labelElement.textContent = label;
+    item.replaceChildren(iconElement, labelElement);
+  }
+
+  _getDropdownRoleLabel(vm = this.viewModel) {
+    if (vm.isAdmin) return 'Admin';
+    return vm.isSeller ? 'Vendedor' : 'Comprador';
   }
 
   _syncSellerLink(vm) {
@@ -375,7 +413,8 @@ export class HeaderView {
     const existingAdminReports = dropdown.querySelector('.q-header-admin-reports-btn');
     const existingAdminApps = dropdown.querySelector('.q-header-admin-applications-btn');
     const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
-    const adminAnchor = existingAdminReports || existingAdminApps || logoutBtn;
+    const separator = dropdown.querySelector('.q-header-dropdown-separator');
+    const adminAnchor = existingAdminReports || existingAdminApps || separator || logoutBtn;
 
     if (vm.isSeller) {
       if (existingApply) existingApply.remove();
@@ -395,10 +434,13 @@ export class HeaderView {
 
     if (vm.isAdmin) {
       if (!existingAdminReports) {
-        dropdown.insertBefore(this._createAdminReportsLink(), existingAdminApps || logoutBtn);
+        dropdown.insertBefore(
+          this._createAdminReportsLink(),
+          existingAdminApps || separator || logoutBtn
+        );
       }
       if (!existingAdminApps) {
-        dropdown.insertBefore(this._createAdminSellerApplicationsLink(), logoutBtn);
+        dropdown.insertBefore(this._createAdminSellerApplicationsLink(), separator || logoutBtn);
       }
     } else {
       if (existingAdminReports) existingAdminReports.remove();
@@ -482,17 +524,23 @@ export class HeaderView {
     nameSpan.className = 'q-header-dropdown-name';
     nameSpan.textContent = user.full_name || user.username || user.email || '';
 
+    const roleBadge = document.createElement('span');
+    roleBadge.className = 'q-header-dropdown-role';
+    roleBadge.textContent = this._getDropdownRoleLabel();
+
     const emailSpan = document.createElement('span');
     emailSpan.className = 'q-header-dropdown-email';
     emailSpan.textContent = user.email || '';
 
-    dropdownHeader.appendChild(nameSpan);
-    dropdownHeader.appendChild(emailSpan);
+    const identity = document.createElement('div');
+    identity.className = 'q-header-dropdown-identity';
+    identity.append(nameSpan, roleBadge);
+    dropdownHeader.append(identity, emailSpan);
 
     const profileBtn = document.createElement('button');
     profileBtn.type = 'button';
     profileBtn.className = 'q-header-dropdown-item q-header-profile-btn';
-    profileBtn.textContent = 'Mi Perfil';
+    this._setDropdownItemContent(profileBtn, 'Mi Perfil', 'user');
     profileBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -503,7 +551,7 @@ export class HeaderView {
     ordersBtn.className = 'q-header-dropdown-item q-header-orders-btn';
     ordersBtn.href = '/orders';
     ordersBtn.dataset.route = '';
-    ordersBtn.textContent = 'Mis Órdenes';
+    this._setDropdownItemContent(ordersBtn, 'Mis Órdenes', 'orders');
     ordersBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -529,14 +577,17 @@ export class HeaderView {
     const logoutBtn = document.createElement('button');
     logoutBtn.type = 'button';
     logoutBtn.className = 'q-header-dropdown-item q-header-logout-btn';
-    logoutBtn.textContent = 'Cerrar sesión';
+    this._setDropdownItemContent(logoutBtn, 'Cerrar sesión', 'logout');
     logoutBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.viewModel.triggerLogout();
     });
 
-    dropdown.appendChild(logoutBtn);
+    const separator = document.createElement('div');
+    separator.className = 'q-header-dropdown-separator';
+    separator.setAttribute('aria-hidden', 'true');
+    dropdown.append(separator, logoutBtn);
 
     wrapper.appendChild(avatar);
     wrapper.appendChild(dropdown);
@@ -600,6 +651,10 @@ export class HeaderView {
           if (nameSpan) {
             nameSpan.textContent = vm.user.full_name || vm.user.username || vm.user.email || '';
           }
+          const roleBadge = existingAvatarWrapper.querySelector('.q-header-dropdown-role');
+          if (roleBadge) {
+            roleBadge.textContent = this._getDropdownRoleLabel(vm);
+          }
           const emailSpan = existingAvatarWrapper.querySelector('.q-header-dropdown-email');
           if (emailSpan) {
             emailSpan.textContent = vm.user.email || '';
@@ -647,6 +702,10 @@ export class HeaderView {
 
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');
+    const avatarButton = this.element.querySelector('.q-header-user-avatar');
+    if (avatarButton) {
+      avatarButton.setAttribute('aria-expanded', String(vm.isDropdownOpen));
+    }
     if (dropdown) {
       if (vm.isDropdownOpen) {
         dropdown.removeAttribute('hidden');

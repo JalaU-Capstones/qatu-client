@@ -135,6 +135,81 @@ describe('ProfileView', () => {
   });
 
   describe('Scenario: Update profile & Upload avatar', () => {
+    it('selects and previews a dropped avatar image, then exposes the upload action', () => {
+      const el = view.mount(container);
+      const file = {
+        name: 'foto.webp',
+        type: 'image/webp',
+        size: 50 * 1024,
+        previewUrl: 'blob:dropped-preview',
+      };
+      const dropzone = el.querySelector('.q-profile-dropzone');
+      const dragEvent = new Event('dragenter', { bubbles: true, cancelable: true });
+      Object.defineProperty(dragEvent, 'dataTransfer', {
+        value: { dropEffect: 'none' },
+      });
+
+      dropzone.dispatchEvent(dragEvent);
+      expect(dropzone.classList.contains('is-dragover')).toBe(true);
+
+      const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: [file] } });
+      dropzone.dispatchEvent(dropEvent);
+
+      expect(dropzone.classList.contains('is-dragover')).toBe(false);
+      expect(viewModel.selectedAvatarFile).toBe(file);
+      expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
+        'blob:dropped-preview'
+      );
+      expect(el.querySelector('.q-profile-upload-btn').hasAttribute('hidden')).toBe(false);
+    });
+
+    it('keeps URL editing in the collapsed avatar studio and syncs preset or custom paths', () => {
+      const el = view.mount(container);
+      const toggle = el.querySelector('.q-profile-studio-toggle');
+      const studio = el.querySelector('#q-profile-avatar-studio');
+
+      expect(el.querySelector('#q-profile-avatar')).toBeNull();
+      expect(el.querySelector('.q-profile-form #q-profile-avatar-url')).toBeNull();
+      expect(studio.hasAttribute('hidden')).toBe(true);
+
+      toggle.click();
+      expect(studio.hasAttribute('hidden')).toBe(false);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+      const preset = el.querySelector('.q-profile-avatar-preset');
+      preset.click();
+      expect(viewModel.formData.avatar_path).toBe(preset.dataset.avatarPath);
+      expect(preset.getAttribute('aria-pressed')).toBe('true');
+      expect(el.querySelector('.q-profile-avatar-img').getAttribute('src')).toBe(
+        preset.dataset.avatarPath
+      );
+
+      const urlInput = el.querySelector('#q-profile-avatar-url');
+      urlInput.value = 'avatars/camila/custom.webp';
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(viewModel.formData.avatar_path).toBe('avatars/camila/custom.webp');
+    });
+
+    it('opens the avatar studio and focuses its URL field when avatar-path validation fails', async () => {
+      const el = view.mount(container);
+      await viewModel.loadProfile();
+      el.querySelector('.q-profile-studio-toggle').click();
+
+      const urlInput = el.querySelector('#q-profile-avatar-url');
+      urlInput.value = 'a'.repeat(501);
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      el.querySelector('.q-profile-form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockProfilesApi.updateMe).not.toHaveBeenCalled();
+      expect(urlInput.getAttribute('aria-invalid')).toBe('true');
+      expect(el.querySelector('#q-profile-avatar-studio').hasAttribute('hidden')).toBe(false);
+      expect(document.activeElement).toBe(urlInput);
+    });
+
     it('submits only changed fields on save, updates the summary card, and shows confirmation message', async () => {
       const el = view.mount(container);
       await viewModel.loadProfile();
