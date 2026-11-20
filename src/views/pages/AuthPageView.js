@@ -1,5 +1,6 @@
 import { AuthViewModel } from '../../viewmodels/components/AuthViewModel.js';
 import { AuthView } from '../components/AuthView.js';
+import { createBrandLogo } from '../components/BrandLogo.js';
 
 const MARKETING_HEADLINES = {
   login: 'Qué bueno verte de nuevo.',
@@ -27,15 +28,7 @@ function createBrand() {
   brand.className = 'q-auth__logo';
   brand.setAttribute('aria-label', "Q'atu");
 
-  const mark = document.createElement('span');
-  mark.className = 'q-auth__logo-mark';
-  mark.textContent = 'Q';
-
-  const word = document.createElement('span');
-  word.className = 'q-auth__logo-word';
-  word.textContent = "'atu";
-
-  brand.append(mark, word);
+  brand.appendChild(createBrandLogo({ size: 'md' }));
   return brand;
 }
 

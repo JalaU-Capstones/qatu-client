@@ -25,10 +25,10 @@ describe('FooterView', () => {
     expect(el.tagName.toLowerCase()).toBe('footer');
     expect(el.classList.contains('q-footer')).toBe(true);
 
-    const logo = el.querySelector('.q-footer-col-brand .q-brand-logo');
+    const logo = el.querySelector('.q-footer-col-brand .q-brand-logo-svg');
     expect(logo).not.toBeNull();
-    expect(logo.textContent).toBe("Q'atu");
-    expect(logo.querySelector('.q-footer-logo-mark')).not.toBeNull();
+    expect(logo.querySelector('text').textContent).toBe('Q’atu');
+    expect(logo.querySelector('polygon')).not.toBeNull();
 
     const tagline = el.querySelector('.q-footer-tagline');
     expect(tagline).not.toBeNull();
@@ -54,7 +54,7 @@ describe('FooterView', () => {
     const el = view.render();
 
     expect(el.querySelectorAll('.q-footer-grid > .q-footer-col').length).toBe(4);
-    expect(el.querySelector('.q-footer-col-brand .q-brand-logo')).not.toBeNull();
+    expect(el.querySelector('.q-footer-col-brand .q-brand-logo-svg')).not.toBeNull();
     const headings = Array.from(el.querySelectorAll('.q-footer-heading')).map(
       (heading) => heading.textContent
     );

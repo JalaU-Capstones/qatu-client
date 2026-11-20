@@ -1,7 +1,6 @@
 import { AuthViewModel } from '../../viewmodels/components/AuthViewModel.js';
 import { AuthMarketingView } from './AuthMarketingView.js';
-
-const QATU_LOGO_URL = new URL('../../assets/icons/qatu-logo.svg', import.meta.url).href;
+import { createBrandLogo } from './BrandLogo.js';
 
 /**
  * View component for Authentication (Login and Register).
@@ -117,7 +116,6 @@ export class AuthView {
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
-          <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
         <h2 class="q-auth-title">Iniciar sesión</h2>
         <p class="q-auth-subtitle">Ingresa tus datos para continuar.</p>
@@ -190,6 +188,8 @@ export class AuthView {
       </form>
     `;
 
+    panel.querySelector('.q-auth-brand').appendChild(createBrandLogo({ size: 'md' }));
+
     // Event Listeners
     const emailInput = panel.querySelector('#q-login-email');
     emailInput.addEventListener('input', (e) => {
@@ -250,7 +250,6 @@ export class AuthView {
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
-          <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
         <h2 class="q-auth-title">Crear una cuenta</h2>
         <p class="q-auth-subtitle">Únete a la comunidad de Q'atu.</p>
@@ -362,6 +361,8 @@ export class AuthView {
         </p>
       </form>
     `;
+
+    panel.querySelector('.q-auth-brand').appendChild(createBrandLogo({ size: 'md' }));
 
     // Event Listeners
     const nameInput = panel.querySelector('#q-register-name');

@@ -82,37 +82,9 @@ a.q-header-brand {
   text-decoration: none;
 }
 
-a.q-header-brand .q-brand-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--q-fg-primary);
-  font-family: var(--q-font-sans, system-ui, sans-serif);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  text-decoration: none;
-  transition:
-    background-color 150ms ease,
-    color 150ms ease,
-    border-color 150ms ease;
-}
-
-a.q-header-brand .q-brand-logo::before {
-  display: inline-flex;
-  width: 24px;
-  height: 24px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #ed3288 0 35%, #ffd84d 35% 65%, #4185ed 65%);
-  content: '';
+a.q-header-brand .q-brand-logo-svg {
+  width: 114px;
+  height: 32px;
 }
 
 a.q-header-brand:hover .q-brand-logo {
@@ -621,15 +593,9 @@ a.q-header-brand:hover .q-brand-logo {
     gap: 4px;
   }
 
-  .q-header-brand .q-brand-logo {
-    gap: 5px;
-    font-size: 16px;
-  }
-
-  .q-header-brand .q-brand-logo::before {
-    width: 20px;
-    height: 20px;
-    flex-basis: 20px;
+  .q-header-brand .q-brand-logo-svg {
+    width: 100px;
+    height: 28px;
   }
 
   .q-header .q-navbar-burger,

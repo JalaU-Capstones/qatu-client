@@ -44,6 +44,18 @@ describe('AuthPageView', () => {
     expect(layouts[0].querySelector('.q-auth__right')).not.toBeNull();
   });
 
+  it('uses the shared brand logo in both the login and register forms', () => {
+    const view = createView({ mode: 'login' });
+    view.mount(container);
+
+    const logos = container.querySelectorAll('.q-auth__logo .q-brand-logo-svg');
+    expect(logos.length).toBe(2);
+    logos.forEach((logo) => {
+      expect(logo.getAttribute('aria-label')).toBe('Q’atu');
+      expect(logo.querySelector('polygon')).not.toBeNull();
+    });
+  });
+
   it('should default mode to "register" when constructed without arguments', () => {
     const view = createView();
     expect(view.mode).toBe('register');

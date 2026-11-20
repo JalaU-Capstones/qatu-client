@@ -1,4 +1,5 @@
 import { HeaderViewModel } from '../../viewmodels/components/HeaderViewModel.js';
+import { createBrandLogo } from './BrandLogo.js';
 import { NavbarView } from './NavbarView.js';
 
 const DROPDOWN_ICONS = {
@@ -60,10 +61,7 @@ export class HeaderView {
     brandLink.href = this.viewModel.logoHref;
     brandLink.setAttribute('aria-label', `${this.viewModel.logoText} inicio`);
 
-    const logoBadge = document.createElement('span');
-    logoBadge.className = 'q-brand-logo';
-    logoBadge.textContent = this.viewModel.logoText;
-    brandLink.appendChild(logoBadge);
+    brandLink.appendChild(createBrandLogo({ size: 'md' }));
 
     brandLink.dataset.route = '';
 

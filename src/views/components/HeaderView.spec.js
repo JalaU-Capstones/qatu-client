@@ -27,7 +27,8 @@ describe('HeaderView', () => {
 
     const logo = el.querySelector('.q-brand-logo');
     expect(logo).not.toBeNull();
-    expect(logo.textContent).toBe("Q'atu");
+    expect(logo.getAttribute('aria-label')).toBe('Q’atu');
+    expect(logo.querySelector('text').textContent).toBe('Q’atu');
 
     const loginBtn = el.querySelector('.q-header-login-btn');
     expect(loginBtn).not.toBeNull();
@@ -555,6 +556,23 @@ describe('HeaderView', () => {
     viewModel.setTheme('system');
     svg = themeBtn.querySelector('svg.q-header-theme-icon');
     expect(svg.getAttribute('data-icon')).toBe('system');
+  });
+
+  it('updates the theme icon in one click in both directions', () => {
+    viewModel.setTheme('light');
+    viewModel.onThemeToggleClick = () => {
+      viewModel.setTheme(viewModel.theme === 'dark' ? 'light' : 'dark');
+    };
+    const el = view.render();
+    const themeBtn = el.querySelector('.q-header-theme-btn');
+
+    themeBtn.click();
+    expect(viewModel.theme).toBe('dark');
+    expect(themeBtn.querySelector('.q-header-theme-icon').getAttribute('data-icon')).toBe('moon');
+
+    themeBtn.click();
+    expect(viewModel.theme).toBe('light');
+    expect(themeBtn.querySelector('.q-header-theme-icon').getAttribute('data-icon')).toBe('sun');
   });
 
   describe('Categorías dropdown and search bar', () => {

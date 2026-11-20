@@ -1,5 +1,6 @@
 import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
+import { createBrandLogo } from './BrandLogo.js';
 
 /**
  * View component for the Footer.
@@ -42,19 +43,12 @@ export class FooterView {
     brandCol.className = 'q-footer-col q-footer-col-brand';
 
     const brandLink = document.createElement('a');
-    brandLink.className = 'q-brand-logo';
+    brandLink.className = 'q-brand-link';
     brandLink.href = this.viewModel.brand.logoHref;
     brandLink.setAttribute('aria-label', `${this.viewModel.brand.logoText} inicio`);
     brandLink.dataset.route = '';
 
-    const brandMark = document.createElement('span');
-    brandMark.className = 'q-footer-logo-mark';
-    brandMark.setAttribute('aria-hidden', 'true');
-
-    const brandText = document.createElement('span');
-    brandText.className = 'q-footer-logo-text';
-    brandText.textContent = this.viewModel.brand.logoText;
-    brandLink.append(brandMark, brandText);
+    brandLink.appendChild(createBrandLogo({ size: 'md' }));
 
     brandLink.addEventListener('click', (e) => {
       e.preventDefault();

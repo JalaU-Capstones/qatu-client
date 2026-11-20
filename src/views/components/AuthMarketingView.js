@@ -73,10 +73,9 @@ export class AuthMarketingView {
     content.className = 'q-auth-marketing__content';
 
     // Brand badge (decorative, not a link)
-    const brand = document.createElement('span');
-    brand.className = 'q-auth-marketing__brand q-brand-logo';
+    const brand = createBrandLogo({ size: 'lg' });
+    brand.classList.add('q-auth-marketing__brand');
     brand.setAttribute('aria-hidden', 'true');
-    brand.textContent = "Q'atu";
 
     // Eyebrow
     const eyebrow = document.createElement('p');
@@ -155,3 +154,4 @@ export class AuthMarketingView {
     this._titleEl.textContent = COPY.titles[this.mode] || COPY.titles.login;
   }
 }
+import { createBrandLogo } from './BrandLogo.js';

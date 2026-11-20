@@ -32,6 +32,13 @@ describe('AuthMarketingView', () => {
     expect(blobs[1].classList.contains('q-ambient__blob--cyan')).toBe(true);
   });
 
+  it('renders the shared brand logo in the marketing panel', () => {
+    const logo = view.render().querySelector('.q-auth-marketing__brand');
+    expect(logo.classList.contains('q-brand-logo-svg')).toBe(true);
+    expect(logo.getAttribute('aria-hidden')).toBe('true');
+    expect(logo.querySelector('text').textContent).toBe('Q’atu');
+  });
+
   it('render() includes the eyebrow text "MERCADO LOCAL, HISTORIAS REALES"', () => {
     const el = view.render();
     const eyebrow = el.querySelector('.q-auth-marketing__eyebrow');

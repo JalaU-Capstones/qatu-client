@@ -56,24 +56,39 @@ describe('ThemeStore', () => {
     store.destroy();
   });
 
-  it('cycle() from "light" → "dark" → "system" → "light" and persists each', () => {
+  it('cycle() toggles the effective theme from light to dark and back in one call', () => {
+    window.localStorage.setItem('qatu.theme', 'system');
     const store = new ThemeStore();
     store.init();
-    store.setPreference('light');
-    expect(store.getPreference()).toBe('light');
-    expect(window.localStorage.getItem('qatu.theme')).toBe('light');
+    expect(store.getPreference()).toBe('system');
+    expect(store.getResolved()).toBe('light');
 
     store.cycle();
     expect(store.getPreference()).toBe('dark');
     expect(window.localStorage.getItem('qatu.theme')).toBe('dark');
-
-    store.cycle();
-    expect(store.getPreference()).toBe('system');
-    expect(window.localStorage.getItem('qatu.theme')).toBe('system');
+    expect(store.getResolved()).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
 
     store.cycle();
     expect(store.getPreference()).toBe('light');
     expect(window.localStorage.getItem('qatu.theme')).toBe('light');
+    expect(store.getResolved()).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    store.destroy();
+  });
+
+  it('cycle() toggles from dark system preference to light immediately', () => {
+    mockMediaQuery.matches = true;
+    const store = new ThemeStore();
+    store.init();
+    expect(store.getResolved()).toBe('dark');
+
+    store.cycle();
+
+    expect(store.getPreference()).toBe('light');
+    expect(window.localStorage.getItem('qatu.theme')).toBe('light');
+    expect(store.getResolved()).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
     store.destroy();
   });
 

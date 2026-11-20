@@ -45,12 +45,12 @@ describe('AuthView', () => {
     aliasView.destroy();
   });
 
-  it('should render brand logo asset in both panels', () => {
+  it('should render the shared theme-aware brand logo in both panels', () => {
     const el = view.render();
-    const logos = el.querySelectorAll('.q-auth-brand-logo');
+    const logos = el.querySelectorAll('.q-auth-brand .q-brand-logo-svg');
     expect(logos.length).toBe(2);
-    expect(logos[0].getAttribute('alt')).toBe("Q'atu");
-    expect(logos[0].getAttribute('src')).toContain('qatu-logo.svg');
+    expect(logos[0].getAttribute('aria-label')).toBe('Q’atu');
+    expect(logos[0].querySelector('tspan').getAttribute('fill')).toContain('--q-accent');
   });
 
   it('should render both login and register panels with updated Figma copy and fields', () => {

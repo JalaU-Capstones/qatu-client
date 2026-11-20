@@ -5,6 +5,7 @@ import './views/styles/fonts.css';
 import './views/styles/bulma-overrides.css';
 import './views/styles/main.css';
 import './views/components/header.css';
+import './views/components/brand-logo.css';
 import './views/components/navbar.css';
 import './views/components/hero.css';
 import './views/components/categories.css';

@@ -174,24 +174,9 @@
   margin-bottom: 24px;
 }
 
-.q-auth__logo-mark {
-  display: inline-flex;
-  width: 28px;
-  height: 28px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: var(--q-auth-pink);
-  color: var(--q-ds-white);
-  font-size: 15px;
-  font-weight: var(--q-font-weight-bold);
-}
-
-.q-auth__logo-word {
+.q-auth-brand,
+.q-auth__logo {
   color: var(--q-fg-primary);
-  font-family: var(--q-font-sans, system-ui, sans-serif);
-  font-size: 18px;
-  font-weight: var(--q-font-weight-bold);
 }
 
 .q-auth__title {
