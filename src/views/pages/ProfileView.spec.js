@@ -135,6 +135,66 @@ describe('ProfileView', () => {
   });
 
   describe('Scenario: Update profile & Upload avatar', () => {
+    it('enables form actions only for normalized edits and restores disabled state on cancel', async () => {
+      const el = view.mount(container);
+      const saveBtn = el.querySelector('.q-profile-save-btn');
+      const resetBtn = el.querySelector('.q-profile-reset-btn');
+      const expectActionsDisabled = (disabled) => {
+        expect(saveBtn.disabled).toBe(disabled);
+        expect(resetBtn.disabled).toBe(disabled);
+      };
+
+      expectActionsDisabled(true);
+      await viewModel.loadProfile();
+      expectActionsDisabled(true);
+
+      const fullNameInput = el.querySelector('#q-profile-full-name');
+      fullNameInput.value = `${sampleProfile.full_name}  `;
+      fullNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expectActionsDisabled(true);
+
+      fullNameInput.value = 'Camila Morales Editada';
+      fullNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expectActionsDisabled(false);
+
+      fullNameInput.value = sampleProfile.full_name;
+      fullNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expectActionsDisabled(true);
+
+      fullNameInput.value = 'Camila Morales Editada';
+      fullNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      resetBtn.click();
+      expect(fullNameInput.value).toBe(sampleProfile.full_name);
+      expectActionsDisabled(true);
+
+      const bioInput = el.querySelector('#q-profile-bio');
+      bioInput.value = 'Biografía editada';
+      bioInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expectActionsDisabled(false);
+      resetBtn.click();
+      expectActionsDisabled(true);
+
+      const localeSelect = el.querySelector('#q-profile-locale');
+      localeSelect.value = 'en';
+      localeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      expectActionsDisabled(false);
+      resetBtn.click();
+      expectActionsDisabled(true);
+
+      el.querySelector('.q-profile-studio-toggle').click();
+      el.querySelector('.q-profile-avatar-preset').click();
+      expectActionsDisabled(false);
+      resetBtn.click();
+      expectActionsDisabled(true);
+
+      const avatarUrlInput = el.querySelector('#q-profile-avatar-url');
+      avatarUrlInput.value = 'avatars/camila/custom.webp';
+      avatarUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      expectActionsDisabled(false);
+      resetBtn.click();
+      expectActionsDisabled(true);
+    });
+
     it('selects and previews a dropped avatar image, then exposes the upload action', () => {
       const el = view.mount(container);
       const file = {
@@ -236,6 +296,8 @@ describe('ProfileView', () => {
       expect(el.querySelector('.q-profile-display-bio').textContent).toBe(
         'Nueva biografía de compradora.'
       );
+      expect(el.querySelector('.q-profile-save-btn').disabled).toBe(true);
+      expect(el.querySelector('.q-profile-reset-btn').disabled).toBe(true);
 
       const successBanner = el.querySelector('.q-profile-alert-success');
       expect(successBanner.hasAttribute('hidden')).toBe(false);

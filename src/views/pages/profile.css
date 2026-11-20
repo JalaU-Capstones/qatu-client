@@ -7,13 +7,23 @@
   position: relative;
   isolation: isolate;
   width: 100%;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 40px 24px 72px;
+  max-width: none;
+  margin: 0;
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
   box-sizing: border-box;
   overflow-x: clip;
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   color: var(--q-fg-primary);
+}
+
+.q-profile-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: calc(var(--q-header-overlay-height, 72px) + 32px) 24px 72px;
+  box-sizing: border-box;
 }
 
 .q-profile::before,
@@ -549,7 +559,9 @@
     background-color 150ms ease,
     border-color 150ms ease,
     color 150ms ease,
-    opacity 150ms ease;
+    opacity 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 .q-profile-btn:disabled {
@@ -558,28 +570,44 @@
 }
 
 .q-profile-reset-btn {
-  background: transparent;
-  border: 1px solid var(--q-border-default, #d1d5db);
+  background: var(--q-bg-surface);
+  border: 1px solid var(--q-border-default);
   color: var(--q-fg-primary);
 }
 
 .q-profile-reset-btn:hover:not(:disabled) {
-  background: var(--q-bg-surface, #f9fafb);
+  background: var(--q-bg-elevated);
+  border-color: var(--q-border-strong);
 }
 
 .q-profile-save-btn {
-  background: var(--q-fg-primary, #171717);
-  border: 1px solid var(--q-fg-primary, #171717);
-  color: var(--q-bg-page, #ffffff);
+  background: var(--q-accent);
+  border: 1px solid var(--q-accent);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(236, 72, 153, 0.2);
 }
 
 .q-profile-save-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  background: var(--q-accent-hover);
+  border-color: var(--q-accent-hover);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+  transform: translateY(-1px);
+}
+
+.q-profile-reset-btn:disabled,
+.q-profile-save-btn:disabled {
+  background: var(--q-bg-surface);
+  border-color: var(--q-border-default);
+  color: var(--q-fg-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
-  .q-profile {
-    padding: 32px 20px 56px;
+  .q-profile-container {
+    padding: calc(var(--q-header-overlay-height, 72px) + 32px) 20px 56px;
   }
 
   .q-profile-grid {
@@ -599,8 +627,8 @@
 }
 
 @media (max-width: 767px) {
-  .q-profile {
-    padding: 24px 16px 48px;
+  .q-profile-container {
+    padding: calc(var(--q-header-overlay-height, 72px) + 24px) 16px 48px;
   }
 
   .q-profile-header {
@@ -681,7 +709,7 @@
 }
 
 @media (max-width: 420px) {
-  .q-profile {
+  .q-profile-container {
     padding-inline: 12px;
   }
 

@@ -44,69 +44,70 @@ export class ProfileView {
     section.setAttribute('aria-labelledby', 'q-profile-heading');
 
     section.innerHTML = `
-      <header class="q-profile-header">
-        <div class="q-profile-heading-copy">
-          <p class="q-profile-eyebrow">Cuenta personal</p>
-          <h1 id="q-profile-heading" class="q-profile-title">Mi perfil</h1>
-          <p class="q-profile-subtitle">Gestiona tu información y mantén tu cuenta al día.</p>
-        </div>
-        <a class="q-profile-home-link" href="/" data-route="">Volver al inicio →</a>
-      </header>
+      <div class="q-profile-container">
+        <header class="q-profile-header">
+          <div class="q-profile-heading-copy">
+            <p class="q-profile-eyebrow">Cuenta personal</p>
+            <h1 id="q-profile-heading" class="q-profile-title">Mi perfil</h1>
+            <p class="q-profile-subtitle">Gestiona tu información y mantén tu cuenta al día.</p>
+          </div>
+          <a class="q-profile-home-link" href="/" data-route="">Volver al inicio →</a>
+        </header>
 
-      <div class="q-profile-grid">
-        <aside class="q-profile-card q-profile-summary-card" aria-label="Resumen de perfil">
-          <h2 class="q-profile-display-name"></h2>
-          <p class="q-profile-username"></p>
-          <p class="q-profile-display-bio"></p>
+        <div class="q-profile-grid">
+          <aside class="q-profile-card q-profile-summary-card" aria-label="Resumen de perfil">
+            <h2 class="q-profile-display-name"></h2>
+            <p class="q-profile-username"></p>
+            <p class="q-profile-display-bio"></p>
 
-          <div class="q-profile-avatar-upload">
-            <button type="button" class="q-profile-dropzone" aria-describedby="q-profile-avatar-hint q-profile-error-avatar">
-              <span class="q-profile-dropzone-content">
-                <span class="q-profile-avatar-frame"></span>
-                <span class="q-profile-dropzone-copy">
-                  <strong>Arrastra tu foto aquí</strong>
-                  <span>o haz clic para elegir una imagen</span>
+            <div class="q-profile-avatar-upload">
+              <button type="button" class="q-profile-dropzone" aria-describedby="q-profile-avatar-hint q-profile-error-avatar">
+                <span class="q-profile-dropzone-content">
+                  <span class="q-profile-avatar-frame"></span>
+                  <span class="q-profile-dropzone-copy">
+                    <strong>Arrastra tu foto aquí</strong>
+                    <span>o haz clic para elegir una imagen</span>
+                  </span>
                 </span>
-              </span>
-            </button>
-            <input
-              id="q-profile-avatar-file"
-              class="q-profile-file-input"
-              type="file"
-              name="image"
-              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-              aria-describedby="q-profile-error-avatar"
-              tabindex="-1"
-              aria-hidden="true"
-            />
-            <button
-              type="button"
-              class="q-profile-btn q-profile-upload-btn"
-              hidden
-            >
-              Subir imagen
-            </button>
-            <p id="q-profile-avatar-hint" class="q-profile-field-hint">JPEG, PNG o WebP · Máximo 2 MB</p>
-            <p
-              id="q-profile-error-avatar"
-              class="q-profile-field-error"
-              data-error-for="avatar"
-              role="alert"
-              hidden
-            ></p>
-            <button
-              type="button"
-              class="q-profile-studio-toggle"
-              aria-controls="q-profile-avatar-studio"
-              aria-expanded="false"
-            >
-              Elegir avatar o URL
-            </button>
-            <div id="q-profile-avatar-studio" class="q-profile-avatar-studio" hidden>
-              <p class="q-profile-studio-label">Avatares rápidos</p>
-              <div class="q-profile-avatar-presets" aria-label="Avatares predefinidos">
-                ${AVATAR_PRESETS.map(
-                  ({ label, src }) => `
+              </button>
+              <input
+                id="q-profile-avatar-file"
+                class="q-profile-file-input"
+                type="file"
+                name="image"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                aria-describedby="q-profile-error-avatar"
+                tabindex="-1"
+                aria-hidden="true"
+              />
+              <button
+                type="button"
+                class="q-profile-btn q-profile-upload-btn"
+                hidden
+              >
+                Subir imagen
+              </button>
+              <p id="q-profile-avatar-hint" class="q-profile-field-hint">JPEG, PNG o WebP · Máximo 2 MB</p>
+              <p
+                id="q-profile-error-avatar"
+                class="q-profile-field-error"
+                data-error-for="avatar"
+                role="alert"
+                hidden
+              ></p>
+              <button
+                type="button"
+                class="q-profile-studio-toggle"
+                aria-controls="q-profile-avatar-studio"
+                aria-expanded="false"
+              >
+                Elegir avatar o URL
+              </button>
+              <div id="q-profile-avatar-studio" class="q-profile-avatar-studio" hidden>
+                <p class="q-profile-studio-label">Avatares rápidos</p>
+                <div class="q-profile-avatar-presets" aria-label="Avatares predefinidos">
+                  ${AVATAR_PRESETS.map(
+                    ({ label, src }) => `
                     <button
                       type="button"
                       class="q-profile-avatar-preset"
@@ -116,127 +117,128 @@ export class ProfileView {
                       <img src="${src}" alt="" />
                     </button>
                   `
-                ).join('')}
+                  ).join('')}
+                </div>
+                <div class="q-profile-field q-profile-avatar-url-field">
+                  <label class="q-profile-label" for="q-profile-avatar-url">URL o ruta personalizada</label>
+                  <input
+                    id="q-profile-avatar-url"
+                    class="q-profile-input"
+                    type="text"
+                    name="avatar_path"
+                    placeholder="https://... o avatars/usuario.webp"
+                    aria-describedby="q-profile-error-avatar_path"
+                  />
+                  <p
+                    id="q-profile-error-avatar_path"
+                    class="q-profile-field-error"
+                    data-error-for="avatar_path"
+                    hidden
+                  ></p>
+                </div>
               </div>
-              <div class="q-profile-field q-profile-avatar-url-field">
-                <label class="q-profile-label" for="q-profile-avatar-url">URL o ruta personalizada</label>
+            </div>
+          </aside>
+
+          <div class="q-profile-card q-profile-form-card">
+            <div class="q-profile-alert q-profile-alert-error" role="alert" tabindex="-1" hidden></div>
+            <div class="q-profile-alert q-profile-alert-success" role="status" hidden>
+              <span class="q-profile-alert-text"></span>
+              <button
+                type="button"
+                class="q-profile-alert-close"
+                aria-label="Cerrar notificación"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form class="q-profile-form" novalidate>
+              <div class="q-profile-field">
+                <label class="q-profile-label" for="q-profile-username-input">Nombre de usuario</label>
                 <input
-                  id="q-profile-avatar-url"
+                  id="q-profile-username-input"
                   class="q-profile-input"
                   type="text"
-                  name="avatar_path"
-                  placeholder="https://... o avatars/usuario.webp"
-                  aria-describedby="q-profile-error-avatar_path"
+                  name="username"
+                  readonly
+                  aria-readonly="true"
+                />
+                <p class="q-profile-field-hint">El nombre de usuario es único y no se puede modificar.</p>
+              </div>
+
+              <div class="q-profile-field">
+                <label class="q-profile-label" for="q-profile-full-name">Nombre completo</label>
+                <input
+                  id="q-profile-full-name"
+                  class="q-profile-input"
+                  type="text"
+                  name="full_name"
+                  placeholder="Ej. Camila Morales"
+                  autocomplete="name"
+                  aria-describedby="q-profile-error-full_name"
+                  required
                 />
                 <p
-                  id="q-profile-error-avatar_path"
+                  id="q-profile-error-full_name"
                   class="q-profile-field-error"
-                  data-error-for="avatar_path"
+                  data-error-for="full_name"
                   hidden
                 ></p>
               </div>
-            </div>
-          </div>
-        </aside>
 
-        <div class="q-profile-card q-profile-form-card">
-          <div class="q-profile-alert q-profile-alert-error" role="alert" tabindex="-1" hidden></div>
-          <div class="q-profile-alert q-profile-alert-success" role="status" hidden>
-            <span class="q-profile-alert-text"></span>
-            <button
-              type="button"
-              class="q-profile-alert-close"
-              aria-label="Cerrar notificación"
-            >
-              &times;
-            </button>
-          </div>
-
-          <form class="q-profile-form" novalidate>
-            <div class="q-profile-field">
-              <label class="q-profile-label" for="q-profile-username-input">Nombre de usuario</label>
-              <input
-                id="q-profile-username-input"
-                class="q-profile-input"
-                type="text"
-                name="username"
-                readonly
-                aria-readonly="true"
-              />
-              <p class="q-profile-field-hint">El nombre de usuario es único y no se puede modificar.</p>
-            </div>
-
-            <div class="q-profile-field">
-              <label class="q-profile-label" for="q-profile-full-name">Nombre completo</label>
-              <input
-                id="q-profile-full-name"
-                class="q-profile-input"
-                type="text"
-                name="full_name"
-                placeholder="Ej. Camila Morales"
-                autocomplete="name"
-                aria-describedby="q-profile-error-full_name"
-                required
-              />
-              <p
-                id="q-profile-error-full_name"
-                class="q-profile-field-error"
-                data-error-for="full_name"
-                hidden
-              ></p>
-            </div>
-
-            <div class="q-profile-field">
-              <label class="q-profile-label" for="q-profile-locale">Idioma preferido</label>
-              <select
-                id="q-profile-locale"
-                class="q-profile-input q-profile-select"
-                name="locale"
-                aria-describedby="q-profile-error-locale"
-              >
-                <option value="en">English (en)</option>
-                <option value="es">Español (es)</option>
-                <option value="es-PE">Español - Perú (es-PE)</option>
-                <option value="pt-BR">Português - Brasil (pt-BR)</option>
-              </select>
-              <p
-                id="q-profile-error-locale"
-                class="q-profile-field-error"
-                data-error-for="locale"
-                hidden
-              ></p>
-            </div>
-
-            <div class="q-profile-field">
-              <div class="q-profile-label-row">
-                <label class="q-profile-label" for="q-profile-bio">Biografía</label>
-                <span class="q-profile-bio-counter">0 / ${BIO_MAX_LENGTH}</span>
+              <div class="q-profile-field">
+                <label class="q-profile-label" for="q-profile-locale">Idioma preferido</label>
+                <select
+                  id="q-profile-locale"
+                  class="q-profile-input q-profile-select"
+                  name="locale"
+                  aria-describedby="q-profile-error-locale"
+                >
+                  <option value="en">English (en)</option>
+                  <option value="es">Español (es)</option>
+                  <option value="es-PE">Español - Perú (es-PE)</option>
+                  <option value="pt-BR">Português - Brasil (pt-BR)</option>
+                </select>
+                <p
+                  id="q-profile-error-locale"
+                  class="q-profile-field-error"
+                  data-error-for="locale"
+                  hidden
+                ></p>
               </div>
-              <textarea
-                id="q-profile-bio"
-                class="q-profile-textarea"
-                name="bio"
-                rows="4"
-                placeholder="Cuéntanos un poco sobre ti..."
-                aria-describedby="q-profile-error-bio"
-              ></textarea>
-              <p
-                id="q-profile-error-bio"
-                class="q-profile-field-error"
-                data-error-for="bio"
-                hidden
-              ></p>
-            </div>
 
-            <div class="q-profile-actions">
-              <button type="button" class="q-profile-btn q-profile-reset-btn">
-                Cancelar
-              </button>
-              <button type="submit" class="q-profile-btn q-profile-save-btn">
-                Guardar cambios
-              </button>
-            </div>
-          </form>
+              <div class="q-profile-field">
+                <div class="q-profile-label-row">
+                  <label class="q-profile-label" for="q-profile-bio">Biografía</label>
+                  <span class="q-profile-bio-counter">0 / ${BIO_MAX_LENGTH}</span>
+                </div>
+                <textarea
+                  id="q-profile-bio"
+                  class="q-profile-textarea"
+                  name="bio"
+                  rows="4"
+                  placeholder="Cuéntanos un poco sobre ti..."
+                  aria-describedby="q-profile-error-bio"
+                ></textarea>
+                <p
+                  id="q-profile-error-bio"
+                  class="q-profile-field-error"
+                  data-error-for="bio"
+                  hidden
+                ></p>
+              </div>
+
+              <div class="q-profile-actions">
+                <button type="button" class="q-profile-btn q-profile-reset-btn">
+                  Cancelar
+                </button>
+                <button type="submit" class="q-profile-btn q-profile-save-btn">
+                  Guardar cambios
+                </button>
+              </div>
+              </form>
+          </div>
         </div>
       </div>
     `;
@@ -567,12 +569,20 @@ export class ProfileView {
     const saveBtn = this.element.querySelector('.q-profile-save-btn');
     const resetBtn = this.element.querySelector('.q-profile-reset-btn');
     const isBusy = vm.isLoading || vm.isSaving || vm.isUploadingAvatar;
+    const savedProfile = vm.profile || {};
+    const normalize = (value) => (typeof value === 'string' ? value.trim() : '');
+    const hasUnsavedChanges =
+      normalize(vm.formData.full_name) !== normalize(savedProfile.full_name) ||
+      normalize(vm.formData.locale) !== normalize(savedProfile.locale || 'en') ||
+      normalize(vm.formData.bio) !== normalize(savedProfile.bio) ||
+      normalize(vm.formData.avatar_path) !== normalize(savedProfile.avatar_path);
+    const actionsDisabled = isBusy || !hasUnsavedChanges;
     if (saveBtn) {
-      saveBtn.disabled = isBusy;
+      saveBtn.disabled = actionsDisabled;
       saveBtn.textContent = vm.isSaving ? 'Guardando...' : 'Guardar cambios';
     }
     if (resetBtn) {
-      resetBtn.disabled = isBusy;
+      resetBtn.disabled = actionsDisabled;
     }
   }
 
