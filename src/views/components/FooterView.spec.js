@@ -1,3 +1,4 @@
+import { Router } from '../../router/Router.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
 import { FooterView } from './FooterView.js';
 
@@ -71,6 +72,35 @@ describe('FooterView', () => {
     expect(motto).not.toBeNull();
     expect(copyright.textContent).toBe("© 2026 Q'atu");
     expect(motto.textContent).toBe('El mercado de Latinoamérica, en un solo lugar');
+    expect(motto.tagName.toLowerCase()).toBe('a');
+    expect(motto.getAttribute('href')).toBe('/about');
+    expect(motto.hasAttribute('data-route')).toBe(true);
+  });
+
+  it('includes a Nosotros navigation link to /about', () => {
+    const el = view.render();
+    const aboutLink = Array.from(el.querySelectorAll('.q-footer-links a')).find(
+      (link) => link.textContent === 'Nosotros'
+    );
+
+    expect(aboutLink).not.toBeNull();
+    expect(aboutLink.getAttribute('href')).toBe('/about');
+    expect(aboutLink.hasAttribute('data-route')).toBe(true);
+  });
+
+  it('navigates to /about when the footer motto is clicked', () => {
+    const originalPath = window.location.pathname;
+    const router = new Router();
+    const aboutRoute = jasmine.createSpy('aboutRoute');
+    router.addRoute('/about', aboutRoute);
+    router.start();
+    view.mount(container);
+
+    container.querySelector('.q-footer-motto').click();
+
+    expect(aboutRoute).toHaveBeenCalledWith('/about', {});
+    router.destroy();
+    window.history.replaceState({}, '', originalPath);
   });
 
   it('should mount into container correctly', () => {

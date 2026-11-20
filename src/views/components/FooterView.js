@@ -107,8 +107,10 @@ export class FooterView {
     copyright.className = 'q-footer-copyright';
     copyright.textContent = this.viewModel.bottomBar.copyright;
 
-    const motto = document.createElement('span');
+    const motto = document.createElement('a');
     motto.className = 'q-footer-motto';
+    motto.href = this.viewModel.bottomBar.mottoHref || '/about';
+    motto.dataset.route = '';
     motto.textContent = this.viewModel.bottomBar.motto;
 
     bottomBar.appendChild(copyright);

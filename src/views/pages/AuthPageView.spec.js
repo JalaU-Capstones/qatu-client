@@ -153,6 +153,29 @@ describe('AuthPageView', () => {
       expect(container.querySelector('.q-auth__left')).not.toBeNull();
     });
 
+    it('renders an accessible four-segment password meter with reactive levels', () => {
+      const view = createView({ mode: 'register' });
+      view.mount(container);
+      const meter = container.querySelector('.q-auth-password-strength');
+      const password = container.querySelector('#q-register-password');
+
+      expect(meter.classList.contains('q-auth__password-strength')).toBe(true);
+      expect(meter.getAttribute('role')).toBe('meter');
+      expect(meter.querySelectorAll('.q-auth-password-strength__segment').length).toBe(4);
+
+      password.value = 'abc';
+      password.dispatchEvent(new Event('input'));
+      expect(meter.getAttribute('aria-valuenow')).toBe('1');
+
+      password.value = 'password';
+      password.dispatchEvent(new Event('input'));
+      expect(meter.getAttribute('aria-valuenow')).toBe('2');
+
+      password.value = 'Password1!';
+      password.dispatchEvent(new Event('input'));
+      expect(meter.getAttribute('aria-valuenow')).toBe('4');
+    });
+
     it('keeps the marketing panel mounted while switching auth modes', () => {
       const view = createView({ mode: 'login' });
       view.mount(container);

@@ -129,12 +129,8 @@ export class AuthApi {
   }
 
   /**
-<<<<<<< HEAD
    * Exchanges the short-lived Supabase OAuth tokens for the backend cookie
    * session.
-=======
-   * Sends temporal OAuth Token
->>>>>>> 8e72f6f (fix: corrected format)
    *
    * @param {string} accessToken
    * @param {string} refreshToken

@@ -30,6 +30,15 @@ describe('Router', () => {
     expect(registerCalled).toBe(true);
   });
 
+  it('resolves the /about page route', () => {
+    const aboutCalled = jasmine.createSpy('aboutCalled');
+    router.addRoute('/about', aboutCalled);
+
+    router.resolve('/about');
+
+    expect(aboutCalled).toHaveBeenCalledWith('/about', {});
+  });
+
   it('should normalize paths with trailing slashes and missing leading slash', () => {
     let called = false;
     router.addRoute('/register', () => {

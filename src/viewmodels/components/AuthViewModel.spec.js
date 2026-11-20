@@ -115,6 +115,26 @@ describe('AuthViewModel', () => {
     expect(viewModel.registerData.acceptTerms).toBe(true);
   });
 
+  it('calculates empty, weak, fair, good, and strong password strength', () => {
+    expect(viewModel.passwordStrength).toEqual({
+      score: 0,
+      label: 'Sin contraseña',
+      level: 'empty',
+    });
+
+    viewModel.setRegisterField('password', 'abc');
+    expect(viewModel.passwordStrength).toEqual({ score: 1, label: 'Débil', level: 'weak' });
+
+    viewModel.setRegisterField('password', 'password');
+    expect(viewModel.passwordStrength).toEqual({ score: 2, label: 'Regular', level: 'fair' });
+
+    viewModel.setRegisterField('password', 'Password1');
+    expect(viewModel.passwordStrength).toEqual({ score: 3, label: 'Buena', level: 'good' });
+
+    viewModel.setRegisterField('password', 'Password1!');
+    expect(viewModel.passwordStrength).toEqual({ score: 4, label: 'Fuerte', level: 'strong' });
+  });
+
   it('should validate and fail login submit if fields are missing', async () => {
     let loggedIn = false;
     viewModel.onLogin = () => {

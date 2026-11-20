@@ -1,4 +1,5 @@
 import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
+import { createImageWithFallback } from './ImageWithFallback.js';
 
 /**
  * View component for the Hero banner.
@@ -13,6 +14,8 @@ export class HeroView {
     this.element = null;
     this._unsubscribe = null;
     this._searchInput = null;
+    this._collage = null;
+    this._renderedVisualImages = null;
   }
 
   /**
@@ -158,37 +161,11 @@ export class HeroView {
     // Visual container (right column)
     const visual = document.createElement('div');
     visual.className = 'q-hero__visual';
-    visual.setAttribute('aria-hidden', 'true');
 
     const collage = document.createElement('div');
     collage.className = 'q-hero__collage';
-
-    this.viewModel.visualImages.forEach((product, index) => {
-      const card = document.createElement('article');
-      const position = ['coffee', 'bag', 'pottery'][index] || 'extra';
-      card.className = `q-hero__collage-card q-hero__collage-card--${position}`;
-
-      const image = document.createElement('img');
-      image.className = 'q-hero__visual-img';
-      image.src = product.src;
-      image.alt = '';
-      image.loading = 'lazy';
-      image.addEventListener(
-        'error',
-        () => {
-          image.removeAttribute('src');
-          image.style.display = 'none';
-          visual.classList.add('q-hero__visual--fallback');
-        },
-        { once: true }
-      );
-
-      const caption = document.createElement('span');
-      caption.className = 'q-hero__collage-caption';
-      caption.textContent = `${product.label} · ${product.price}`;
-      card.append(image, caption);
-      collage.appendChild(card);
-    });
+    this._collage = collage;
+    this._renderCollage();
 
     const badge = document.createElement('div');
     badge.className = 'q-hero__badge';
@@ -207,9 +184,7 @@ export class HeroView {
     const floatingCard = document.createElement('a');
     floatingCard.className = 'q-hero__floating-card';
     floatingCard.href = this.viewModel.floatingCardHref;
-    floatingCard.addEventListener('click', (e) => {
-      e.preventDefault();
-    });
+    floatingCard.dataset.route = '';
 
     const floatingCardLabel = document.createElement('span');
     floatingCardLabel.className = 'q-hero__floating-card-label';
@@ -274,6 +249,49 @@ export class HeroView {
     if (this._searchInput && this._searchInput.value !== this.viewModel.searchValue) {
       this._searchInput.value = this.viewModel.searchValue;
     }
+    if (this._renderedVisualImages !== this.viewModel.visualImages) {
+      this._renderCollage();
+    }
+  }
+
+  _renderCollage() {
+    if (!this._collage) return;
+    const positions = ['coffee', 'bag', 'pottery'];
+    const products = this.viewModel.visualImages;
+    const items = products.slice(0, 3);
+    while (items.length < 3) {
+      items.push({
+        src: null,
+        label: 'Producto local',
+        price: 'Descubre piezas únicas',
+      });
+    }
+
+    this._collage.replaceChildren();
+    items.forEach((product, index) => {
+      const position = positions[index] || 'extra';
+      const card = document.createElement(product.slug ? 'a' : 'article');
+      card.className = `q-hero__collage-card q-hero__collage-card--${position}`;
+      if (product.slug) {
+        card.href = `/products/${encodeURIComponent(product.slug)}`;
+        card.dataset.route = '';
+        card.setAttribute('aria-label', `${product.label} · ${product.price}`);
+      }
+
+      const image = createImageWithFallback({
+        src: product.src,
+        alt: product.slug ? product.label : '',
+        imageClassName: 'q-hero__visual-img',
+        placeholderImageClassName: 'q-hero__visual-img',
+      });
+
+      const caption = document.createElement('span');
+      caption.className = 'q-hero__collage-caption';
+      caption.textContent = `${product.label} · ${product.price}`;
+      card.append(image, caption);
+      this._collage.appendChild(card);
+    });
+    this._renderedVisualImages = products;
   }
 
   /**
@@ -289,5 +307,7 @@ export class HeroView {
     }
     this.element = null;
     this._searchInput = null;
+    this._collage = null;
+    this._renderedVisualImages = null;
   }
 }

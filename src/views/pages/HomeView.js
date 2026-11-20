@@ -1,3 +1,4 @@
+import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
 import { CategoriesView } from '../components/CategoriesView.js';
 import { FeaturedProductsView } from '../components/FeaturedProductsView.js';
 import { FeaturedStoresView } from '../components/FeaturedStoresView.js';
@@ -16,13 +17,16 @@ export class HomeView {
    *   header cart badge. Defaults to a no-op.
    * @param {Function} [options.onSearch] Called with the hero search term on submit.
    *   The app shell uses this to open the catalog results. Defaults to a no-op.
+   * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    */
   constructor({
     onAddToCart = () => Promise.resolve({ status: 'added' }),
     onSearch = () => {},
+    productsApi,
   } = {}) {
     this.onAddToCart = onAddToCart;
     this.onSearch = onSearch;
+    this.productsApi = productsApi;
     this._hero = null;
     this._categories = null;
     this._featuredProducts = null;
@@ -39,9 +43,12 @@ export class HomeView {
     this.element.className = 'q-home';
     container.appendChild(this.element);
 
-    this._hero = new HeroView();
+    this._hero = new HeroView(
+      new HeroViewModel(this.productsApi ? { productsApi: this.productsApi } : {})
+    );
     this._hero.viewModel.onSearch = (term) => this.onSearch(term);
     this._hero.mount(this.element);
+    void this._hero.viewModel.loadVisualProducts();
 
     this._categories = new CategoriesView();
     this._categories.mount(this.element);

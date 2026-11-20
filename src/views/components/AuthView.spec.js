@@ -88,6 +88,14 @@ describe('AuthView', () => {
     const passwordHint = registerPanel.querySelector('.q-auth-password-hint');
     expect(passwordHint).not.toBeNull();
     expect(passwordHint.textContent).toBe('Mínimo 8 caracteres, una mayúscula y un número');
+    expect(registerPanel.querySelectorAll('.q-auth-password-strength__segment').length).toBe(4);
+    expect(registerPanel.querySelector('#q-register-name').placeholder).toBe('Valeria Quispe');
+    expect(registerPanel.querySelector('#q-register-username').placeholder).toBe('@valeria');
+    expect(registerPanel.querySelector('#q-register-email').placeholder).toBe('hola@ejemplo.com');
+    const formControls = Array.from(registerPanel.querySelector('.q-register-form').children);
+    expect(
+      formControls.indexOf(registerPanel.querySelector('.q-register-submit-btn'))
+    ).toBeLessThan(formControls.indexOf(registerPanel.querySelector('.q-google-register-btn')));
 
     const directSwitchBtn = registerPanel.querySelector('.q-register-to-login');
     expect(directSwitchBtn).not.toBeNull();
@@ -191,6 +199,33 @@ describe('AuthView', () => {
     termsInput.checked = true;
     termsInput.dispatchEvent(new Event('change'));
     expect(viewModel.registerData.acceptTerms).toBe(true);
+  });
+
+  it('updates the accessible four-segment password meter on password input', () => {
+    const el = view.render();
+    const password = el.querySelector('#q-register-password');
+    const meter = el.querySelector('.q-auth-password-strength');
+    const update = (value) => {
+      password.value = value;
+      password.dispatchEvent(new Event('input'));
+    };
+
+    expect(meter.getAttribute('role')).toBe('meter');
+    expect(meter.getAttribute('aria-valuenow')).toBe('0');
+    expect(meter.querySelectorAll('.is-active').length).toBe(0);
+
+    update('abc');
+    expect(meter.dataset.strength).toBe('weak');
+    expect(meter.querySelectorAll('.is-active').length).toBe(1);
+
+    update('password');
+    expect(meter.dataset.strength).toBe('fair');
+    expect(meter.querySelectorAll('.is-active').length).toBe(2);
+
+    update('Password1!');
+    expect(meter.dataset.strength).toBe('strong');
+    expect(meter.getAttribute('aria-valuenow')).toBe('4');
+    expect(meter.querySelectorAll('.is-active').length).toBe(4);
   });
 
   it('should render a password toggle for login and both register password fields', () => {

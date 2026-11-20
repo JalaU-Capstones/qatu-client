@@ -1,3 +1,4 @@
+import { Router } from '../../router/Router.js';
 import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
 import { HeroView } from './HeroView.js';
 
@@ -138,15 +139,19 @@ describe('HeroView', () => {
     );
     expect(cta.textContent).toBe('→');
     expect(cta.getAttribute('aria-label')).toBe('Ver más sobre');
+    expect(floatingCard.getAttribute('href')).toBe('/about');
+    expect(floatingCard.hasAttribute('data-route')).toBe(true);
   });
 
-  it('should render visual image with q-hero__visual-img class and valid src', () => {
+  it('renders three clean placeholder cards until API products are available', () => {
     const el = view.render();
-    const img = el.querySelector('.q-hero__collage-card--pottery .q-hero__visual-img');
+    const cards = el.querySelectorAll('.q-hero__collage-card');
 
-    expect(img).not.toBeNull();
-    expect(img.getAttribute('src')).toBe('https://picsum.photos/seed/qatu-hero/900/700');
-    expect(el.querySelectorAll('.q-hero__collage-card').length).toBe(3);
+    expect(cards.length).toBe(3);
+    cards.forEach((card) => {
+      expect(card.tagName.toLowerCase()).toBe('article');
+      expect(card.querySelector('img').src).toContain('product-placeholder.svg');
+    });
   });
 
   it('should mount into container correctly', () => {
@@ -171,19 +176,54 @@ describe('HeroView', () => {
     expect(input.value).toBe('artesanías');
   });
 
-  it('renders fallback styling when visual image fails to load', () => {
-    const customVM = new HeroViewModel({ visualImageUrl: 'https://invalid.example/broken.jpg' });
+  it('renders the product placeholder when a collage image fails to load', () => {
+    const customVM = new HeroViewModel({
+      visualImages: [
+        {
+          src: 'https://invalid.example/broken.jpg',
+          slug: 'broken-product',
+          label: 'Producto',
+          price: 'US$ 10.00',
+        },
+      ],
+    });
     const customView = new HeroView(customVM);
     const el = customView.render();
-    const img = el.querySelector('.q-hero__collage-card--pottery .q-hero__visual-img');
-    const visual = el.querySelector('.q-hero__visual');
+    const img = el.querySelector('.q-hero__collage-card--coffee .q-hero__visual-img');
     expect(img).not.toBeNull();
 
     img.dispatchEvent(new Event('error'));
 
-    expect(img.style.display).toBe('none');
-    expect(img.hasAttribute('src')).toBe(false);
-    expect(visual.classList.contains('q-hero__visual--fallback')).toBe(true);
+    const fallback = el.querySelector('.q-hero__collage-card--coffee img');
+    expect(fallback.src).toContain('product-placeholder.svg');
     customView.destroy();
+  });
+
+  it('navigates hero product cards to their product detail and the floating card to /about', () => {
+    const originalPath = window.location.pathname;
+    viewModel.visualImages = [
+      {
+        src: 'https://cdn.example/poncho.jpg',
+        slug: 'poncho-andino',
+        label: 'Poncho andino',
+        price: 'US$ 35.00',
+      },
+    ];
+    const router = new Router();
+    const detailRoute = jasmine.createSpy('detailRoute');
+    const aboutRoute = jasmine.createSpy('aboutRoute');
+    router.addRoute('/products/:slug', detailRoute);
+    router.addRoute('/about', aboutRoute);
+    router.start();
+    const el = view.mount(container);
+
+    el.querySelector('.q-hero__collage-card--coffee').click();
+    expect(detailRoute).toHaveBeenCalledWith('/products/poncho-andino', { slug: 'poncho-andino' });
+
+    el.querySelector('.q-hero__floating-card').click();
+    expect(aboutRoute).toHaveBeenCalledWith('/about', {});
+
+    router.destroy();
+    window.history.replaceState({}, '', originalPath);
   });
 });

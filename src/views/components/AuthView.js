@@ -258,20 +258,6 @@ export class AuthView {
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
       <div class="q-auth-alert q-auth-alert-success" style="display: none;" role="alert"></div>
 
-      <button type="button" class="q-btn q-btn--neutral q-btn--block q-auth-social-btn q-google-register-btn">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        Continuar con Google
-      </button>
-
-      <div class="q-auth-divider">
-        <span>o con tus datos</span>
-      </div>
-
       <form class="q-auth-form q-register-form" novalidate>
         <div class="q-auth-field">
           <label class="q-auth-label" for="q-register-name">Nombre Completo</label>
@@ -280,7 +266,7 @@ export class AuthView {
               id="q-register-name"
               class="q-auth-input"
               type="text"
-              placeholder="Ej. Camila Morales"
+              placeholder="Valeria Quispe"
               autocomplete="name"
               required
             />
@@ -294,7 +280,7 @@ export class AuthView {
               id="q-register-username"
               class="q-auth-input"
               type="text"
-              placeholder="Ej. camilam"
+              placeholder="@valeria"
               autocomplete="username"
               required
             />
@@ -308,7 +294,7 @@ export class AuthView {
               id="q-register-email"
               class="q-auth-input"
               type="email"
-              placeholder="nombre@ejemplo.com"
+              placeholder="hola@ejemplo.com"
               autocomplete="email"
               required
             />
@@ -326,6 +312,22 @@ export class AuthView {
               autocomplete="new-password"
               required
             />
+          </div>
+          <div
+            class="q-auth-password-strength q-auth__password-strength"
+            role="meter"
+            aria-label="Seguridad de la contraseña"
+            aria-valuemin="0"
+            aria-valuemax="4"
+            aria-valuenow="0"
+            aria-valuetext="Sin contraseña"
+            data-strength="empty"
+          >
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-sr-only q-auth-password-strength__status">Sin contraseña</span>
           </div>
           <p class="q-auth-password-hint">Mínimo 8 caracteres, una mayúscula y un número</p>
         </div>
@@ -353,6 +355,16 @@ export class AuthView {
 
         <button type="submit" class="q-btn q-btn--primary q-btn--block q-btn--lg q-auth-submit-btn q-register-submit-btn">
           Crear Cuenta
+        </button>
+
+        <button type="button" class="q-btn q-btn--neutral q-btn--block q-auth-social-btn q-google-register-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          Continuar con Google
         </button>
 
         <p class="q-auth-switch-link">
@@ -467,6 +479,18 @@ export class AuthView {
     submitBtns.forEach((btn) => {
       btn.disabled = vm.isLoading;
     });
+
+    const strength = vm.passwordStrength;
+    const meter = this.element.querySelector('.q-auth-password-strength');
+    if (meter) {
+      meter.setAttribute('aria-valuenow', String(strength.score));
+      meter.setAttribute('aria-valuetext', strength.label);
+      meter.dataset.strength = strength.level;
+      meter.querySelector('.q-auth-password-strength__status').textContent = strength.label;
+      meter.querySelectorAll('.q-auth-password-strength__segment').forEach((segment, index) => {
+        segment.classList.toggle('is-active', index < strength.score);
+      });
+    }
   }
 
   /**

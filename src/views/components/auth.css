@@ -307,6 +307,40 @@
   line-height: 1.4;
 }
 
+.q-auth__password-strength {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 2px 0 0;
+}
+
+.q-auth__password-strength .q-auth-password-strength__segment {
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--q-fg-muted) 20%, transparent);
+  transition: background-color 160ms ease;
+}
+
+.q-auth__password-strength[data-strength='weak'] .is-active {
+  background: var(--q-color-error);
+}
+
+.q-auth__password-strength[data-strength='fair'] .is-active {
+  background: var(--q-color-warning);
+}
+
+.q-auth__password-strength[data-strength='good'] .is-active {
+  background: var(--q-cat-teal);
+}
+
+.q-auth__password-strength[data-strength='strong'] .is-active {
+  background: var(--q-color-success);
+}
+
+.q-auth__password-hint {
+  margin-top: -1px;
+}
+
 .q-auth__extras {
   display: flex;
   align-items: center;

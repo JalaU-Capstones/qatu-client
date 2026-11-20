@@ -203,6 +203,7 @@ export class AuthPageView {
       input.classList.add('q-auth__input');
     });
     panel.querySelector('.q-auth-password-hint')?.classList.add('q-auth__password-hint');
+    panel.querySelector('.q-auth-password-strength')?.classList.add('q-auth__password-strength');
     panel.querySelector('.q-auth-extras')?.classList.add('q-auth__extras');
     panel.querySelector('.q-auth-checkbox-label')?.classList.add('q-auth__checkbox-label');
     panel.querySelector('.q-forgot-password-btn')?.classList.add('q-auth__forgot');

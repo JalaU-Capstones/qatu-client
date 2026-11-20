@@ -24,6 +24,7 @@ import './views/pages/seller-apply.css';
 import './views/pages/admin-reports.css';
 import './views/pages/admin-seller-applications.css';
 import './views/pages/profile.css';
+import './views/pages/about.css';
 import './views/components/product-card.css';
 import './views/components/quantity-selector.css';
 import './views/pages/product-detail.css';
@@ -54,6 +55,7 @@ import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { AboutView } from './views/pages/AboutView.js';
 import { AdminReportsPageView } from './views/pages/AdminReportsPageView.js';
 import { AdminSellerApplicationsPageView } from './views/pages/AdminSellerApplicationsPageView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -161,6 +163,12 @@ if (app) {
     currentPageView = new CatalogView(catalogViewModel, {
       onAddToCart: onAddToCartHandler,
     });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderAbout = () => {
+    clearCurrentView('about');
+    currentPageView = new AboutView();
     currentPageView.mount(mainEl);
   };
 
@@ -485,6 +493,7 @@ if (app) {
 
   const router = new Router();
   router.addRoute('/', () => renderHome());
+  router.addRoute('/about', () => renderAbout());
   router.addRoute('/products', () => renderCatalog());
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());

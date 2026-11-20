@@ -39,6 +39,7 @@ export class FooterViewModel {
           { label: 'Preguntas frecuentes', href: '/faq' },
           { label: 'Envíos y devoluciones', href: '/devoluciones' },
           { label: 'Contáctanos', href: '/contacto' },
+          { label: 'Nosotros', href: '/about' },
         ],
       },
     ];
@@ -55,6 +56,7 @@ export class FooterViewModel {
     this.bottomBar = options.bottomBar || {
       copyright: "© 2026 Q'atu",
       motto: 'El mercado de Latinoamérica, en un solo lugar',
+      mottoHref: '/about',
     };
 
     this._listeners = new Set();

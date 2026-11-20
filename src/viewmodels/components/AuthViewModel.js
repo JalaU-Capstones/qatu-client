@@ -72,6 +72,19 @@ export class AuthViewModel {
     return this.mode === 'register';
   }
 
+  get passwordStrength() {
+    const password = this.registerData.password;
+    if (!password) return { score: 0, label: 'Sin contraseña', level: 'empty' };
+    if (password.length < 8) return { score: 1, label: 'Débil', level: 'weak' };
+    if (/[A-Z]/.test(password) && /\d/.test(password)) {
+      if (/[^A-Za-z0-9]/.test(password) || password.length >= 12) {
+        return { score: 4, label: 'Fuerte', level: 'strong' };
+      }
+      return { score: 3, label: 'Buena', level: 'good' };
+    }
+    return { score: 2, label: 'Regular', level: 'fair' };
+  }
+
   setMode(newMode) {
     if (newMode !== 'login' && newMode !== 'register') {
       return;
@@ -266,7 +279,6 @@ export class AuthViewModel {
   }
 
   /**
-<<<<<<< HEAD
    * Surfaces OAuth handoff errors redirected from /auth/callback via the
    * `?error=` query param. No-ops when the param is absent or unknown.
    *
@@ -285,12 +297,8 @@ export class AuthViewModel {
 
   /**
    * Starts the Google OAuth sign-in flow with PKCE and redirects to the
-   * callback page. Delegates to `onGoogleAuth` when provided.
-=======
-   * Starts the Google OAuth sign-in flow with PKCE and redirects to the
    * callback page. Delegates to `onGoogleAuth` when a custom callback is
    * provided, otherwise drives Supabase directly.
->>>>>>> 8e72f6f (fix: corrected format)
    *
    * @returns {Promise<void>}
    */

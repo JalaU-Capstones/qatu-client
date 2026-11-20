@@ -1,6 +1,6 @@
 /* global process, console, window, document, setTimeout */
 /**
- * Visual matrix E2E — 12 routes × 2 themes × 3 viewports = 72 combinations.
+ * Visual matrix E2E — routes × 2 themes × 3 viewports.
  *
  * For each combination:
  *   - Screenshot to /tmp/qatu-matrix/{route}-{theme}-{viewport}.png
@@ -35,6 +35,7 @@ mkdirSync(OUT_DIR, { recursive: true });
 
 const ROUTES = [
   { name: 'home', path: '/' },
+  { name: 'about', path: '/about' },
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
@@ -555,6 +556,14 @@ for (const route of activeRoutes) {
                 header: check('.q-header'),
                 authPage: check('.q-auth-page'),
                 card: check('.q-auth-card'),
+                footer: check('.q-footer'),
+              };
+            case 'about':
+              return {
+                header: check('.q-header'),
+                aboutPage: check('.q-about'),
+                team: check('.q-about__member'),
+                repositories: check('.q-about__repository'),
                 footer: check('.q-footer'),
               };
             case 'catalog':
