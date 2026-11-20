@@ -790,10 +790,6 @@
     display: none;
   }
 
-  .q-catalog__filters--open .q-catalog__filters-title {
-    display: flex;
-  }
-
   .q-catalog__filters-form {
     display: block;
     max-height: 0;
@@ -846,10 +842,6 @@
   .q-catalog__filters-title,
   .q-catalog__filters-form {
     display: none;
-  }
-
-  .q-catalog__filters--open .q-catalog__filters-title {
-    display: flex;
   }
 
   .q-catalog__filters-form {
