@@ -241,7 +241,7 @@ const activeRoutes = ROUTES.filter(
 const THEMES = ['light', 'dark'];
 
 const VIEWPORTS = [
-  { name: 'mobile', width: 375, height: 667 },
+  { name: 'mobile', width: 360, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
   { name: 'desktop', width: 1440, height: 900 },
 ];
@@ -636,11 +636,13 @@ for (const route of activeRoutes) {
               return {
                 header: check('.q-header'),
                 sellerPage: check('.q-seller-products'),
+                breadcrumb: check('.q-seller-products__breadcrumb'),
                 title: check('.q-seller-products__title'),
+                createButton: check('.q-seller-products__create-btn'),
                 kpis: check('.q-seller-products__kpi'),
                 filterTabs: check('.q-seller-products__filter'),
                 grid: check('.q-seller-products__grid'),
-                cards: check('.q-seller-products__card'),
+                cards: check('.product-card--seller'),
                 footer: check('.q-footer'),
               };
             case 'seller-product-new':

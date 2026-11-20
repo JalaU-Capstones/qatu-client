@@ -64,6 +64,8 @@ export class SellerProductsPageView {
     const container = document.createElement('div');
     container.className = 'q-section-container';
 
+    const breadcrumb = this._renderBreadcrumb();
+
     // Header
     const header = document.createElement('div');
     header.className = 'q-seller-products__header';
@@ -104,10 +106,13 @@ export class SellerProductsPageView {
     this._filtersContainer = document.createElement('div');
     this._filtersContainer.className = 'q-seller-products__filters';
     this._filtersContainer.setAttribute('role', 'tablist');
+    this._filtersContainer.setAttribute('aria-label', 'Filtrar productos por estado');
 
     // Content container
     this._contentContainer = document.createElement('div');
     this._contentContainer.className = 'q-seller-products__content';
+    this._contentContainer.id = 'seller-products-panel';
+    this._contentContainer.setAttribute('role', 'tabpanel');
     this._contentContainer.dataset.role = 'content';
 
     // Pagination container
@@ -115,6 +120,7 @@ export class SellerProductsPageView {
     this._paginationContainer.dataset.role = 'pagination';
 
     container.append(
+      breadcrumb,
       header,
       this._kpisContainer,
       this._filtersContainer,
@@ -125,10 +131,54 @@ export class SellerProductsPageView {
     return section;
   }
 
+  _renderBreadcrumb() {
+    const nav = document.createElement('nav');
+    nav.className = 'q-breadcrumb q-seller-products__breadcrumb';
+    nav.setAttribute('aria-label', 'Migas de pan');
+
+    const home = document.createElement('a');
+    home.className = 'q-breadcrumb__link';
+    home.href = '/';
+    home.dataset.route = '';
+    home.textContent = 'Inicio';
+
+    const sellerPanel = document.createElement('a');
+    sellerPanel.className = 'q-breadcrumb__link';
+    sellerPanel.href = '/seller/orders';
+    sellerPanel.dataset.route = '';
+    sellerPanel.textContent = 'Panel del vendedor';
+
+    const current = document.createElement('span');
+    current.className = 'q-breadcrumb__current';
+    current.setAttribute('aria-current', 'page');
+    current.textContent = 'Mis productos';
+
+    nav.append(
+      home,
+      this._renderBreadcrumbSeparator(),
+      sellerPanel,
+      this._renderBreadcrumbSeparator(),
+      current
+    );
+    return nav;
+  }
+
+  _renderBreadcrumbSeparator() {
+    const separator = document.createElement('span');
+    separator.className = 'q-breadcrumb__separator';
+    separator.setAttribute('aria-hidden', 'true');
+    separator.textContent = '/';
+    return separator;
+  }
+
   _render() {
     if (!this.element) return;
     this._renderKpis();
     this._renderFilters();
+    this._contentContainer.setAttribute(
+      'aria-labelledby',
+      `seller-products-tab-${this.viewModel.filterStatus || 'all'}`
+    );
     this._renderContent();
     this._renderPagination();
   }
@@ -182,9 +232,14 @@ export class SellerProductsPageView {
       if (this.viewModel.filterStatus === tab.status) {
         btn.classList.add('is-active');
         btn.setAttribute('aria-selected', 'true');
+        btn.tabIndex = 0;
       } else {
         btn.setAttribute('aria-selected', 'false');
+        btn.tabIndex = -1;
       }
+      btn.setAttribute('role', 'tab');
+      btn.id = `seller-products-tab-${tab.status || 'all'}`;
+      btn.setAttribute('aria-controls', 'seller-products-panel');
       btn.textContent = tab.label;
       btn.dataset.status = tab.status || 'all';
       btn.addEventListener('click', () => {
@@ -303,6 +358,7 @@ export class SellerProductsPageView {
       onDelete: (item) => this.onDeleteProduct?.(item.id),
     }).render();
     card.dataset.productId = product.id;
+    card.dataset.productState = product.state;
 
     const stock = document.createElement('span');
     stock.className = 'q-seller-products__stock';

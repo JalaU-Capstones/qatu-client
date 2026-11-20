@@ -78,6 +78,35 @@ describe('SellerProductsPageView', () => {
     expect(container.textContent).toContain('No tienes productos en esta lista.');
   });
 
+  it('renders the seller breadcrumb and accessible status tabs', async () => {
+    view.mount(container);
+    await tick();
+
+    const breadcrumb = container.querySelector('.q-seller-products__breadcrumb');
+    expect(
+      Array.from(breadcrumb.children)
+        .map((item) => item.textContent)
+        .filter((text) => text !== '/')
+        .join(' / ')
+    ).toBe('Inicio / Panel del vendedor / Mis productos');
+    expect(container.querySelector('.q-seller-products__create-btn').textContent).toBe(
+      'Crear producto'
+    );
+
+    const tabs = Array.from(container.querySelectorAll('[role="tab"]'));
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Todos',
+      'Borradores',
+      'Publicados',
+      'No publicados',
+    ]);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].getAttribute('aria-controls')).toBe('seller-products-panel');
+    expect(container.querySelector('[role="tabpanel"]').getAttribute('aria-labelledby')).toBe(
+      tabs[0].id
+    );
+  });
+
   it('2. renders KPIs and product cards when products exist', async () => {
     const p1 = mockProduct({
       id: 'p1',
