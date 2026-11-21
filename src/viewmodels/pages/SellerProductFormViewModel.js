@@ -14,11 +14,12 @@ export class SellerProductFormViewModel {
     this._listeners = new Set();
     if (this.onChange) this._listeners.add(this.onChange);
 
-    this.step = 1; // 1 | 2 | 3
     this.productId = null; // set after successful POST /products
     this.productSlug = null;
+    this.slugEdited = false;
     this.form = {
       name: '',
+      slug: '',
       price: '',
       categoryId: '',
       description: '',
@@ -53,19 +54,26 @@ export class SellerProductFormViewModel {
 
   setField(name, value) {
     this.form[name] = value;
+    if (name === 'slug') {
+      this.slugEdited = true;
+    } else if (name === 'name' && !this.slugEdited) {
+      this.form.slug = this._slugify(value);
+    }
     delete this.fieldErrors[name];
   }
 
-  setStep(step) {
-    if (step === 2 && !this.productId) return;
-    if (step === 3 && (!this.productId || this.images.length < 1)) return;
-    if (step < 1 || step > 3) return;
-    this.step = step;
-    this._notify();
+  _slugify(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   canSubmitForm() {
     return Boolean(
+      !this.productId &&
       this.form.name &&
       this.form.name.trim() !== '' &&
       this.form.price &&
@@ -76,12 +84,10 @@ export class SellerProductFormViewModel {
     );
   }
 
-  canAdvanceToStep3() {
-    return this.images.length >= 1;
-  }
-
   get canPublish() {
-    return this.step === 3 && this.images.length >= 1;
+    return Boolean(
+      this.productId && this.images.length >= 1 && !this.uploadingCount && !this.isPublishing
+    );
   }
 
   get uploadLimitReached() {
@@ -97,6 +103,11 @@ export class SellerProductFormViewModel {
       errors.name = 'El nombre debe tener al menos 3 caracteres.';
     } else if (name.length > 200) {
       errors.name = 'El nombre no puede exceder 200 caracteres.';
+    }
+
+    const slug = (this.form.slug || '').trim();
+    if (slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      errors.slug = 'Usa minúsculas, números y guiones entre palabras.';
     }
 
     const price = Number(this.form.price);
@@ -162,6 +173,7 @@ export class SellerProductFormViewModel {
 
     const payload = {
       name: this.form.name.trim(),
+      ...(this.form.slug.trim() ? { slug: this.form.slug.trim() } : {}),
       price: Number(this.form.price),
       category_id: this.form.categoryId,
       currency: this.form.currency || 'USD',
@@ -174,7 +186,6 @@ export class SellerProductFormViewModel {
       const res = await this.productsApi.createProduct(payload);
       this.productId = res.data.id;
       this.productSlug = res.data.slug;
-      this.setStep(2);
       return { status: 'success', data: res.data };
     } catch (err) {
       if (err.statusCode === 409 || err.code === 'SLUG_ALREADY_EXISTS') {
@@ -251,8 +262,8 @@ export class SellerProductFormViewModel {
   }
 
   async publish() {
-    if (this.step !== 3 || !this.productId) {
-      return { status: 'error', message: 'No se puede publicar en este paso' };
+    if (!this.canPublish) {
+      return { status: 'error', message: 'Sube al menos una imagen antes de publicar.' };
     }
 
     this.isPublishing = true;
@@ -267,7 +278,6 @@ export class SellerProductFormViewModel {
     } catch (err) {
       if (err.statusCode === 422 || err.code === 'IMAGE_REQUIRED') {
         this.generalError = 'Se requiere al menos una imagen para publicar el producto.';
-        this.setStep(2);
       } else if (err.statusCode === 409 || err.code === 'INVALID_STATE_TRANSITION') {
         this.generalError = 'El producto no puede ser publicado en su estado actual.';
       } else if (err.statusCode === 403 || err.code === 'FORBIDDEN') {
@@ -286,8 +296,7 @@ export class SellerProductFormViewModel {
    * Deletes a single product image by id.
    *
    * Guards against double-clicks via `deletingImageId`.
-   * On success, removes the image from `this.images` and, if the wizard
-   * is on step 3 and no images remain, reverts to step 2 with a warning.
+   * On success, removes the image from `this.images`.
    * On error, stores the message in `this.imageErrors[imageId]`.
    *
    * @param {string} imageId
@@ -301,8 +310,7 @@ export class SellerProductFormViewModel {
     try {
       await this.productsApi.deleteProductImage(this.productId, imageId);
       this.images = this.images.filter((img) => img.id !== imageId);
-      if (this.images.length === 0 && this.step === 3) {
-        this.step = 2;
+      if (this.images.length === 0) {
         this.publishBlockedReason = 'Sube al menos una imagen antes de publicar.';
       }
       return { status: 'success' };

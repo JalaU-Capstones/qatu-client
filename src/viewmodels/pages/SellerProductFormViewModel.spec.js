@@ -60,15 +60,17 @@ describe('SellerProductFormViewModel', () => {
     expect(notifySpy).toHaveBeenCalled();
   });
 
-  it('setStep still notifies subscribers', () => {
+  it('name changes auto-generate a normalized slug until a slug is edited', () => {
     const notifySpy = jasmine.createSpy('notify');
     vm.subscribe(notifySpy);
-    vm.productId = 'prod-123';
-    vm.images = [{ id: 'img-1' }];
 
-    vm.setStep(2);
+    vm.setField('name', 'Cámara de Acción HD');
+    expect(vm.form.slug).toBe('camara-de-accion-hd');
+    vm.setField('slug', 'mi-camara');
+    vm.setField('name', 'Otra cámara');
 
-    expect(notifySpy).toHaveBeenCalled();
+    expect(vm.form.slug).toBe('mi-camara');
+    expect(notifySpy).not.toHaveBeenCalled();
   });
 
   it('2. submitForm with empty required fields sets fieldErrors and does not call createProduct', async () => {
@@ -89,6 +91,18 @@ describe('SellerProductFormViewModel', () => {
     await vm.submitForm();
 
     expect(vm.fieldErrors.price).toContain('mayor a 0');
+    expect(productsApi.createProduct).not.toHaveBeenCalled();
+  });
+
+  it('rejects a manually edited slug outside the lowercase hyphen format', async () => {
+    vm.setField('name', 'Laptop Gamer');
+    vm.setField('slug', 'Laptop Gamer!');
+    vm.setField('price', '1200');
+    vm.setField('categoryId', 'cat-1');
+
+    await vm.submitForm();
+
+    expect(vm.fieldErrors.slug).toContain('minúsculas');
     expect(productsApi.createProduct).not.toHaveBeenCalled();
   });
 
@@ -117,6 +131,7 @@ describe('SellerProductFormViewModel', () => {
 
     expect(productsApi.createProduct).toHaveBeenCalledWith({
       name: 'Laptop Gamer',
+      slug: 'laptop-gamer',
       price: 1200.5,
       category_id: 'cat-1',
       currency: 'USD',
@@ -126,7 +141,7 @@ describe('SellerProductFormViewModel', () => {
     });
   });
 
-  it('6. submitForm success sets productId, productSlug and advances to step 2', async () => {
+  it('6. submitForm success sets productId and productSlug without resetting form values', async () => {
     vm.setField('name', 'Laptop Gamer');
     vm.setField('price', '1200');
     vm.setField('categoryId', 'cat-1');
@@ -136,10 +151,10 @@ describe('SellerProductFormViewModel', () => {
     expect(res.status).toBe('success');
     expect(vm.productId).toBe('prod-123');
     expect(vm.productSlug).toBe('test-product');
-    expect(vm.step).toBe(2);
+    expect(vm.form.name).toBe('Laptop Gamer');
   });
 
-  it('7. submitForm 409 SLUG_ALREADY_EXISTS sets generalError and leaves step === 1', async () => {
+  it('7. submitForm 409 SLUG_ALREADY_EXISTS sets generalError and keeps the form editable', async () => {
     const error = new Error('Slug already exists');
     error.statusCode = 409;
     error.code = 'SLUG_ALREADY_EXISTS';
@@ -153,7 +168,7 @@ describe('SellerProductFormViewModel', () => {
 
     expect(res.status).toBe('error');
     expect(vm.generalError).toContain('Ya existe un producto con ese nombre');
-    expect(vm.step).toBe(1);
+    expect(vm.productId).toBeNull();
   });
 
   it('8. submitForm 400 VALIDATION_ERROR with details sets fieldErrors', async () => {
@@ -172,30 +187,6 @@ describe('SellerProductFormViewModel', () => {
     expect(vm.fieldErrors.price).toBe('El precio es inválido');
   });
 
-  it('9. setStep(2) without productId is a no-op (step stays 1)', () => {
-    expect(vm.step).toBe(1);
-    vm.setStep(2);
-    expect(vm.step).toBe(1);
-  });
-
-  it('10. setStep(3) with 0 images is a no-op (step stays 2)', () => {
-    vm.productId = 'prod-123';
-    vm.setStep(2);
-    expect(vm.step).toBe(2);
-
-    vm.setStep(3);
-    expect(vm.step).toBe(2);
-  });
-
-  it('11. setStep(3) with 1 image succeeds', () => {
-    vm.productId = 'prod-123';
-    vm.images = [{ id: 'img-1', path: 'https://example.com/img1.png' }];
-    vm.setStep(2);
-
-    vm.setStep(3);
-    expect(vm.step).toBe(3);
-  });
-
   it('12. addFiles with valid file calls uploadProductImage and pushes to images', async () => {
     vm.productId = 'prod-123';
     const validFile = new File(['image-bits'], 'laptop.png', { type: 'image/png' });
@@ -208,7 +199,7 @@ describe('SellerProductFormViewModel', () => {
       jasmine.objectContaining({ alt_text: 'laptop.png' })
     );
     expect(vm.images.length).toBe(1);
-    expect(vm.canAdvanceToStep3()).toBe(true);
+    expect(vm.canPublish).toBe(true);
   });
 
   it('13. addFiles with tooLargeFile adds to uploadErrors and does not call uploadProductImage', async () => {
@@ -239,7 +230,6 @@ describe('SellerProductFormViewModel', () => {
   it('15. publish calls publishProduct(productId) and sets publishedSuccess = true', async () => {
     vm.productId = 'prod-123';
     vm.images = [{ id: 'img-1' }];
-    vm.setStep(3);
 
     const res = await vm.publish();
 
@@ -248,7 +238,7 @@ describe('SellerProductFormViewModel', () => {
     expect(vm.publishedSuccess).toBe(true);
   });
 
-  it('16. publish 422 IMAGE_REQUIRED sets generalError and sets step to 2', async () => {
+  it('16. publish 422 IMAGE_REQUIRED sets a visible error without changing page phase', async () => {
     const error = new Error('Image required');
     error.statusCode = 422;
     error.code = 'IMAGE_REQUIRED';
@@ -256,13 +246,12 @@ describe('SellerProductFormViewModel', () => {
 
     vm.productId = 'prod-123';
     vm.images = [{ id: 'img-1' }];
-    vm.setStep(3);
 
     const res = await vm.publish();
 
     expect(res.status).toBe('error');
     expect(vm.generalError).toContain('imagen');
-    expect(vm.step).toBe(2);
+    expect(vm.productId).toBe('prod-123');
   });
 
   it('17. publish 409 INVALID_STATE_TRANSITION sets generalError', async () => {
@@ -273,7 +262,6 @@ describe('SellerProductFormViewModel', () => {
 
     vm.productId = 'prod-123';
     vm.images = [{ id: 'img-1' }];
-    vm.setStep(3);
 
     const res = await vm.publish();
 
@@ -289,8 +277,6 @@ describe('SellerProductFormViewModel', () => {
       { id: 'i1', path: 'https://example.com/1.png' },
       { id: 'i2', path: 'https://example.com/2.png' },
     ];
-    vm.step = 2;
-
     const result = await vm.deleteImage('i1');
 
     expect(result).toEqual({ status: 'success' });
@@ -300,18 +286,15 @@ describe('SellerProductFormViewModel', () => {
     expect(productsApi.deleteProductImage).toHaveBeenCalledWith('prod-123', 'i1');
   });
 
-  it('19. deleteImage last image while on step 3 reverts step to 2 and sets publishBlockedReason', async () => {
+  it('19. deleting the last image preserves the draft phase and blocks publishing', async () => {
     vm.productId = 'prod-123';
     vm.images = [{ id: 'i1', path: 'https://example.com/1.png' }];
-    // Force step 3 without setStep guard
-    vm.step = 3;
-
     const result = await vm.deleteImage('i1');
 
     expect(result).toEqual({ status: 'success' });
     expect(vm.images.length).toBe(0);
-    expect(vm.step).toBe(2);
     expect(vm.publishBlockedReason).toContain('imagen');
+    expect(vm.canPublish).toBe(false);
   });
 
   it('20. deleteImage error: sets imageErrors entry, images unchanged, deletingImageId reset', async () => {
@@ -321,7 +304,6 @@ describe('SellerProductFormViewModel', () => {
 
     vm.productId = 'prod-123';
     vm.images = [{ id: 'i1', path: 'https://example.com/1.png' }];
-    vm.step = 3;
 
     const result = await vm.deleteImage('i1');
 

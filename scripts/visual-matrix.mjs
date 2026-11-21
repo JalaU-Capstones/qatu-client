@@ -343,6 +343,37 @@ for (const route of activeRoutes) {
         }
 
         if (
+          route.name === 'seller-product-new' &&
+          req.method() === 'POST' &&
+          url.includes('/v1/products')
+        ) {
+          const isImageUpload = url.includes('/images');
+          return req.respond({
+            status: 201,
+            contentType: 'application/json',
+            headers: corsHeaders,
+            body: JSON.stringify({
+              data: isImageUpload
+                ? {
+                    id: 'matrix-image-1',
+                    product_id: 'matrix-product-1',
+                    path: 'http://localhost:5173/product-images/matrix-image-1.png',
+                    alt_text: 'matrix-image.png',
+                    position: 0,
+                    created_at: '2026-11-18T12:00:00.000Z',
+                  }
+                : {
+                    id: 'matrix-product-1',
+                    name: 'Producto de matriz',
+                    slug: 'producto-de-matriz',
+                    state: 'draft',
+                  },
+              meta: { timestamp: '2026-11-18T12:00:00.000Z' },
+            }),
+          });
+        }
+
+        if (
           route.authenticated &&
           (url.includes('/v1/auth/me') ||
             url.includes('/v1/profiles/') ||
@@ -710,12 +741,15 @@ for (const route of activeRoutes) {
               return {
                 header: check('.q-header'),
                 formPage: check('.q-seller-product-form'),
-                stepper: check('.q-seller-product-form__stepper'),
-                stepOneActive: check('.q-seller-product-form__step.is-active'),
+                singlePage: !check('.q-seller-product-form__stepper'),
+                basicInformation: check('.q-seller-product-form__section-title'),
+                statusBadge: check('.q-seller-product-form__status'),
                 nameInput: check('input[name="name"]'),
+                slugInput: check('input[name="slug"]'),
                 priceInput: check('input[name="price"]'),
                 categorySelect: check('select[name="categoryId"]'),
-                submitBtn: check('.q-seller-product-form__footer .q-btn--primary'),
+                imagesHiddenBeforeDraft: !check('.q-seller-product-form__images-panel'),
+                submitBtn: check('.q-seller-product-form__submit-btn'),
                 footer: check('.q-footer'),
               };
             default:
@@ -753,6 +787,83 @@ for (const route of activeRoutes) {
         // ── Screenshot
         const file = join(OUT_DIR, `${route.name}-${theme}-${vp.name}.png`);
         await page.screenshot({ path: file, fullPage: true });
+
+        if (route.name === 'seller-product-new') {
+          await page.locator('input[name="name"]').fill('Producto de matriz');
+          await page.locator('input[name="price"]').fill('24.99');
+          await page.select('select[name="categoryId"]', 'cat-electronics');
+          await page.locator('.q-seller-product-form__submit-btn').click();
+          await page.waitForSelector('.q-seller-product-form__images-panel', { timeout: 5000 });
+
+          const draftPhase = await page.evaluate(() => ({
+            fieldsLocked: Array.from(
+              document.querySelectorAll(
+                '.q-seller-product-form__form input, .q-seller-product-form__form select, .q-seller-product-form__form textarea'
+              )
+            ).every((field) => field.disabled),
+            imagesVisible: Boolean(document.querySelector('.q-seller-product-form__images-panel')),
+            publishDisabled: document.querySelector('.q-seller-product-form__publish-btn')
+              ?.disabled,
+            horizontalOverflow:
+              document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
+          }));
+          if (!draftPhase.fieldsLocked) combo.errors.push('DRAFT_PHASE_FIELDS_NOT_LOCKED');
+          if (!draftPhase.imagesVisible) combo.errors.push('DRAFT_PHASE_IMAGES_NOT_VISIBLE');
+          if (!draftPhase.publishDisabled)
+            combo.errors.push('DRAFT_PHASE_PUBLISH_SHOULD_BE_DISABLED');
+          if (draftPhase.horizontalOverflow) combo.errors.push('DRAFT_PHASE_HORIZONTAL_OVERFLOW');
+
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const draftFile = join(OUT_DIR, `${route.name}-${theme}-${vp.name}-draft.png`);
+          await page.screenshot({ path: draftFile, fullPage: true });
+
+          await page.evaluate(() => {
+            const input = document.querySelector('.q-seller-product-form__file-input');
+            const transfer = new window.DataTransfer();
+            transfer.items.add(
+              new window.File(['matrix-image'], 'matrix.png', { type: 'image/png' })
+            );
+            input.files = transfer.files;
+            input.dispatchEvent(new window.Event('change', { bubbles: true }));
+          });
+          await page.waitForSelector('.q-seller-product-form__primary-badge', { timeout: 5000 });
+          await page.locator('.q-seller-product-form__image-remove').click();
+          await page.waitForFunction(
+            () => !document.querySelector('.q-seller-product-form__image-confirm')?.hidden,
+            { timeout: 5000 }
+          );
+          const confirmBounds = await page.evaluate(() => {
+            const thumb = document
+              .querySelector('.q-seller-product-form__thumb')
+              .getBoundingClientRect();
+            const confirm = document
+              .querySelector('.q-seller-product-form__image-confirm')
+              .getBoundingClientRect();
+            const buttons = Array.from(
+              document.querySelectorAll('.q-seller-product-form__image-confirm button')
+            ).map((button) => button.getBoundingClientRect());
+            return {
+              overlayFitsThumb:
+                confirm.left >= thumb.left &&
+                confirm.top >= thumb.top &&
+                confirm.right <= thumb.right &&
+                confirm.bottom <= thumb.bottom,
+              buttonsFitOverlay: buttons.every(
+                (button) =>
+                  button.left >= confirm.left &&
+                  button.top >= confirm.top &&
+                  button.right <= confirm.right &&
+                  button.bottom <= confirm.bottom
+              ),
+            };
+          });
+          if (!confirmBounds.overlayFitsThumb) combo.errors.push('DELETE_CONFIRM_OVERFLOWS_THUMB');
+          if (!confirmBounds.buttonsFitOverlay)
+            combo.errors.push('DELETE_CONFIRM_BUTTONS_OVERFLOW');
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const confirmFile = join(OUT_DIR, `${route.name}-${theme}-${vp.name}-delete-confirm.png`);
+          await page.screenshot({ path: confirmFile, fullPage: true });
+        }
       } catch (err) {
         combo.errors.push('EXCEPTION: ' + err.message);
       } finally {
@@ -818,7 +929,9 @@ if (fail > 0) {
     });
 }
 console.log('\nScreenshots saved to: ' + OUT_DIR);
-console.log('  ' + results.length + ' files');
+const screenshotCount =
+  results.length + results.filter((result) => result.route === 'seller-product-new').length * 2;
+console.log(`  ${screenshotCount} screenshots across ${results.length} matrix combinations`);
 
 // Write machine-readable report
 writeFileSync(join(OUT_DIR, 'report.json'), JSON.stringify(results, null, 2));
@@ -826,4 +939,4 @@ console.log('  report.json written');
 
 // Exit code 1 if any failure — CI-friendly
 if (fail > 0) process.exit(1);
-console.log(`\n[MATRIX] OK — ${results.length} screenshots from ${BASE}`);
+console.log(`\n[MATRIX] OK — ${results.length} combinations from ${BASE}`);

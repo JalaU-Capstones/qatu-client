@@ -1,4 +1,3 @@
-import { formatPrice } from '../../utils/formatCurrency.js';
 import { SellerProductFormViewModel } from '../../viewmodels/pages/SellerProductFormViewModel.js';
 import { createImageWithFallback } from '../components/ImageWithFallback.js';
 
@@ -23,21 +22,20 @@ export class SellerProductFormView {
     this._unsubscribe = null;
     this._onBeforeUnload = null;
     this._bodyEl = null;
-    this._stepperEl = null;
+    this._didNavigateAfterPublish = false;
   }
 
   mount(container) {
     this.element = this._buildShell();
     container.appendChild(this.element);
 
-    this._onBeforeUnload = (e) => {
+    this._onBeforeUnload = (event) => {
       if (this.viewModel.productId && !this.viewModel.publishedSuccess) {
-        e.preventDefault();
-        e.returnValue = '';
+        event.preventDefault();
+        event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', this._onBeforeUnload);
-
     this._unsubscribe = this.viewModel.subscribe(() => this._render());
     this._render();
   }
@@ -51,12 +49,9 @@ export class SellerProductFormView {
       this._unsubscribe();
       this._unsubscribe = null;
     }
-    if (this.element?.parentElement) {
-      this.element.remove();
-    }
+    this.element?.remove();
     this.element = null;
     this._bodyEl = null;
-    this._stepperEl = null;
   }
 
   _buildShell() {
@@ -66,173 +61,174 @@ export class SellerProductFormView {
     const header = document.createElement('header');
     header.className = 'q-seller-product-form__header';
 
-    const back = document.createElement('a');
-    back.href = '/seller/products';
-    back.dataset.route = '';
-    back.className = 'q-seller-product-form__back';
-    back.textContent = '← Volver';
-    back.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (typeof this.onNavigate === 'function') {
-        this.onNavigate('/seller/products');
+    const breadcrumb = document.createElement('nav');
+    breadcrumb.className = 'q-seller-product-form__breadcrumb';
+    breadcrumb.setAttribute('aria-label', 'Navegación de ruta');
+    const crumbs = [
+      { label: 'Inicio', href: '/' },
+      { label: 'Productos', href: '/seller/products' },
+      { label: 'Nuevo producto', current: true },
+    ];
+    for (const [index, crumb] of crumbs.entries()) {
+      if (index > 0) {
+        const separator = document.createElement('span');
+        separator.setAttribute('aria-hidden', 'true');
+        separator.textContent = '/';
+        breadcrumb.appendChild(separator);
       }
-    });
+      if (crumb.current) {
+        const current = document.createElement('span');
+        current.setAttribute('aria-current', 'page');
+        current.textContent = crumb.label;
+        breadcrumb.appendChild(current);
+      } else {
+        const link = document.createElement('a');
+        link.href = crumb.href;
+        link.dataset.route = '';
+        link.textContent = crumb.label;
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          this._navigate('/seller/products');
+        });
+        breadcrumb.appendChild(link);
+      }
+    }
 
+    const heading = document.createElement('div');
+    heading.className = 'q-seller-product-form__heading';
+    const headingCopy = document.createElement('div');
+    headingCopy.className = 'q-seller-product-form__heading-copy';
     const title = document.createElement('h1');
     title.className = 'q-seller-product-form__title';
     title.textContent = 'Nuevo producto';
+    const subtitle = document.createElement('p');
+    subtitle.className = 'q-seller-product-form__subtitle';
+    subtitle.textContent = 'Completa la información para agregar un producto a tu tienda.';
+    headingCopy.append(title, subtitle);
 
-    this._stepperEl = document.createElement('nav');
-    this._stepperEl.className = 'q-seller-product-form__stepper';
-    this._stepperEl.setAttribute('aria-label', 'Pasos de creación');
-
-    header.append(back, title, this._stepperEl);
+    const status = document.createElement('span');
+    status.className = 'q-seller-product-form__status';
+    status.textContent = 'Borrador';
+    heading.append(headingCopy, status);
+    header.append(breadcrumb, heading);
 
     this._bodyEl = document.createElement('div');
     this._bodyEl.className = 'q-seller-product-form__body';
-
     section.append(header, this._bodyEl);
     return section;
   }
 
+  _navigate(path) {
+    if (typeof this.onNavigate === 'function') this.onNavigate(path);
+  }
+
   _render() {
     if (!this.element) return;
-
     if (this.viewModel.publishedSuccess) {
+      if (this._didNavigateAfterPublish) return;
+      this._didNavigateAfterPublish = true;
       if (typeof this._onBeforeUnload === 'function') {
         window.removeEventListener('beforeunload', this._onBeforeUnload);
+        this._onBeforeUnload = null;
       }
-      if (typeof this.onNavigate === 'function') {
-        this.onNavigate('/seller/products');
-      }
+      this._navigate('/seller/products');
       return;
     }
 
-    this._updateStepper();
-    this._renderBody();
-  }
-
-  _updateStepper() {
-    if (!this._stepperEl) return;
-    this._stepperEl.replaceChildren();
-
-    const steps = [
-      { num: 1, label: '1. Datos' },
-      { num: 2, label: '2. Imágenes' },
-      { num: 3, label: '3. Publicar' },
-    ];
-
-    for (const s of steps) {
-      const span = document.createElement('span');
-      span.className = 'q-seller-product-form__step';
-      if (this.viewModel.step === s.num) {
-        span.classList.add('is-active');
-      } else if (this.viewModel.step > s.num) {
-        span.classList.add('is-complete');
-      }
-      span.textContent = s.label;
-      this._stepperEl.appendChild(span);
-    }
-  }
-
-  _renderBody() {
-    if (!this._bodyEl) return;
     this._bodyEl.replaceChildren();
-
-    if (this.viewModel.step === 1) {
-      this._bodyEl.appendChild(this._renderStepForm());
-    } else if (this.viewModel.step === 2) {
-      this._bodyEl.appendChild(this._renderStepUpload());
-    } else if (this.viewModel.step === 3) {
-      this._bodyEl.appendChild(this._renderStepPublish());
-    }
-  }
-
-  _renderStepForm() {
-    const panel = document.createElement('div');
-    panel.className = 'q-seller-product-form__panel q-glass-panel';
-
     if (this.viewModel.generalError) {
       const banner = document.createElement('div');
       banner.className = 'q-seller-product-form__error-banner';
       banner.setAttribute('role', 'alert');
       banner.textContent = this.viewModel.generalError;
-      panel.appendChild(banner);
+      this._bodyEl.appendChild(banner);
     }
+    this._bodyEl.appendChild(this._renderFormPanel());
+    if (this.viewModel.productId) {
+      this._bodyEl.append(this._renderImagePanel(), this._renderDraftFooter());
+    }
+  }
+
+  _renderFormPanel() {
+    const locked = Boolean(this.viewModel.productId);
+    const panel = document.createElement('section');
+    panel.className = 'q-seller-product-form__panel q-glass-panel';
 
     const form = document.createElement('form');
     form.className = 'q-seller-product-form__form';
     form.noValidate = true;
 
-    // 1. Name
-    form.appendChild(
+    const basicSection = document.createElement('section');
+    basicSection.className = 'q-seller-product-form__form-section';
+    const basicTitle = document.createElement('h2');
+    basicTitle.className = 'q-seller-product-form__section-title';
+    basicTitle.textContent = 'Información básica';
+    basicSection.appendChild(basicTitle);
+
+    basicSection.appendChild(
       this._createField({
         name: 'name',
-        label: 'Nombre del producto',
-        type: 'text',
+        label: 'Nombre del producto *',
         required: true,
         maxlength: 200,
         value: this.viewModel.form.name,
         error: this.viewModel.fieldErrors.name,
+        disabled: locked,
+        hint: 'Entre 3 y 200 caracteres.',
       })
     );
 
-    // 2. Price & Currency row
+    const slugField = this._createField({
+      name: 'slug',
+      label: 'URL Slug',
+      value: this.viewModel.form.slug,
+      error: this.viewModel.fieldErrors.slug,
+      disabled: locked,
+      hint: 'Vista previa editable; usa minúsculas y guiones.',
+    });
+    basicSection.appendChild(slugField);
+
+    const categoryOptions = [
+      { value: '', label: 'Selecciona una categoría' },
+      ...this.categories.map((category) => ({
+        value: String(category.id),
+        label: category.name,
+      })),
+    ];
+    basicSection.appendChild(
+      this._createSelectField({
+        name: 'categoryId',
+        label: 'Categoría *',
+        required: true,
+        options: categoryOptions,
+        value: this.viewModel.form.categoryId,
+        error: this.viewModel.fieldErrors.categoryId,
+        disabled: locked,
+      })
+    );
+
     const priceRow = document.createElement('div');
     priceRow.className = 'q-seller-product-form__row';
-
-    priceRow.appendChild(
+    priceRow.append(
       this._createField({
         name: 'price',
-        label: 'Precio',
+        label: 'Precio *',
         type: 'number',
         required: true,
         min: '0.01',
         step: '0.01',
         value: this.viewModel.form.price,
         error: this.viewModel.fieldErrors.price,
-      })
-    );
-
-    const currencyField = this._createSelectField({
-      name: 'currency',
-      label: 'Moneda',
-      options: CURRENCIES.map((c) => ({ value: c, label: c })),
-      value: this.viewModel.form.currency || 'USD',
-      error: this.viewModel.fieldErrors.currency,
-    });
-    priceRow.appendChild(currencyField);
-    form.appendChild(priceRow);
-
-    // 3. Category
-    const categoryOptions = [
-      { value: '', label: 'Selecciona una categoría' },
-      ...this.categories.map((c) => ({ value: String(c.id), label: c.name })),
-    ];
-    form.appendChild(
+        disabled: locked,
+      }),
       this._createSelectField({
-        name: 'categoryId',
-        label: 'Categoría',
-        options: categoryOptions,
-        value: this.viewModel.form.categoryId,
-        error: this.viewModel.fieldErrors.categoryId,
-      })
-    );
-
-    // 4. Description
-    form.appendChild(
-      this._createTextareaField({
-        name: 'description',
-        label: 'Descripción (opcional)',
-        maxlength: 5000,
-        rows: 4,
-        value: this.viewModel.form.description,
-        error: this.viewModel.fieldErrors.description,
-      })
-    );
-
-    // 5. Stock
-    form.appendChild(
+        name: 'currency',
+        label: 'Moneda',
+        options: CURRENCIES.map((currency) => ({ value: currency, label: currency })),
+        value: this.viewModel.form.currency || 'USD',
+        error: this.viewModel.fieldErrors.currency,
+        disabled: locked,
+      }),
       this._createField({
         name: 'stock',
         label: 'Stock inicial',
@@ -241,268 +237,190 @@ export class SellerProductFormView {
         step: '1',
         value: this.viewModel.form.stock ?? '0',
         error: this.viewModel.fieldErrors.stock,
+        disabled: locked,
       })
     );
+    basicSection.appendChild(priceRow);
+    form.appendChild(basicSection);
 
-    // 6. Attributes JSON
-    form.appendChild(
+    const descriptionSection = document.createElement('section');
+    descriptionSection.className = 'q-seller-product-form__form-section';
+    const descriptionTitle = document.createElement('h2');
+    descriptionTitle.className = 'q-seller-product-form__section-title';
+    descriptionTitle.textContent = 'Descripción';
+    descriptionSection.appendChild(descriptionTitle);
+    descriptionSection.append(
+      this._createTextareaField({
+        name: 'description',
+        label: 'Descripción',
+        maxlength: 5000,
+        rows: 5,
+        value: this.viewModel.form.description,
+        error: this.viewModel.fieldErrors.description,
+        disabled: locked,
+      }),
       this._createTextareaField({
         name: 'attributesText',
         label: 'Atributos (JSON opcional)',
-        rows: 3,
+        rows: 4,
         value: this.viewModel.form.attributesText,
         error: this.viewModel.fieldErrors.attributesText,
+        disabled: locked,
         hint: 'Ej: {"color": "negro", "talla": "M"}',
       })
     );
+    form.appendChild(descriptionSection);
 
-    // Footer actions
-    const footer = document.createElement('div');
-    footer.className = 'q-seller-product-form__footer';
+    if (locked) {
+      const notice = document.createElement('p');
+      notice.className = 'q-seller-product-form__locked-notice';
+      notice.textContent =
+        'La información del producto está bloqueada. Podrás editarla más tarde desde el modal de edición en tu lista de productos.';
+      panel.append(form, notice);
+    } else {
+      const footer = document.createElement('div');
+      footer.className = 'q-seller-product-form__footer';
 
-    const submitBtn = document.createElement('button');
-    submitBtn.type = 'submit';
-    submitBtn.className = 'q-btn q-btn--primary q-seller-product-form__submit-btn';
-    submitBtn.textContent = this.viewModel.isCreating
-      ? 'Creando borrador…'
-      : 'Crear borrador y continuar';
-    submitBtn.toggleAttribute('disabled', !this.viewModel.canSubmitForm());
+      const cancelButton = document.createElement('button');
+      cancelButton.type = 'button';
+      cancelButton.className = 'q-btn q-btn--outline q-seller-product-form__cancel-btn';
+      cancelButton.textContent = 'Cancelar';
+      cancelButton.addEventListener('click', () => this._navigate('/seller/products'));
 
-    footer.appendChild(submitBtn);
-    form.appendChild(footer);
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.viewModel.submitForm();
-    });
-
-    panel.appendChild(form);
+      const submitButton = document.createElement('button');
+      submitButton.type = 'submit';
+      submitButton.className = 'q-btn q-btn--primary q-seller-product-form__submit-btn';
+      submitButton.textContent = this.viewModel.isCreating ? 'Creando borrador…' : 'Crear borrador';
+      submitButton.disabled = !this.viewModel.canSubmitForm();
+      footer.append(cancelButton, submitButton);
+      form.appendChild(footer);
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void this.viewModel.submitForm();
+      });
+      panel.appendChild(form);
+    }
     return panel;
   }
 
-  _renderStepUpload() {
-    const panel = document.createElement('div');
-    panel.className = 'q-seller-product-form__panel q-glass-panel';
+  _renderImagePanel() {
+    const panel = document.createElement('section');
+    panel.className =
+      'q-seller-product-form__panel q-glass-panel q-seller-product-form__images-panel';
 
-    const heading = document.createElement('h2');
-    heading.className = 'q-seller-product-form__subtitle';
-    heading.textContent = 'Sube al menos una imagen';
-
+    const header = document.createElement('div');
+    header.className = 'q-seller-product-form__images-header';
+    const heading = document.createElement('div');
+    const title = document.createElement('h2');
+    title.className = 'q-seller-product-form__section-title';
+    title.textContent = 'Imágenes del producto';
     const description = document.createElement('p');
     description.className = 'q-seller-product-form__desc';
-    description.textContent = 'Máximo 5 imágenes, 5 MB cada una. Formatos: JPEG, PNG, WebP.';
+    description.textContent = 'JPEG, PNG, WebP · Máx 5 MB · Hasta 5 imágenes';
+    heading.append(title, description);
+    const count = document.createElement('span');
+    count.className = 'q-seller-product-form__image-count';
+    count.textContent = `${this.viewModel.images.length} / 5 imágenes`;
+    header.append(heading, count);
+    panel.appendChild(header);
 
-    panel.append(heading, description);
-
-    // Upload grid showing current images
     const grid = document.createElement('div');
     grid.className = 'q-seller-product-form__upload-grid';
-
-    for (const img of this.viewModel.images) {
-      const thumb = this._makeImageThumbWithDelete(img);
-      grid.appendChild(thumb);
+    for (const [index, image] of this.viewModel.images.entries()) {
+      grid.appendChild(this._makeImageThumb(image, index === 0));
     }
     panel.appendChild(grid);
 
-    // Dropzone / File picker
     const dropzone = document.createElement('div');
     dropzone.className = 'q-seller-product-form__dropzone';
-
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.className = 'q-seller-product-form__file-input';
     fileInput.accept = 'image/jpeg,image/png,image/webp';
     fileInput.multiple = true;
-    fileInput.style.display = 'none';
+    fileInput.setAttribute('aria-label', 'Seleccionar imágenes del producto');
 
-    const selectBtn = document.createElement('button');
-    selectBtn.type = 'button';
-    selectBtn.className = 'q-btn q-btn--outline q-seller-product-form__select-files-btn';
-    selectBtn.textContent = 'Seleccionar imágenes';
+    const dropzoneText = document.createElement('p');
+    dropzoneText.textContent = 'Arrastra tus imágenes aquí o selecciónalas desde tu dispositivo.';
+    const selectButton = document.createElement('button');
+    selectButton.type = 'button';
+    selectButton.className = 'q-btn q-btn--outline q-seller-product-form__select-files-btn';
+    selectButton.textContent = 'Seleccionar imágenes';
 
-    if (this.viewModel.uploadLimitReached) {
-      fileInput.disabled = true;
-      selectBtn.disabled = true;
-      const limitMsg = document.createElement('p');
-      limitMsg.className = 'q-seller-product-form__limit-msg';
-      limitMsg.textContent = 'Has alcanzado el límite máximo de 5 imágenes.';
-      dropzone.appendChild(limitMsg);
+    const limitReached = this.viewModel.uploadLimitReached;
+    fileInput.disabled = limitReached;
+    selectButton.disabled = limitReached;
+    if (limitReached) {
+      const limitMessage = document.createElement('p');
+      limitMessage.className = 'q-seller-product-form__limit-msg';
+      limitMessage.textContent = 'Has alcanzado el límite máximo de 5 imágenes.';
+      dropzone.appendChild(limitMessage);
     } else {
-      selectBtn.addEventListener('click', () => fileInput.click());
+      selectButton.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', () => {
-        if (fileInput.files?.length) {
-          this.viewModel.addFiles(fileInput.files);
-        }
+        if (fileInput.files?.length) void this.viewModel.addFiles(fileInput.files);
       });
-
-      dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
+      dropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
         dropzone.classList.add('is-dragover');
       });
-      dropzone.addEventListener('dragleave', () => {
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragover'));
+      dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
         dropzone.classList.remove('is-dragover');
-      });
-      dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('is-dragover');
-        if (e.dataTransfer?.files?.length) {
-          this.viewModel.addFiles(e.dataTransfer.files);
-        }
+        if (event.dataTransfer?.files?.length)
+          void this.viewModel.addFiles(event.dataTransfer.files);
       });
     }
-
-    dropzone.append(selectBtn, fileInput);
+    dropzone.append(dropzoneText, selectButton, fileInput);
     panel.appendChild(dropzone);
 
-    // Uploading progress
     if (this.viewModel.uploadingCount > 0) {
-      const progress = document.createElement('div');
-      progress.className = 'q-seller-product-form__uploading';
-      progress.textContent = `Subiendo ${this.viewModel.uploadingCount} imagen(es)…`;
-      panel.appendChild(progress);
+      const progressWrap = document.createElement('div');
+      progressWrap.className = 'q-seller-product-form__uploading';
+      const progressText = document.createElement('span');
+      progressText.textContent = `Subiendo ${this.viewModel.uploadingCount} imagen(es)…`;
+      const progress = document.createElement('progress');
+      progress.max = 5;
+      progress.value = Math.min(this.viewModel.images.length + this.viewModel.uploadingCount, 5);
+      progress.setAttribute('aria-label', 'Progreso de carga de imágenes');
+      progressWrap.append(progressText, progress);
+      panel.appendChild(progressWrap);
     }
 
-    // Upload errors
     if (this.viewModel.uploadErrors.length > 0) {
-      const errList = document.createElement('ul');
-      errList.className = 'q-seller-product-form__upload-errors';
-      for (const err of this.viewModel.uploadErrors) {
-        const li = document.createElement('li');
-        li.textContent = `${err.filename}: ${err.message}`;
-        errList.appendChild(li);
+      const errorList = document.createElement('ul');
+      errorList.className = 'q-seller-product-form__upload-errors';
+      errorList.setAttribute('role', 'alert');
+      for (const error of this.viewModel.uploadErrors) {
+        const item = document.createElement('li');
+        item.textContent = `${error.filename}: ${error.message}`;
+        errorList.appendChild(item);
       }
-      panel.appendChild(errList);
+      panel.appendChild(errorList);
     }
-
-    // Footer actions
-    const footer = document.createElement('div');
-    footer.className = 'q-seller-product-form__footer';
-
-    const draftBtn = document.createElement('button');
-    draftBtn.type = 'button';
-    draftBtn.className = 'q-btn q-btn--outline q-seller-product-form__draft-btn';
-    draftBtn.textContent = 'Guardar como borrador';
-    draftBtn.addEventListener('click', () => {
-      if (typeof this.onNavigate === 'function') {
-        this.onNavigate('/seller/products');
-      }
-    });
-
-    const nextBtn = document.createElement('button');
-    nextBtn.type = 'button';
-    nextBtn.className = 'q-btn q-btn--primary q-seller-product-form__next-btn';
-    nextBtn.textContent = 'Siguiente';
-    nextBtn.disabled = !this.viewModel.canAdvanceToStep3();
-    nextBtn.addEventListener('click', () => {
-      this.viewModel.setStep(3);
-    });
-
-    footer.append(draftBtn, nextBtn);
-    panel.appendChild(footer);
-
     return panel;
   }
 
-  _renderStepPublish() {
-    const panel = document.createElement('div');
-    panel.className = 'q-seller-product-form__panel q-glass-panel';
-
-    if (this.viewModel.generalError) {
-      const banner = document.createElement('div');
-      banner.className = 'q-seller-product-form__error-banner';
-      banner.setAttribute('role', 'alert');
-      banner.textContent = this.viewModel.generalError;
-      panel.appendChild(banner);
-    }
-
-    // Review content
-    const review = document.createElement('div');
-    review.className = 'q-seller-product-form__review';
-
-    const nameEl = document.createElement('h2');
-    nameEl.className = 'q-seller-product-form__review-name';
-    nameEl.textContent = this.viewModel.form.name;
-
-    const metaRow = document.createElement('div');
-    metaRow.className = 'q-seller-product-form__review-meta';
-
-    const priceEl = document.createElement('span');
-    priceEl.className = 'q-seller-product-form__review-price';
-    priceEl.textContent = formatPrice(
-      Number(this.viewModel.form.price),
-      this.viewModel.form.currency
-    );
-
-    const categoryObj = this.categories.find(
-      (c) => String(c.id) === String(this.viewModel.form.categoryId)
-    );
-    const categoryEl = document.createElement('span');
-    categoryEl.className = 'q-seller-product-form__review-category';
-    categoryEl.textContent = categoryObj ? categoryObj.name : '';
-
-    metaRow.append(priceEl, categoryEl);
-
-    const descEl = document.createElement('p');
-    descEl.className = 'q-seller-product-form__review-description';
-    descEl.textContent = this.viewModel.form.description || 'Sin descripción';
-
-    const imagesTitle = document.createElement('h3');
-    imagesTitle.className = 'q-seller-product-form__review-images-count';
-    imagesTitle.textContent = `${this.viewModel.images.length} imágenes`;
-
-    const imagesGrid = document.createElement('div');
-    imagesGrid.className = 'q-seller-product-form__upload-grid';
-
-    for (const img of this.viewModel.images) {
-      const thumb = this._makeImageThumbWithDelete(img);
-      imagesGrid.appendChild(thumb);
-    }
-
-    review.append(nameEl, metaRow, descEl, imagesTitle, imagesGrid);
-    panel.appendChild(review);
-
-    // Warning if no images
-    if (this.viewModel.images.length === 0) {
-      const warnBox = document.createElement('div');
-      warnBox.className = 'q-seller-product-form__warning';
-      const warnText = document.createElement('p');
-      warnText.textContent = 'Necesitas al menos 1 imagen para publicar';
-      const backImgBtn = document.createElement('button');
-      backImgBtn.type = 'button';
-      backImgBtn.className = 'q-btn q-btn--outline q-btn--sm';
-      backImgBtn.textContent = 'Volver a imágenes';
-      backImgBtn.addEventListener('click', () => this.viewModel.setStep(2));
-      warnBox.append(warnText, backImgBtn);
-      panel.appendChild(warnBox);
-    }
-
-    // Footer actions
+  _renderDraftFooter() {
     const footer = document.createElement('div');
-    footer.className = 'q-seller-product-form__footer';
+    footer.className = 'q-seller-product-form__footer q-seller-product-form__draft-footer';
 
-    const draftBtn = document.createElement('button');
-    draftBtn.type = 'button';
-    draftBtn.className = 'q-btn q-btn--outline q-seller-product-form__draft-btn';
-    draftBtn.textContent = 'Guardar como borrador';
-    draftBtn.addEventListener('click', () => {
-      if (typeof this.onNavigate === 'function') {
-        this.onNavigate('/seller/products');
-      }
-    });
+    const draftButton = document.createElement('button');
+    draftButton.type = 'button';
+    draftButton.className = 'q-btn q-btn--outline q-seller-product-form__draft-btn';
+    draftButton.textContent = 'Guardar como borrador';
+    draftButton.addEventListener('click', () => this._navigate('/seller/products'));
 
-    const publishBtn = document.createElement('button');
-    publishBtn.type = 'button';
-    publishBtn.className = 'q-btn q-btn--primary q-btn--lg q-seller-product-form__publish-btn';
-    publishBtn.textContent = this.viewModel.isPublishing ? 'Publicando…' : 'Publicar producto';
-    publishBtn.disabled = this.viewModel.isPublishing || this.viewModel.images.length === 0;
-    publishBtn.addEventListener('click', () => {
-      this.viewModel.publish();
-    });
+    const publishButton = document.createElement('button');
+    publishButton.type = 'button';
+    publishButton.className = 'q-btn q-btn--primary q-seller-product-form__publish-btn';
+    publishButton.textContent = this.viewModel.isPublishing ? 'Publicando…' : 'Publicar producto';
+    publishButton.disabled = !this.viewModel.canPublish || this.viewModel.uploadingCount > 0;
+    publishButton.addEventListener('click', () => void this.viewModel.publish());
 
-    footer.append(draftBtn, publishBtn);
-    panel.appendChild(footer);
-
-    return panel;
+    footer.append(draftButton, publishButton);
+    return footer;
   }
 
   _createField({
@@ -515,103 +433,119 @@ export class SellerProductFormView {
     maxlength,
     value = '',
     error,
+    disabled = false,
+    hint,
   }) {
     const wrap = document.createElement('div');
     wrap.className = 'q-seller-product-form__field';
+    wrap.dataset.field = name;
 
-    const labelEl = document.createElement('label');
-    labelEl.className = 'q-seller-product-form__label';
-    labelEl.htmlFor = `field-${name}`;
-    labelEl.textContent = label;
-    wrap.appendChild(labelEl);
+    const labelElement = document.createElement('label');
+    labelElement.className = 'q-seller-product-form__label';
+    labelElement.htmlFor = `field-${name}`;
+    labelElement.textContent = label;
+    wrap.appendChild(labelElement);
 
     const input = document.createElement('input');
     input.id = `field-${name}`;
     input.name = name;
     input.type = type;
     input.className = 'q-seller-product-form__input';
-    if (required) input.required = true;
+    input.required = required;
+    input.disabled = disabled;
     if (min !== undefined) input.min = min;
     if (step !== undefined) input.step = step;
     if (maxlength !== undefined) input.maxLength = maxlength;
     input.value = value;
-
+    if (error) input.classList.add('is-invalid');
     input.addEventListener('input', () => {
       this.viewModel.setField(name, input.value);
+      if (name === 'name' && !this.viewModel.slugEdited) {
+        const slugInput = this._bodyEl.querySelector('#field-slug');
+        if (slugInput) slugInput.value = this.viewModel.form.slug;
+      }
       this._updateSubmitButtonState();
     });
-
     wrap.appendChild(input);
 
-    if (error) {
-      input.classList.add('is-invalid');
-      const errEl = document.createElement('span');
-      errEl.className = 'q-seller-product-form__error';
-      errEl.textContent = error;
-      wrap.appendChild(errEl);
+    if (hint) {
+      const hintElement = document.createElement('span');
+      hintElement.className = 'q-seller-product-form__hint';
+      hintElement.textContent = hint;
+      wrap.appendChild(hintElement);
     }
-
+    if (error) this._appendFieldError(wrap, error);
     return wrap;
   }
 
-  _createSelectField({ name, label, options = [], value = '', error }) {
+  _createSelectField({
+    name,
+    label,
+    options = [],
+    value = '',
+    error,
+    disabled = false,
+    required = false,
+  }) {
     const wrap = document.createElement('div');
     wrap.className = 'q-seller-product-form__field';
+    wrap.dataset.field = name;
 
-    const labelEl = document.createElement('label');
-    labelEl.className = 'q-seller-product-form__label';
-    labelEl.htmlFor = `field-${name}`;
-    labelEl.textContent = label;
-    wrap.appendChild(labelEl);
+    const labelElement = document.createElement('label');
+    labelElement.className = 'q-seller-product-form__label';
+    labelElement.htmlFor = `field-${name}`;
+    labelElement.textContent = label;
+    wrap.appendChild(labelElement);
 
     const select = document.createElement('select');
     select.id = `field-${name}`;
     select.name = name;
     select.className = 'q-seller-product-form__select';
-
-    for (const opt of options) {
-      const optEl = document.createElement('option');
-      optEl.value = opt.value;
-      optEl.textContent = opt.label;
-      if (String(opt.value) === String(value)) {
-        optEl.selected = true;
-      }
-      select.appendChild(optEl);
+    select.disabled = disabled;
+    select.required = required;
+    for (const option of options) {
+      const optionElement = document.createElement('option');
+      optionElement.value = option.value;
+      optionElement.textContent = option.label;
+      optionElement.selected = String(option.value) === String(value);
+      select.appendChild(optionElement);
     }
-
     select.addEventListener('change', () => {
       this.viewModel.setField(name, select.value);
       this._updateSubmitButtonState();
     });
-
     wrap.appendChild(select);
-
     if (error) {
       select.classList.add('is-invalid');
-      const errEl = document.createElement('span');
-      errEl.className = 'q-seller-product-form__error';
-      errEl.textContent = error;
-      wrap.appendChild(errEl);
+      this._appendFieldError(wrap, error);
     }
-
     return wrap;
   }
 
-  _createTextareaField({ name, label, rows = 3, maxlength, value = '', error, hint }) {
+  _createTextareaField({
+    name,
+    label,
+    rows = 3,
+    maxlength,
+    value = '',
+    error,
+    hint,
+    disabled = false,
+  }) {
     const wrap = document.createElement('div');
     wrap.className = 'q-seller-product-form__field';
+    wrap.dataset.field = name;
 
-    const labelEl = document.createElement('label');
-    labelEl.className = 'q-seller-product-form__label';
-    labelEl.htmlFor = `field-${name}`;
-    labelEl.textContent = label;
-    wrap.appendChild(labelEl);
-
+    const labelElement = document.createElement('label');
+    labelElement.className = 'q-seller-product-form__label';
+    labelElement.htmlFor = `field-${name}`;
+    labelElement.textContent = label;
+    wrap.appendChild(labelElement);
     if (hint) {
-      const hintEl = document.createElement('span');
-      hintEl.className = 'q-seller-product-form__hint';
-      hintEl.textContent = hint;
-      wrap.appendChild(hintEl);
+      const hintElement = document.createElement('span');
+      hintElement.className = 'q-seller-product-form__hint';
+      hintElement.textContent = hint;
+      wrap.appendChild(hintElement);
     }
 
     const textarea = document.createElement('textarea');
@@ -619,128 +553,126 @@ export class SellerProductFormView {
     textarea.name = name;
     textarea.rows = rows;
     textarea.className = 'q-seller-product-form__textarea';
+    textarea.disabled = disabled;
     if (maxlength !== undefined) textarea.maxLength = maxlength;
     textarea.value = value;
-
+    if (error) textarea.classList.add('is-invalid');
     textarea.addEventListener('input', () => {
       this.viewModel.setField(name, textarea.value);
+      if (name === 'description') {
+        const counter = wrap.querySelector('.q-seller-product-form__character-count');
+        if (counter) counter.textContent = `${textarea.value.length} / 5,000`;
+      }
       this._updateSubmitButtonState();
     });
-
     wrap.appendChild(textarea);
 
-    if (error) {
-      textarea.classList.add('is-invalid');
-      const errEl = document.createElement('span');
-      errEl.className = 'q-seller-product-form__error';
-      errEl.textContent = error;
-      wrap.appendChild(errEl);
+    if (name === 'description') {
+      const counter = document.createElement('span');
+      counter.className = 'q-seller-product-form__character-count';
+      counter.setAttribute('aria-live', 'polite');
+      counter.textContent = `${textarea.value.length} / 5,000`;
+      wrap.appendChild(counter);
     }
-
+    if (error) this._appendFieldError(wrap, error);
     return wrap;
   }
 
-  _updateSubmitButtonState() {
-    const submitBtn = this._bodyEl?.querySelector('.q-seller-product-form__submit-btn');
-    if (submitBtn) {
-      submitBtn.disabled = !this.viewModel.canSubmitForm();
-    }
+  _appendFieldError(wrap, message) {
+    const error = document.createElement('span');
+    error.className = 'q-seller-product-form__error';
+    error.setAttribute('role', 'alert');
+    error.textContent = message;
+    wrap.appendChild(error);
   }
 
-  /**
-   * Builds a thumbnail container with the image preview and an inline
-   * "¿Eliminar?" confirm affordance (no modal-on-modal).
-   *
-   * State machine for each thumb:
-   *   idle        → shows "×" button
-   *   confirming  → shows inline "¿Eliminar? [Sí] [No]"
-   *   deleting    → shows "Eliminando…" (buttons disabled)
-   *   error       → idle view restored + error text below
-   *
-   * @param {{ id: string, path: string, alt_text?: string }} img
-   * @returns {HTMLElement}
-   * @private
-   */
-  _makeImageThumbWithDelete(img) {
+  _updateSubmitButtonState() {
+    const submitButton = this._bodyEl?.querySelector('.q-seller-product-form__submit-btn');
+    if (submitButton) submitButton.disabled = !this.viewModel.canSubmitForm();
+  }
+
+  _makeImageThumb(image, isPrimary) {
+    const item = document.createElement('div');
+    item.className = 'q-seller-product-form__thumb-item';
+
     const thumb = document.createElement('div');
     thumb.className = 'q-seller-product-form__thumb';
-
     thumb.appendChild(
       createImageWithFallback({
-        src: img.path,
-        alt: img.alt_text || 'Imagen de producto',
+        src: image.path,
+        alt: image.alt_text || 'Imagen de producto',
         size: 24,
         placeholderClassName: 'q-seller-product-form__thumb-placeholder',
         label: '',
       })
     );
 
-    // Error text (shown below thumb when imageErrors[id] is set)
-    if (this.viewModel.imageErrors && this.viewModel.imageErrors[img.id]) {
-      const errEl = document.createElement('p');
-      errEl.className = 'q-seller-product-form__image-error';
-      errEl.textContent = this.viewModel.imageErrors[img.id];
-      thumb.appendChild(errEl);
+    if (isPrimary) {
+      const badge = document.createElement('span');
+      badge.className = 'q-seller-product-form__primary-badge';
+      badge.textContent = 'Principal';
+      thumb.appendChild(badge);
     }
 
-    // While this exact image is being deleted, show spinner text only
-    if (this.viewModel.deletingImageId === img.id) {
-      const spinner = document.createElement('span');
-      spinner.className = 'q-seller-product-form__image-deleting';
-      spinner.textContent = 'Eliminando…';
-      thumb.appendChild(spinner);
-      return thumb;
+    const deleting = this.viewModel.deletingImageId === image.id;
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'q-seller-product-form__image-remove';
+    removeButton.setAttribute('aria-label', 'Eliminar imagen');
+    removeButton.textContent = '×';
+    removeButton.disabled = Boolean(this.viewModel.deletingImageId);
+    removeButton.hidden = deleting;
+
+    const confirmation = document.createElement('div');
+    confirmation.className = 'q-seller-product-form__image-confirm';
+    confirmation.hidden = true;
+    confirmation.setAttribute('role', 'group');
+    confirmation.setAttribute('aria-label', 'Confirmar eliminación de imagen');
+    const confirmationText = document.createElement('span');
+    confirmationText.textContent = '¿Eliminar?';
+    const confirmButton = document.createElement('button');
+    confirmButton.type = 'button';
+    confirmButton.textContent = 'Sí';
+    confirmButton.setAttribute('aria-label', 'Sí, eliminar imagen');
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.textContent = 'No';
+    cancelButton.setAttribute('aria-label', 'No, conservar imagen');
+    removeButton.addEventListener('click', () => {
+      confirmation.hidden = false;
+      removeButton.hidden = true;
+      confirmButton.focus();
+    });
+    cancelButton.addEventListener('click', () => {
+      confirmation.hidden = true;
+      removeButton.hidden = false;
+      removeButton.focus();
+    });
+    confirmButton.addEventListener('click', async () => {
+      confirmButton.disabled = true;
+      cancelButton.disabled = true;
+      confirmationText.textContent = 'Eliminando…';
+      await this.viewModel.deleteImage(image.id);
+    });
+    confirmation.append(confirmationText, confirmButton, cancelButton);
+    thumb.append(removeButton, confirmation);
+
+    if (deleting) {
+      const progress = document.createElement('span');
+      progress.className = 'q-seller-product-form__image-deleting';
+      progress.textContent = 'Eliminando…';
+      thumb.appendChild(progress);
     }
+    item.appendChild(thumb);
 
-    // "×" delete button (idle state)
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'q-seller-product-form__image-remove';
-    removeBtn.setAttribute('aria-label', 'Eliminar imagen');
-    removeBtn.textContent = '×';
-    // Disable if any other deletion is in flight
-    removeBtn.disabled = Boolean(this.viewModel.deletingImageId);
-
-    // Inline confirm container (hidden until "×" is clicked)
-    const confirmEl = document.createElement('div');
-    confirmEl.className = 'q-seller-product-form__image-confirm';
-    confirmEl.style.display = 'none';
-
-    const confirmLabel = document.createElement('span');
-    confirmLabel.textContent = '¿Eliminar?';
-
-    const yesBtn = document.createElement('button');
-    yesBtn.type = 'button';
-    yesBtn.textContent = 'Sí';
-
-    const noBtn = document.createElement('button');
-    noBtn.type = 'button';
-    noBtn.textContent = 'No';
-
-    confirmEl.append(confirmLabel, yesBtn, noBtn);
-
-    // "×" click → show confirm, hide "×"
-    removeBtn.addEventListener('click', () => {
-      removeBtn.style.display = 'none';
-      confirmEl.style.display = '';
-    });
-
-    // "No" → hide confirm, show "×"
-    noBtn.addEventListener('click', () => {
-      confirmEl.style.display = 'none';
-      removeBtn.style.display = '';
-    });
-
-    // "Sí" → start deletion
-    yesBtn.addEventListener('click', async () => {
-      yesBtn.disabled = true;
-      noBtn.disabled = true;
-      confirmLabel.textContent = 'Eliminando…';
-      await this.viewModel.deleteImage(img.id);
-      // VM notifies → view re-renders; nothing else needed here
-    });
-
-    thumb.append(removeBtn, confirmEl);
-    return thumb;
+    const imageError = this.viewModel.imageErrors?.[image.id];
+    if (imageError) {
+      const error = document.createElement('p');
+      error.className = 'q-seller-product-form__image-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = imageError;
+      item.appendChild(error);
+    }
+    return item;
   }
 }

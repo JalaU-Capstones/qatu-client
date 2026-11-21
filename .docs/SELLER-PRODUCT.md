@@ -2,8 +2,9 @@
 
 ## Overview
 
-Sellers can create, upload images for, and publish products through a
-guided 3-step wizard. The entire flow ships as of Sprint 6 backend + frontend.
+Sellers create, upload images for, and publish products through a progressive
+single-page flow. Product details stay visible and become read-only after draft
+creation while the image upload section appears below them.
 
 **User story:** US-16 — Create and Publish Product (EP-05 Seller Management).
 
@@ -12,10 +13,10 @@ guided 3-step wizard. The entire flow ships as of Sprint 6 backend + frontend.
 ```
 Login (seller role)
   → /seller/products (list)
-  → /seller/products/new (wizard)
-      Step 1: fill product data → POST /v1/products      → returns draft
-      Step 2: upload 1-5 images → POST /v1/products/:id/images (per file)
-      Step 3: review + publish  → PATCH /v1/products/:id/publish
+  → /seller/products/new (single-page progressive form)
+      Create draft: fill product data → POST /v1/products
+      Upload 1-5 images: POST /v1/products/:id/images (per file)
+      Publish: PATCH /v1/products/:id/publish
   → redirect /seller/products (list refreshes, new product visible)
 ```
 
@@ -36,8 +37,8 @@ Full contract: `src/presentation/docs/paths/products.yaml` and
 - **Draft → published** is the only valid transition (via PATCH publish).
   Any other source state returns `409 INVALID_STATE_TRANSITION`.
 - **At least 1 image required** before publishing.
-  Returns `422 IMAGE_REQUIRED` otherwise. The wizard enforces this in step
-  2 → 3 transition.
+  Returns `422 IMAGE_REQUIRED` otherwise. The creation view keeps publishing
+  disabled until at least one image has uploaded.
 - **Max 5 images per product.** 6th upload returns `422 IMAGE_LIMIT_REACHED`.
 - **Max 5 MiB per image.** `422 FILE_TOO_LARGE`.
 - **Allowed formats:** JPEG, PNG, WebP. `422 INVALID_FILE_FORMAT`.
@@ -63,60 +64,48 @@ FORBIDDEN`.
   Supabase Storage. The `^~` modifier is critical — without it, the regex
   asset location swallows `.webp`/`.png` requests before the proxy runs.
 
-## Wizard UX (`/seller/products/new`)
+## Seller product creation UX (`/seller/products/new`)
 
-### Step 1 — Form
+### Before draft creation
 
-Fields: `name`, `price`, `currency`, `category`, `description`, `stock`,
-`attributes` (optional JSON textarea). Client-side validation mirrors the
-backend. On success: `POST /v1/products` → returns `productId` + `slug` →
-advances to step 2.
+The single-page form accepts `name`, optional editable `slug`, `price`,
+`currency`, `category`, `description`, `stock`, and `attributes` (optional JSON
+textarea). Client-side validation mirrors the backend. On success,
+`POST /v1/products` returns a draft and `productId`; the form remains on screen
+with its fields locked, and the image section is revealed beneath it.
 
-### Step 2 — Upload
+### After draft creation
 
-Drag-and-drop + file picker. Fast-fail client checks (size, MIME, count).
-Thumbnails rendered with `onerror` placeholder. "Siguiente" enabled only
-when ≥ 1 image uploaded. "Guardar como borrador" → redirect to
-`/seller/products` without publishing.
-
-### Step 3 — Review + publish
-
-Read-only review (name, price, category, thumbnails). "Publicar producto"
-→ `PATCH /v1/products/:id/publish`. On success → `/seller/products`.
-On error → inline banner.
+Drag-and-drop and file picker upload images to the existing draft. Fast-fail
+client checks enforce size, MIME, and count. Thumbnails use an image fallback
+and offer an accessible delete confirmation. "Guardar como borrador" returns
+to `/seller/products`; "Publicar producto" stays disabled until an image has
+uploaded and then calls `PATCH /v1/products/:id/publish`. On success the view
+returns to the product list; errors remain visible inline.
 
 ### Abandon protection
 
 `beforeunload` listener while a draft exists and is not yet published.
 Browser-native warning (only shown if the user interacted with the page).
 
-## Known limitations (Sprint 7 debt)
+## Editing a draft
 
-The backend lacks several endpoints needed for a fully editable flow. As of
-Sprint 6, they are marked `x-status: planned` in the OpenAPI spec.
-
-| Missing endpoint                          | Impact                                                                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `GET /v1/seller/products/:id`             | Seller cannot view a single draft by ID. Only the list is available.                                   |
-| `PATCH /v1/products/:id`                  | Step 1 fields are read-only after creation. The user must abandon the draft to start over.             |
-| `DELETE /v1/products/:id`                 | Drafts cannot be soft-deleted from the client. Abandoned drafts stay as orphans in `/seller/products`. |
-| `DELETE /v1/products/:id/images/:imageId` | Uploaded images cannot be removed or reordered in step 2. Max 5 is the only guard.                     |
-
-**Impact:** the wizard only supports the "create → upload → publish in one
-session" flow. Orphan drafts (created + navigated away mid-wizard) can
-still be published inline from `/seller/products` IF they have at least one
-image. Drafts without images are stuck.
+The creation view locks product details after the draft is created because
+images require an existing `productId`. Sellers can update product details
+later from the edit modal in `/seller/products`; uploaded images can be
+removed from the creation view.
 
 ## Visual matrix coverage
 
 `scripts/visual-matrix.mjs` includes:
 
 - `seller-products` — `/seller/products` (KPI cards + filter tabs + grid)
-- `seller-product-new` — `/seller/products/new` (step 1 form)
+- `seller-product-new` — `/seller/products/new` (before/after draft and image
+  deletion confirmation)
 
 Both run in 2 themes × 3 viewports. Screenshots saved to `/tmp/qatu-matrix/`.
-Note: `/seller/products/:id` is NOT in the matrix because the edit route
-does not exist (see limitations).
+To run only product creation, use
+`MATRIX_ROUTES=seller-product-new pnpm test:matrix`.
 
 ## How to test manually
 
@@ -131,8 +120,8 @@ open http://localhost:8080/login
 
 # 3. Navigate to /seller/products
 # 4. Click "Crear producto" → /seller/products/new
-# 5. Fill step 1 → "Crear borrador y continuar"
-# 6. Upload 1+ images → "Siguiente"
+# 5. Fill the form → "Crear borrador"
+# 6. Upload 1+ images in the revealed section
 # 7. "Publicar producto" → redirect to list, new product visible
 ```
 
