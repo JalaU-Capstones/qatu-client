@@ -396,4 +396,145 @@ describe('SellerProductsViewModel', () => {
     expect(vm.products[0].id).toBe('p1');
     expect(notifySpy).not.toHaveBeenCalled();
   });
+
+  it('26. calculates global KPIs across pages and keeps them stable when filtering', async () => {
+    const inventory = Array.from({ length: 25 }, (_, index) =>
+      mockProduct({
+        id: `product-${index}`,
+        state: index < 12 ? 'published' : index < 20 ? 'draft' : 'unpublished',
+        primary_image_path: index % 2 === 0 ? `https://example.com/${index}.png` : null,
+      })
+    );
+    productsApi.getSellerProducts.and.callFake(async ({ page = 1, limit = 20, status } = {}) => {
+      const matching = status ? inventory.filter((product) => product.state === status) : inventory;
+      const start = (page - 1) * limit;
+      return {
+        data: matching.slice(start, start + limit),
+        meta: {
+          page,
+          per_page: limit,
+          total: matching.length,
+          total_pages: Math.ceil(matching.length / limit),
+        },
+      };
+    });
+
+    await vm.load();
+
+    const catalogTotals = {
+      total: 25,
+      published: 12,
+      drafts: 8,
+      unpublished: 5,
+      withImage: 13,
+    };
+    expect(vm.kpis).toEqual(catalogTotals);
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith({
+      page: 2,
+      limit: 20,
+    });
+    expect(productsApi.getSellerProducts).toHaveBeenCalledWith({
+      page: 1,
+      limit: 1,
+      status: 'published',
+    });
+
+    await vm.setFilter('published');
+
+    expect(vm.kpis).toEqual(catalogTotals);
+  });
+
+  it('27. falls back to the available single-page products when metadata is omitted', async () => {
+    const products = [
+      mockProduct({ id: 'published', state: 'published' }),
+      mockProduct({ id: 'draft', state: 'draft', primary_image_path: null }),
+    ];
+    productsApi.getSellerProducts.and.resolveTo({ data: products });
+
+    await vm.load();
+
+    expect(vm.meta).toEqual({ page: 1, per_page: 20, total: 2, total_pages: 1 });
+    expect(vm.kpis).toEqual({
+      total: 2,
+      published: 1,
+      drafts: 1,
+      unpublished: 0,
+      withImage: 1,
+    });
+  });
+
+  it('28. adjusts catalog KPIs after state, image, and delete mutations', async () => {
+    const products = [
+      mockProduct({ id: 'draft', state: 'draft' }),
+      mockProduct({ id: 'published', state: 'published', primary_image_path: null }),
+      mockProduct({ id: 'unpublished', state: 'unpublished' }),
+    ];
+    productsApi.getSellerProducts.and.resolveTo({
+      data: products,
+      meta: { page: 1, per_page: 20, total: 3, total_pages: 1 },
+    });
+
+    await vm.load();
+    expect(vm.kpis).toEqual({
+      total: 3,
+      published: 1,
+      drafts: 1,
+      unpublished: 1,
+      withImage: 2,
+    });
+
+    productsApi.publishProduct.and.resolveTo({ data: { id: 'draft', state: 'published' } });
+    await vm.publishProduct('draft');
+    expect(vm.kpis.published).toBe(2);
+    expect(vm.kpis.drafts).toBe(0);
+
+    productsApi.unpublishProduct.and.resolveTo({
+      data: { id: 'published', state: 'unpublished' },
+    });
+    await vm.unpublishProduct('published');
+    expect(vm.kpis.published).toBe(1);
+    expect(vm.kpis.unpublished).toBe(2);
+
+    vm.applyProductUpdate({
+      ...products[2],
+      state: 'draft',
+      primary_image_path: null,
+    });
+    expect(vm.kpis.drafts).toBe(1);
+    expect(vm.kpis.unpublished).toBe(1);
+    expect(vm.kpis.withImage).toBe(1);
+
+    await vm.deleteProduct('draft');
+    expect(vm.kpis).toEqual({
+      total: 2,
+      published: 0,
+      drafts: 1,
+      unpublished: 1,
+      withImage: 0,
+    });
+  });
+
+  it('29. refreshes catalog KPIs after a new product is added', async () => {
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [],
+      meta: { page: 1, per_page: 20, total: 0, total_pages: 0 },
+    });
+    await vm.load();
+    expect(vm.kpis.total).toBe(0);
+
+    const createdProduct = mockProduct({ id: 'created-product' });
+    productsApi.getSellerProducts.and.resolveTo({
+      data: [createdProduct],
+      meta: { page: 1, per_page: 20, total: 1, total_pages: 1 },
+    });
+    await vm.load();
+
+    expect(vm.kpis).toEqual({
+      total: 1,
+      published: 0,
+      drafts: 1,
+      unpublished: 0,
+      withImage: 1,
+    });
+  });
 });

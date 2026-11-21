@@ -1,4 +1,4 @@
-/* global process, console, window, document, setTimeout */
+/* global process, console, window, document, setTimeout, URL, getComputedStyle */
 /**
  * Visual matrix E2E — routes × 2 themes × 3 viewports.
  *
@@ -151,7 +151,7 @@ const SAMPLE_CATEGORIES = [
 ];
 
 /** Products returned for `GET /v1/seller/products`. */
-const SAMPLE_SELLER_PRODUCTS = [
+const SELLER_PRODUCT_TEMPLATES = [
   {
     id: 'p-draft-with-img',
     seller_id: 'seller-1',
@@ -226,6 +226,40 @@ const SAMPLE_SELLER_PRODUCTS = [
     updated_at: '2026-11-13T08:30:00.000Z',
   },
 ];
+
+const SAMPLE_SELLER_PRODUCTS = [
+  ...SELLER_PRODUCT_TEMPLATES,
+  ...Array.from({ length: 17 }, (_, index) => {
+    const source = SELLER_PRODUCT_TEMPLATES[index % SELLER_PRODUCT_TEMPLATES.length];
+    const suffix = index + SELLER_PRODUCT_TEMPLATES.length + 1;
+    return {
+      ...source,
+      id: `p-matrix-${suffix}`,
+      name: `${source.name} ${suffix}`,
+      slug: `${source.slug}-${suffix}`,
+    };
+  }),
+];
+
+function sellerProductsResponse(url, products) {
+  const query = new URL(url, BASE).searchParams;
+  const page = Math.max(1, Number(query.get('page')) || 1);
+  const limit = Math.max(1, Number(query.get('limit')) || 20);
+  const status = query.get('status');
+  const matchingProducts = status
+    ? products.filter((product) => product.state === status)
+    : products;
+  const start = (page - 1) * limit;
+  return {
+    data: matchingProducts.slice(start, start + limit),
+    meta: {
+      page,
+      per_page: limit,
+      total: matchingProducts.length,
+      total_pages: matchingProducts.length ? Math.ceil(matchingProducts.length / limit) : 0,
+    },
+  };
+}
 
 const ROUTE_FILTER = (process.env.MATRIX_ROUTES || '')
   .split(',')
@@ -356,15 +390,7 @@ for (const route of activeRoutes) {
               meta: { timestamp: '2026-10-14T12:00:00.000Z' },
             };
           } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
-            body = {
-              data: sessionSellerProducts,
-              meta: {
-                page: 1,
-                per_page: 20,
-                total: sessionSellerProducts.length,
-                total_pages: sessionSellerProducts.length ? 1 : 0,
-              },
-            };
+            body = sellerProductsResponse(url, sessionSellerProducts);
           } else if (url.includes('/v1/categories') && req.method() === 'GET') {
             body = {
               data: SAMPLE_CATEGORIES,
@@ -463,13 +489,23 @@ for (const route of activeRoutes) {
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
                     };
                   } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
+                    const query = new URL(url, window.location.origin).searchParams;
+                    const page = Math.max(1, Number(query.get('page')) || 1);
+                    const limit = Math.max(1, Number(query.get('limit')) || 20);
+                    const status = query.get('status');
+                    const matchingProducts = status
+                      ? sellerProductsData.filter((product) => product.state === status)
+                      : sellerProductsData;
+                    const start = (page - 1) * limit;
                     body = {
-                      data: sellerProductsData,
+                      data: matchingProducts.slice(start, start + limit),
                       meta: {
-                        page: 1,
-                        per_page: 20,
-                        total: sellerProductsData.length,
-                        total_pages: sellerProductsData.length ? 1 : 0,
+                        page,
+                        per_page: limit,
+                        total: matchingProducts.length,
+                        total_pages: matchingProducts.length
+                          ? Math.ceil(matchingProducts.length / limit)
+                          : 0,
                       },
                     };
                   } else if (url.includes('/v1/categories')) {
@@ -649,6 +685,25 @@ for (const route of activeRoutes) {
                 publishAction: check('.q-seller-products__publish-btn'),
                 unpublishAction: check('.q-seller-products__unpublish-btn'),
                 viewAction: check('.q-seller-products__view-btn'),
+                pagination: check('.q-seller-products__pagination'),
+                compactPaginationRange: check('.q-seller-products__pagination-compact'),
+                paginationSingleRow: (() => {
+                  const pagination = document.querySelector('.q-seller-products__pagination');
+                  if (!pagination || window.innerWidth > 480) return Boolean(pagination);
+                  const items = [
+                    pagination.querySelector('.q-seller-products__pagination-prev'),
+                    pagination.querySelector('.q-seller-products__pagination-range'),
+                    pagination.querySelector('.q-seller-products__pagination-next'),
+                  ];
+                  const topEdges = items.map(
+                    (item) => item?.getBoundingClientRect().top ?? Infinity
+                  );
+                  return Math.max(...topEdges) - Math.min(...topEdges) < 14;
+                })(),
+                compactPaginationVisible: (() => {
+                  const label = document.querySelector('.q-seller-products__pagination-compact');
+                  return window.innerWidth > 480 || getComputedStyle(label).display !== 'none';
+                })(),
                 footer: check('.q-footer'),
               };
             case 'seller-product-new':

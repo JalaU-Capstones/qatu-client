@@ -76,6 +76,9 @@ describe('SellerProductsPageView', () => {
     expect(container.querySelector('.q-seller-products__empty')).not.toBeNull();
     expect(container.querySelectorAll('[role="listitem"]').length).toBe(0);
     expect(container.textContent).toContain('No tienes productos en esta lista.');
+    expect(
+      container.querySelector('.q-seller-products__empty svg[aria-hidden="true"]')
+    ).not.toBeNull();
   });
 
   it('renders the seller breadcrumb and accessible status tabs', async () => {
@@ -92,6 +95,9 @@ describe('SellerProductsPageView', () => {
     expect(container.querySelector('.q-seller-products__create-btn').textContent).toBe(
       'Crear producto'
     );
+    expect(
+      container.querySelector('.q-seller-products__create-btn svg[aria-hidden="true"]')
+    ).not.toBeNull();
 
     const tabs = Array.from(container.querySelectorAll('[role="tab"]'));
     expect(tabs.map((tab) => tab.textContent)).toEqual([
@@ -134,6 +140,9 @@ describe('SellerProductsPageView', () => {
     expect(
       container.querySelector('[data-kpi="withImage"] .q-seller-products__kpi-value').textContent
     ).toBe('1');
+    expect(
+      container.querySelectorAll('.q-seller-products__kpi-icon svg[aria-hidden="true"]').length
+    ).toBe(5);
 
     expect(container.querySelectorAll('[role="listitem"]').length).toBe(2);
   });
@@ -161,6 +170,11 @@ describe('SellerProductsPageView', () => {
     expect(actionsFor('draft')).toEqual(['Publicar', 'Editar', 'Eliminar']);
     expect(actionsFor('published')).toEqual(['Despublicar', 'Editar', 'Eliminar', 'Ver']);
     expect(actionsFor('unpublished')).toEqual(['Publicar', 'Editar', 'Eliminar']);
+    expect(
+      container.querySelectorAll(
+        '.q-seller-products__actions button:not([aria-hidden="true"]) svg[aria-hidden="true"]'
+      ).length
+    ).toBe(10);
     expect(
       container.querySelector('.product-card--seller button[aria-label^="Añadir"]')
     ).toBeNull();
@@ -274,6 +288,7 @@ describe('SellerProductsPageView', () => {
     const errorEl = container.querySelector('.q-seller-products__error');
     expect(errorEl).not.toBeNull();
     expect(errorEl.textContent).toContain('No pudimos cargar tus productos');
+    expect(errorEl.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
 
     // Setup success for retry
     productsApi.getSellerProducts.and.resolveTo({
@@ -327,6 +342,10 @@ describe('SellerProductsPageView', () => {
     expect(pagination.querySelector('.q-seller-products__pagination-label').textContent).toBe(
       'Mostrando 1\u201320 de 27'
     );
+    expect(pagination.querySelector('.q-seller-products__pagination-compact').textContent).toBe(
+      '1\u201320 / 27'
+    );
+    expect(pagination.querySelectorAll('button svg[aria-hidden="true"]').length).toBe(2);
   });
 
   it('11. has prev disabled and next enabled on page 1', async () => {

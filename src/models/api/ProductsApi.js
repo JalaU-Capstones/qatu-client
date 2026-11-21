@@ -299,7 +299,7 @@ export class ProductsApi {
    * GET /v1/seller/products — paginated list of the authenticated seller's
    * products (includes drafts).
    *
-   * @param {{ page?: number, limit?: number, status?: 'draft'|'published' }} [query]
+   * @param {{ page?: number, limit?: number, status?: 'draft'|'published'|'unpublished' }} [query]
    * @returns {Promise<{ data: Array<Object>, meta: Object }>}
    */
   async getSellerProducts(query = {}) {

@@ -1,6 +1,69 @@
 import { SellerProductsViewModel } from '../../viewmodels/pages/SellerProductsViewModel.js';
 import { ProductCard } from '../components/ProductCard.js';
 
+const ICON_SHAPES = {
+  add: [['path', { d: 'M12 5v14M5 12h14' }]],
+  alert: [
+    ['path', { d: 'm10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z' }],
+    ['path', { d: 'M12 9v4m0 4h.01' }],
+  ],
+  box: [
+    ['path', { d: 'm12 3 9 5-9 5-9-5 9-5Z' }],
+    ['path', { d: 'M3 8v8l9 5 9-5V8M12 13v8' }],
+  ],
+  check: [
+    ['circle', { cx: '12', cy: '12', r: '9' }],
+    ['path', { d: 'm8 12 2.5 2.5L16 9' }],
+  ],
+  chevronLeft: [['path', { d: 'm15 18-6-6 6-6' }]],
+  chevronRight: [['path', { d: 'm9 18 6-6-6-6' }]],
+  delete: [['path', { d: 'M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6' }]],
+  edit: [['path', { d: 'm16 4 4 4M4 20l4.5-1 10.8-10.8a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z' }]],
+  eye: [
+    ['path', { d: 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z' }],
+    ['circle', { cx: '12', cy: '12', r: '3' }],
+  ],
+  eyeOff: [
+    ['path', { d: 'm3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8' }],
+    [
+      'path',
+      {
+        d: 'M9.9 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a15 15 0 0 1-3.1 3.8M6.2 6.2C3.5 8 2 12 2 12s3.5 7 10 7a10 10 0 0 0 4-.8',
+      },
+    ],
+  ],
+  image: [
+    ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '3' }],
+    ['circle', { cx: '8.5', cy: '8.5', r: '1.5' }],
+    ['path', { d: 'm21 15-5-5L5 21' }],
+  ],
+  publish: [['path', { d: 'M12 19V5m-7 7 7-7 7 7' }]],
+  unpublish: [['path', { d: 'M12 5v14m7-7-7 7-7-7' }]],
+};
+
+function createIcon(name, className = '') {
+  const namespace = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(namespace, 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '1.8');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  icon.setAttribute('class', ['q-seller-products__icon', className].filter(Boolean).join(' '));
+
+  for (const [tagName, attributes] of ICON_SHAPES[name] || ICON_SHAPES.box) {
+    const shape = document.createElementNS(namespace, tagName);
+    for (const [attribute, value] of Object.entries(attributes)) {
+      shape.setAttribute(attribute, value);
+    }
+    icon.appendChild(shape);
+  }
+  return icon;
+}
+
 export class SellerProductsPageView {
   /**
    * @param {Object} [options]
@@ -86,7 +149,7 @@ export class SellerProductsPageView {
     const createBtn = document.createElement('button');
     createBtn.type = 'button';
     createBtn.className = 'q-btn q-btn--primary q-seller-products__create-btn';
-    createBtn.textContent = 'Crear producto';
+    createBtn.append(createIcon('add'), document.createTextNode('Crear producto'));
     createBtn.addEventListener('click', () => {
       if (typeof this.onCreate === 'function') {
         this.onCreate();
@@ -189,17 +252,24 @@ export class SellerProductsPageView {
 
     const kpis = this.viewModel.kpis;
     const kpiData = [
-      { key: 'total', label: 'Total', value: kpis.total },
-      { key: 'published', label: 'Publicados', value: kpis.published },
-      { key: 'drafts', label: 'Borradores', value: kpis.drafts },
-      { key: 'unpublished', label: 'No publicados', value: kpis.unpublished },
-      { key: 'withImage', label: 'Con imagen', value: kpis.withImage },
+      { key: 'total', label: 'Total', value: kpis.total, icon: 'box' },
+      { key: 'published', label: 'Publicados', value: kpis.published, icon: 'check' },
+      { key: 'drafts', label: 'Borradores', value: kpis.drafts, icon: 'edit' },
+      { key: 'unpublished', label: 'No publicados', value: kpis.unpublished, icon: 'eyeOff' },
+      { key: 'withImage', label: 'Con imagen', value: kpis.withImage, icon: 'image' },
     ];
 
     for (const item of kpiData) {
       const card = document.createElement('div');
       card.className = 'q-seller-products__kpi q-glass-panel';
       card.dataset.kpi = item.key;
+
+      const heading = document.createElement('div');
+      heading.className = 'q-seller-products__kpi-heading';
+
+      const icon = document.createElement('span');
+      icon.className = 'q-seller-products__kpi-icon';
+      icon.appendChild(createIcon(item.icon));
 
       const label = document.createElement('span');
       label.className = 'q-seller-products__kpi-label';
@@ -209,7 +279,8 @@ export class SellerProductsPageView {
       val.className = 'q-seller-products__kpi-value';
       val.textContent = String(item.value);
 
-      card.append(label, val);
+      heading.append(icon, label);
+      card.append(heading, val);
       this._kpisContainer.appendChild(card);
     }
   }
@@ -272,6 +343,7 @@ export class SellerProductsPageView {
       msg.className = 'q-seller-products__error-message';
       msg.textContent = this.viewModel.errorMessage;
 
+      const icon = createIcon('alert', 'q-seller-products__state-icon');
       const retryBtn = document.createElement('button');
       retryBtn.type = 'button';
       retryBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__retry-btn';
@@ -280,7 +352,7 @@ export class SellerProductsPageView {
         this.viewModel.load();
       });
 
-      errorBox.append(msg, retryBtn);
+      errorBox.append(icon, msg, retryBtn);
       this._contentContainer.appendChild(errorBox);
       return;
     }
@@ -292,7 +364,7 @@ export class SellerProductsPageView {
       const p = document.createElement('p');
       p.textContent = 'No tienes productos en esta lista.';
 
-      empty.appendChild(p);
+      empty.append(createIcon('box', 'q-seller-products__state-icon'), p);
       this._contentContainer.appendChild(empty);
       return;
     }
@@ -326,20 +398,28 @@ export class SellerProductsPageView {
     const prevBtn = document.createElement('button');
     prevBtn.type = 'button';
     prevBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__pagination-prev';
-    prevBtn.textContent = '← Anterior';
+    prevBtn.append(createIcon('chevronLeft'), document.createTextNode('Anterior'));
+    prevBtn.setAttribute('aria-label', 'Página anterior');
     prevBtn.disabled = !vm.hasPrevPage;
     prevBtn.addEventListener('click', () => {
       vm.setPage(vm.currentPage - 1);
     });
 
-    const rangeLabel = document.createElement('span');
-    rangeLabel.className = 'q-seller-products__pagination-label';
-    rangeLabel.textContent = vm.pageRangeLabel;
+    const rangeLabel = document.createElement('div');
+    rangeLabel.className = 'q-seller-products__pagination-range';
+    const fullRange = document.createElement('span');
+    fullRange.className = 'q-seller-products__pagination-label';
+    fullRange.textContent = vm.pageRangeLabel;
+    const compactRange = document.createElement('span');
+    compactRange.className = 'q-seller-products__pagination-compact';
+    compactRange.textContent = vm.compactPageRangeLabel;
+    rangeLabel.append(fullRange, compactRange);
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'q-btn q-btn--outline q-btn--sm q-seller-products__pagination-next';
-    nextBtn.textContent = 'Siguiente →';
+    nextBtn.append(document.createTextNode('Siguiente'), createIcon('chevronRight'));
+    nextBtn.setAttribute('aria-label', 'Página siguiente');
     nextBtn.disabled = !vm.hasNextPage;
     nextBtn.addEventListener('click', () => {
       vm.setPage(vm.currentPage + 1);
@@ -380,11 +460,11 @@ export class SellerProductsPageView {
     actions.setAttribute('role', 'group');
     actions.setAttribute('aria-label', `Acciones para ${product.name || 'producto'}`);
 
-    const addAction = (label, className, onClick) => {
+    const addAction = (label, iconName, className, onClick) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = className;
-      button.textContent = label;
+      button.append(createIcon(iconName), document.createTextNode(label));
       button.setAttribute('aria-label', `${label} ${product.name || 'producto'}`);
       button.addEventListener('click', onClick);
       actions.appendChild(button);
@@ -395,6 +475,7 @@ export class SellerProductsPageView {
       const isUnpublishing = this.viewModel.publishingId === product.id;
       const unpublishBtn = addAction(
         isUnpublishing ? 'Despublicando…' : 'Despublicar',
+        'unpublish',
         'q-btn q-btn--outline q-btn--sm q-seller-products__unpublish-btn',
         () => this.viewModel.unpublishProduct(product.id)
       );
@@ -404,6 +485,7 @@ export class SellerProductsPageView {
       const canPublish = this.viewModel.canPublish(product);
       const publishBtn = addAction(
         isPublishing ? 'Publicando…' : 'Publicar',
+        'publish',
         'q-btn q-btn--primary q-btn--sm q-seller-products__publish-btn',
         () => this.viewModel.publishProduct(product.id)
       );
@@ -415,15 +497,18 @@ export class SellerProductsPageView {
       }
     }
 
-    addAction('Editar', 'q-btn q-btn--neutral q-btn--sm q-seller-products__edit-btn', () =>
+    addAction('Editar', 'edit', 'q-btn q-btn--neutral q-btn--sm q-seller-products__edit-btn', () =>
       this.onEditProduct?.(product.id)
     );
-    addAction('Eliminar', 'q-btn q-btn--outline q-btn--sm q-seller-products__delete-btn', () =>
-      this.onDeleteProduct?.(product.id)
+    addAction(
+      'Eliminar',
+      'delete',
+      'q-btn q-btn--outline q-btn--sm q-seller-products__delete-btn',
+      () => this.onDeleteProduct?.(product.id)
     );
 
     if (product.state === 'published' && product.slug) {
-      addAction('Ver', 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn', () =>
+      addAction('Ver', 'eye', 'q-btn q-btn--outline q-btn--sm q-seller-products__view-btn', () =>
         this.onViewProduct?.(product.slug)
       );
     }
