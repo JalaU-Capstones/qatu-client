@@ -37,6 +37,10 @@ describe('DeleteConfirmModal', () => {
     const question = document.querySelector('.q-delete-confirm-modal__question');
     expect(question).not.toBeNull();
     expect(question.textContent).toContain('Zapatillas Rojas');
+    expect(question.querySelector('.q-delete-confirm-modal__product-name').textContent).toBe(
+      'Zapatillas Rojas'
+    );
+    expect(document.querySelector('.q-delete-confirm-modal__icon-badge svg')).not.toBeNull();
 
     const warning = document.querySelector('.q-delete-confirm-modal__warning');
     expect(warning).not.toBeNull();
@@ -80,9 +84,13 @@ describe('DeleteConfirmModal', () => {
     await tick();
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.q-delete-confirm-modal__confirm').textContent).toContain(
+      'Eliminando…'
+    );
     // Both buttons should be disabled while in-flight
     const buttons = document.querySelectorAll('.q-delete-confirm-modal__footer button');
     buttons.forEach((btn) => expect(btn.disabled).toBe(true));
+    expect(document.querySelector('.q-modal__close').disabled).toBe(true);
 
     // resolve to unblock
     resolveConfirm({ status: 'success' });
@@ -129,6 +137,23 @@ describe('DeleteConfirmModal', () => {
 
     // Clean up
     document.querySelector('.q-btn--outline').click();
+    await openPromise;
+  });
+
+  it('does not treat an unrecognized confirmation result as successful deletion', async () => {
+    onConfirm = jasmine.createSpy('onConfirm').and.resolveTo(undefined);
+    modal = new DeleteConfirmModal({ productId: 'p1', productName: 'Prod', onConfirm });
+    const openPromise = modal.open();
+    await tick();
+
+    document.querySelector('.q-btn--danger').click();
+    await tick();
+
+    expect(document.querySelector('.q-modal')).not.toBeNull();
+    expect(document.querySelector('.q-delete-confirm-modal__error').textContent).toContain(
+      'No se pudo completar'
+    );
+    document.querySelector('.q-delete-confirm-modal__cancel').click();
     await openPromise;
   });
 

@@ -1,5 +1,34 @@
 import { ModalView } from './ModalView.js';
 
+function createIcon(name) {
+  const namespace = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(namespace, 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '1.8');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+
+  if (name === 'trash') {
+    const path = document.createElementNS(namespace, 'path');
+    path.setAttribute('d', 'M3 6h18m-2 0-.9 14H5.9L5 6m4 0V4h6v2m-5 4v6m4-6v6');
+    icon.appendChild(path);
+  } else {
+    const path = document.createElementNS(namespace, 'path');
+    path.setAttribute(
+      'd',
+      'm10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z'
+    );
+    const mark = document.createElementNS(namespace, 'path');
+    mark.setAttribute('d', 'M12 9v4m0 4h.01');
+    icon.append(path, mark);
+  }
+  return icon;
+}
+
 export class DeleteConfirmModal {
   /**
    * Modal that asks the user to confirm deletion of a product.
@@ -93,6 +122,8 @@ export class DeleteConfirmModal {
     if (!this._bodyContainer || !this._footerContainer) return;
     this._renderBody();
     this._renderFooter();
+    const closeButton = this._modal?.element?.querySelector('.q-modal__close');
+    if (closeButton) closeButton.disabled = this._isDeleting;
   }
 
   /**
@@ -101,15 +132,28 @@ export class DeleteConfirmModal {
   _renderBody() {
     this._bodyContainer.replaceChildren();
 
+    const summary = document.createElement('div');
+    summary.className = 'q-delete-confirm-modal__summary';
+    const badge = document.createElement('span');
+    badge.className = 'q-delete-confirm-modal__icon-badge';
+    badge.appendChild(createIcon('alert'));
+    const copy = document.createElement('div');
+    copy.className = 'q-delete-confirm-modal__copy';
     const p1 = document.createElement('p');
     p1.className = 'q-delete-confirm-modal__question';
-    p1.textContent = `¿Eliminar "${this.productName}"?`;
+    p1.appendChild(document.createTextNode('¿Quieres eliminar '));
+    const name = document.createElement('strong');
+    name.className = 'q-delete-confirm-modal__product-name';
+    name.textContent = this.productName || 'este producto';
+    p1.append(name, document.createTextNode('?'));
 
     const p2 = document.createElement('p');
     p2.className = 'q-delete-confirm-modal__warning';
-    p2.textContent = 'Esta acción no se puede deshacer desde la interfaz.';
+    p2.textContent = 'La eliminación es permanente y no se puede deshacer.';
 
-    this._bodyContainer.append(p1, p2);
+    copy.append(p1, p2);
+    summary.append(badge, copy);
+    this._bodyContainer.appendChild(summary);
 
     if (this._errorMessage) {
       const errEl = document.createElement('p');
@@ -128,7 +172,7 @@ export class DeleteConfirmModal {
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
-    cancelBtn.className = 'q-btn q-btn--outline';
+    cancelBtn.className = 'q-btn q-btn--outline q-delete-confirm-modal__cancel';
     cancelBtn.textContent = 'Cancelar';
     cancelBtn.disabled = this._isDeleting;
     cancelBtn.addEventListener('click', () => {
@@ -138,8 +182,11 @@ export class DeleteConfirmModal {
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.className = 'q-btn q-btn--danger';
-    deleteBtn.textContent = this._isDeleting ? 'Eliminando…' : 'Eliminar';
+    deleteBtn.className = 'q-btn q-btn--danger q-delete-confirm-modal__confirm';
+    deleteBtn.append(
+      createIcon('trash'),
+      document.createTextNode(this._isDeleting ? 'Eliminando…' : 'Eliminar')
+    );
     deleteBtn.disabled = this._isDeleting;
     deleteBtn.addEventListener('click', async () => {
       if (this._isDeleting) return; // double-click guard
@@ -149,10 +196,8 @@ export class DeleteConfirmModal {
 
       try {
         const result = await this.onConfirm();
-        // onConfirm() delegates to VM.deleteProduct() which returns { status, error? }
-        // Treat anything other than explicit 'error' as success.
-        if (result && result.status === 'error') {
-          throw result.error || new Error('Error al eliminar el producto.');
+        if (result?.status !== 'success') {
+          throw result?.error || new Error('No se pudo completar la eliminación.');
         }
         this._confirmed = true;
         this._modal.close();

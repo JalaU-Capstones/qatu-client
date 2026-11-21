@@ -58,6 +58,12 @@ const ROUTES = [
     authenticated: true,
     roles: ['seller'],
   },
+  {
+    name: 'seller-product-edit',
+    path: '/seller/products/p-draft-with-img/edit',
+    authenticated: true,
+    roles: ['seller'],
+  },
   { name: 'admin-reports', path: '/admin/reports', authenticated: true, roles: ['admin'] },
 ];
 
@@ -318,7 +324,9 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
-      const sessionSellerProducts = route.name === 'seller-products' ? SAMPLE_SELLER_PRODUCTS : [];
+      const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
+        ? SAMPLE_SELLER_PRODUCTS
+        : [];
 
       await page.setRequestInterception(true);
       page.on('request', (req) => {
@@ -380,6 +388,7 @@ for (const route of activeRoutes) {
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
             url.includes('/v1/seller/products') ||
+            url.includes('/v1/products/') ||
             url.includes('/v1/categories') ||
             url.includes('/v1/admin/reports'))
         ) {
@@ -414,6 +423,24 @@ for (const route of activeRoutes) {
                 roles: sessionRoles,
               },
               meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+            };
+          } else if (url.includes('/v1/products/') && url.includes('/images')) {
+            body = {
+              data: [
+                {
+                  id: 'matrix-image-1',
+                  product_id: 'p-draft-with-img',
+                  path: 'http://localhost:5173/product-images/matrix-image-1.webp',
+                  alt_text: 'Frente del producto',
+                  position: 0,
+                },
+              ],
+              meta: { timestamp: '2026-11-18T12:00:00.000Z' },
+            };
+          } else if (url.includes('/v1/products/')) {
+            body = {
+              data: SELLER_PRODUCT_TEMPLATES[0],
+              meta: { timestamp: '2026-11-18T12:00:00.000Z' },
             };
           } else if (url.includes('/v1/cart')) {
             body = {
@@ -459,7 +486,7 @@ for (const route of activeRoutes) {
 
       // Set theme and optional authenticated session before navigation so first paint is themed
       await page.evaluateOnNewDocument(
-        (t, isAuth, roles, ordersData, sellerProductsData, categoriesData) => {
+        (t, isAuth, roles, ordersData, sellerProductsData, categoriesData, editProductData) => {
           try {
             window.localStorage.setItem('qatu.theme', t);
             if (isAuth) {
@@ -496,6 +523,7 @@ for (const route of activeRoutes) {
                   url.includes('/v1/profiles/') ||
                   url.includes('/v1/cart') ||
                   url.includes('/v1/seller/products') ||
+                  url.includes('/v1/products/') ||
                   url.includes('/v1/categories') ||
                   url.includes('/v1/orders') ||
                   url.includes('/v1/admin/reports')
@@ -513,6 +541,24 @@ for (const route of activeRoutes) {
                         roles,
                       },
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/products/') && url.includes('/images')) {
+                    body = {
+                      data: [
+                        {
+                          id: 'matrix-image-1',
+                          product_id: 'p-draft-with-img',
+                          path: 'http://localhost:5173/product-images/matrix-image-1.webp',
+                          alt_text: 'Frente del producto',
+                          position: 0,
+                        },
+                      ],
+                      meta: { timestamp: '2026-11-18T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/products/')) {
+                    body = {
+                      data: editProductData,
+                      meta: { timestamp: '2026-11-18T12:00:00.000Z' },
                     };
                   } else if (url.includes('/v1/cart')) {
                     body = {
@@ -581,7 +627,8 @@ for (const route of activeRoutes) {
         sessionRoles,
         sessionOrders,
         sessionSellerProducts,
-        SAMPLE_CATEGORIES
+        SAMPLE_CATEGORIES,
+        SELLER_PRODUCT_TEMPLATES[0]
       );
 
       try {
@@ -750,6 +797,31 @@ for (const route of activeRoutes) {
                 categorySelect: check('select[name="categoryId"]'),
                 imagesHiddenBeforeDraft: !check('.q-seller-product-form__images-panel'),
                 submitBtn: check('.q-seller-product-form__submit-btn'),
+                footer: check('.q-footer'),
+              };
+            case 'seller-product-edit':
+              return {
+                header: check('.q-header'),
+                formPage: check('.q-edit-product'),
+                breadcrumb: check('.q-edit-product__breadcrumb'),
+                statusBadge: check('.q-edit-product__status'),
+                nameInput: check('input[name="name"]'),
+                categorySelect: check('select[name="categoryId"]'),
+                priceInput: check('input[name="price"]'),
+                descriptionCount: check('.q-edit-product__character-count'),
+                descriptionResize: (() => {
+                  const textarea = document.querySelector('textarea[name="description"]');
+                  return textarea ? getComputedStyle(textarea).resize === 'vertical' : false;
+                })(),
+                descriptionMaxWidth: (() => {
+                  const textarea = document.querySelector('textarea[name="description"]');
+                  return textarea ? getComputedStyle(textarea).maxWidth === '100%' : false;
+                })(),
+                productImages: check('.q-edit-product__images-panel'),
+                primaryImage: check('.q-edit-product__primary-badge'),
+                cancelButton: check('.q-edit-product__cancel-btn'),
+                updateButton: check('.q-edit-product__save-btn'),
+                deleteButton: check('.q-edit-product__delete-btn'),
                 footer: check('.q-footer'),
               };
             default:

@@ -25,10 +25,15 @@ describe('EditProductViewModel', () => {
   beforeEach(() => {
     productsApi = {
       getProductById: jasmine.createSpy('getProductById').and.resolveTo(mockProduct()),
+      listProductImages: jasmine.createSpy('listProductImages').and.resolveTo({ data: [] }),
       updateProduct: jasmine.createSpy('updateProduct').and.resolveTo({
         data: mockProduct({ name: 'Updated Product' }),
         meta: {},
       }),
+      uploadProductImage: jasmine.createSpy('uploadProductImage').and.resolveTo({
+        data: { id: 'image-1', path: '/image.webp', alt_text: 'Frente', position: 0 },
+      }),
+      deleteProductImage: jasmine.createSpy('deleteProductImage').and.resolveTo(undefined),
     };
 
     categoriesApi = {
@@ -271,5 +276,62 @@ describe('EditProductViewModel', () => {
 
     vm.setField('attributesText', '{broken'); // throws in buildUpdatePayload
     expect(vm.isDirty).toBe(true); // dirty getter tolerates throws and returns true
+  });
+
+  it('loads image records and exposes image-list errors without hiding the product', async () => {
+    productsApi.listProductImages.and.resolveTo({
+      data: [
+        { id: 'image-2', position: 1 },
+        { id: 'image-1', position: 0 },
+      ],
+    });
+    await vm.load('prod-123');
+    expect(vm.images.map((image) => image.id)).toEqual(['image-1', 'image-2']);
+
+    productsApi.listProductImages.and.rejectWith(new Error('Images unavailable'));
+    await vm.load('prod-123');
+    expect(vm.loadedProduct.id).toBe('prod-123');
+    expect(vm.imageErrorMessage).toBe('Images unavailable');
+  });
+
+  it('uploads images with accessible alt text and deletes them through the product API', async () => {
+    await vm.load('prod-123');
+    const file = new File(['image'], 'bag.webp', { type: 'image/webp' });
+
+    await vm.addImages([file], 'Vista frontal');
+    expect(productsApi.uploadProductImage).toHaveBeenCalledWith('prod-123', file, {
+      alt_text: 'Vista frontal',
+      position: 0,
+    });
+    expect(vm.images.length).toBe(1);
+
+    const result = await vm.deleteImage('image-1');
+    expect(result.status).toBe('success');
+    expect(productsApi.deleteProductImage).toHaveBeenCalledWith('prod-123', 'image-1');
+    expect(vm.images).toEqual([]);
+  });
+
+  it('does not upload past the five-image limit', async () => {
+    await vm.load('prod-123');
+    vm.images = Array.from({ length: 5 }, (_, position) => ({ id: `image-${position}`, position }));
+    const file = new File(['image'], 'extra.png', { type: 'image/png' });
+
+    await vm.addImages([file]);
+
+    expect(productsApi.uploadProductImage).not.toHaveBeenCalled();
+    expect(vm.uploadErrors[0].message).toContain('hasta 5 imágenes');
+  });
+
+  it('rejects invalid required values and does not include currency changes for published products', async () => {
+    await vm.load('prod-123');
+    vm.setField('name', 'ab');
+    expect(() => vm.buildUpdatePayload()).toThrowError(
+      'El nombre debe tener entre 3 y 200 caracteres.'
+    );
+
+    productsApi.getProductById.and.resolveTo(mockProduct({ state: 'published' }));
+    await vm.load('prod-123');
+    vm.setField('currency', 'EUR');
+    expect(vm.buildUpdatePayload()).toBeNull();
   });
 });

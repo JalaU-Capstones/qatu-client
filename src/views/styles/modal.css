@@ -1,7 +1,6 @@
 /**
  * Modal primitive styles (.q-modal* BEM).
- * Used by ModalView shell (C3a) and consumed by EditProductModal (C3b)
- * and DeleteProductModal (C4).
+ * Shared modal shell used by confirmation and product dialogs.
  */
 
 .q-modal {
@@ -12,6 +11,7 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  padding: 16px;
 }
 
 .q-modal__backdrop {
@@ -90,4 +90,131 @@
   gap: 0.5rem;
   justify-content: flex-end;
   align-items: center;
+}
+
+.q-modal__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.q-delete-confirm-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.q-delete-confirm-modal__summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.q-delete-confirm-modal__icon-badge {
+  display: grid;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border: 1px solid color-mix(in srgb, var(--q-color-error) 28%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--q-color-error) 12%, var(--q-bg-surface) 88%);
+  color: var(--q-color-error);
+  place-items: center;
+}
+
+.q-delete-confirm-modal__icon-badge svg {
+  width: 25px;
+  height: 25px;
+}
+
+.q-delete-confirm-modal__copy {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.q-delete-confirm-modal__question {
+  margin: 0 0 8px;
+  color: var(--q-fg-primary);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.q-delete-confirm-modal__product-name {
+  color: var(--q-fg-primary);
+  font-weight: var(--q-font-weight-bold, 700);
+}
+
+.q-delete-confirm-modal__warning {
+  margin: 0;
+  color: var(--q-fg-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.q-delete-confirm-modal__error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--q-color-error) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--q-color-error) 9%, var(--q-bg-surface) 91%);
+  color: var(--q-color-error);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.q-modal__footer:has(.q-delete-confirm-modal__footer) {
+  margin-top: 20px;
+}
+
+.q-delete-confirm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.q-delete-confirm-modal__footer .q-btn {
+  min-height: 46px;
+  min-width: 120px;
+}
+
+.q-delete-confirm-modal__confirm svg {
+  width: 17px;
+  height: 17px;
+}
+
+.q-delete-confirm-modal__footer .q-btn:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+@media (max-width: 480px) {
+  .q-modal__panel {
+    max-height: calc(100dvh - 32px);
+    padding: 20px;
+  }
+
+  .q-modal__header {
+    gap: 12px;
+  }
+
+  .q-modal__title {
+    font-size: 1.125rem;
+  }
+
+  .q-modal__footer:has(.q-delete-confirm-modal__footer) {
+    margin-top: 16px;
+  }
+
+  .q-delete-confirm-modal__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .q-delete-confirm-modal__footer .q-btn {
+    width: 100%;
+  }
 }

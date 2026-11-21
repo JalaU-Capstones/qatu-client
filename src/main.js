@@ -52,7 +52,6 @@ import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
 import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
 import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
-import { EditProductModal } from './views/components/EditProductModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AboutView } from './views/pages/AboutView.js';
@@ -63,6 +62,7 @@ import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { CheckoutView } from './views/pages/CheckoutView.js';
+import { EditProductView } from './views/pages/EditProductView.js';
 import { HomeView } from './views/pages/HomeView.js';
 import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
 import { OrdersPageView } from './views/pages/OrdersPageView.js';
@@ -181,17 +181,7 @@ if (app) {
       viewModel: productDetailViewModel,
       productSlug,
       onBuyNow: () => router.navigate('/cart'),
-      onEditProduct: (productId) => {
-        const modal = new EditProductModal({
-          productId,
-          productsApi,
-          categoriesApi,
-          onSaved: () => {
-            void productDetailViewModel.load(productSlug);
-          },
-        });
-        void modal.open();
-      },
+      onEditProduct: (productId) => router.navigate(`/seller/products/${productId}/edit`),
       onDeleteProduct: (productId) => {
         const product = productDetailViewModel.product;
         const modal = new DeleteConfirmModal({
@@ -302,17 +292,7 @@ if (app) {
       onNavigate: (path) => router.navigate(path),
       onCreate: () => router.navigate('/seller/products/new'),
       onViewProduct: (slug) => router.navigate(`/products/${slug}`),
-      onEditProduct: (productId) => {
-        const modal = new EditProductModal({
-          productId,
-          productsApi,
-          categoriesApi,
-          onSaved: (updatedProduct) => {
-            sellerProductsViewModel.applyProductUpdate(updatedProduct);
-          },
-        });
-        void modal.open();
-      },
+      onEditProduct: (productId) => router.navigate(`/seller/products/${productId}/edit`),
       onDeleteProduct: (productId) => {
         const product = sellerProductsViewModel.products.find((p) => p.id === productId);
         const modal = new DeleteConfirmModal({
@@ -324,6 +304,50 @@ if (app) {
       },
     });
     currentPageView.mount(mainEl);
+  };
+
+  const renderSellerProductEdit = async (productId) => {
+    clearCurrentView('seller');
+    await sessionReady;
+    const routePath = `/seller/products/${productId}/edit`;
+    if (currentPageView || router.currentPath !== routePath) return;
+
+    const access = getSellerRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo(routePath);
+      router.navigate('/login', { replace: true });
+      return;
+    }
+    if (access === 'home') {
+      router.navigate('/', { replace: true });
+      return;
+    }
+    if (categories.length === 0) {
+      await categoriesReady;
+      if (router.currentPath !== routePath) return;
+    }
+
+    const view = new EditProductView({
+      productId,
+      productsApi,
+      categoriesApi,
+      onNavigate: (path) => router.navigate(path),
+      onDeleteProduct: (product) => {
+        const modal = new DeleteConfirmModal({
+          productId: product.id,
+          productName: product.name,
+          onConfirm: async () => {
+            await productsApi.deleteProduct(product.id);
+            return { status: 'success' };
+          },
+        });
+        void modal.open().then(({ confirmed }) => {
+          if (confirmed) router.navigate('/seller/products');
+        });
+      },
+    });
+    view.mount(mainEl);
+    currentPageView = view;
   };
 
   const renderSellerProductNew = async () => {
@@ -528,6 +552,9 @@ if (app) {
   router.addRoute('/seller/orders', () => renderSellerOrders());
   router.addRoute('/seller/products', () => renderSellerProducts());
   router.addRoute('/seller/products/new', () => renderSellerProductNew());
+  router.addRoute('/seller/products/:productId/edit', (_path, params) =>
+    renderSellerProductEdit(params.productId)
+  );
   router.addRoute('/profile', () => renderProfile());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
