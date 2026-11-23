@@ -1,3 +1,24 @@
+.q-app:has(.q-admin-applications-page) {
+  background-color: var(--q-bg-page);
+  background-image:
+    radial-gradient(ellipse at 12% 18%, var(--q-ambient-pink), transparent 42%),
+    radial-gradient(ellipse at 92% 70%, var(--q-ambient-cyan), transparent 36%);
+  background-repeat: no-repeat;
+}
+
+.q-app:has(.q-admin-applications-page) .q-footer {
+  padding-top: 0;
+  background: transparent;
+}
+
+.q-app:has(.q-admin-applications-page) .q-footer::before {
+  display: none;
+}
+
+.q-app:has(.q-admin-applications-page) .q-footer-container {
+  padding-top: calc(var(--q-geist-space-8x, 32) * 1px);
+}
+
 .q-admin-applications-page {
   position: relative;
   isolation: isolate;
@@ -6,14 +27,9 @@
   margin-top: calc(0px - var(--q-header-overlay-height, 72px));
   overflow-x: clip;
   padding: calc(var(--q-header-overlay-height, 72px) + calc(var(--q-geist-space-8x, 32) * 1px)) 0
-    calc(var(--q-geist-space-16x, 64) * 1px);
+    calc(var(--q-geist-space-10x, 40) * 1px);
   box-sizing: border-box;
   color: var(--q-fg-primary);
-  background-color: var(--q-bg-page);
-  background-image:
-    radial-gradient(ellipse at 12% 18%, var(--q-ambient-pink), transparent 42%),
-    radial-gradient(ellipse at 92% 70%, var(--q-ambient-cyan), transparent 36%);
-  background-repeat: no-repeat;
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
 }
 
@@ -28,7 +44,7 @@
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: calc(var(--q-geist-space-4x, 16) * 1px);
   margin-bottom: calc(var(--q-geist-space-6x, 24) * 1px);
@@ -72,7 +88,7 @@
   border: 1px solid color-mix(in srgb, var(--q-border-default) 82%, transparent);
   border-radius: calc(var(--q-radius-xl, 12) * 1px);
   background: color-mix(in srgb, var(--q-bg-surface) 76%, transparent);
-  box-shadow: var(--q-shadow-sm);
+  box-shadow: var(--q-shadow-md);
   backdrop-filter: blur(calc(var(--q-blur-sm, 8) * 1px));
   -webkit-backdrop-filter: blur(calc(var(--q-blur-sm, 8) * 1px));
   -webkit-overflow-scrolling: touch;
@@ -97,7 +113,7 @@
 
 .q-admin-applications-table th,
 .q-admin-applications-table td {
-  padding: calc(var(--q-geist-space-3x, 12) * 1px) calc(var(--q-geist-space-4x, 16) * 1px);
+  padding: calc(var(--q-geist-space-4x, 16) * 1px);
   border-bottom: 1px solid var(--q-border-default);
   color: var(--q-fg-primary);
   font-size: calc(var(--q-text-sm, 14) * 1px);
@@ -115,19 +131,19 @@
 }
 
 .q-admin-applications-table th:nth-child(1) {
-  width: 17%;
+  width: 16%;
 }
 
 .q-admin-applications-table th:nth-child(2) {
-  width: 25%;
+  width: 23%;
 }
 
 .q-admin-applications-table th:nth-child(3) {
-  width: 21%;
+  width: 19%;
 }
 
 .q-admin-applications-table th:nth-child(4) {
-  width: 11%;
+  width: 10%;
 }
 
 .q-admin-applications-table th:nth-child(5) {
@@ -135,7 +151,7 @@
 }
 
 .q-admin-applications-table th:nth-child(6) {
-  width: 14%;
+  width: 20%;
 }
 
 .q-admin-applications-table tbody tr {
@@ -199,11 +215,14 @@
 .q-admin-app-actions {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: calc(var(--q-geist-space-2x, 8) * 1px);
 }
 
 .q-admin-app-actions .q-btn {
+  min-width: 76px;
+  min-height: calc(var(--q-ds-size-small, 36) * 1px);
+  justify-content: center;
   white-space: nowrap;
 }
 
@@ -383,6 +402,7 @@
   .q-admin-app-reject-buttons .q-btn {
     width: 100%;
     min-width: 0;
+    min-height: calc(var(--q-ds-size-small, 36) * 1px);
     justify-content: center;
     white-space: normal;
   }

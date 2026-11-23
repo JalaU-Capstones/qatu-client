@@ -1141,7 +1141,9 @@ for (const route of activeRoutes) {
                 pageBackgroundCoversTop: (() => {
                   const page = document.querySelector('.q-admin-applications-page');
                   if (!page) return false;
-                  const style = getComputedStyle(page);
+                  const app = document.querySelector('.q-app');
+                  if (!app) return false;
+                  const style = getComputedStyle(app);
                   const headerZIndex = Number.parseInt(
                     getComputedStyle(document.querySelector('.q-header')).zIndex,
                     10
@@ -1152,6 +1154,14 @@ for (const route of activeRoutes) {
                     style.backgroundImage !== 'none' &&
                     Number.isFinite(headerZIndex) &&
                     headerZIndex > 0
+                  );
+                })(),
+                footerSeamRemoved: (() => {
+                  const footer = document.querySelector('.q-footer');
+                  return (
+                    footer !== null &&
+                    getComputedStyle(footer).backgroundImage === 'none' &&
+                    getComputedStyle(footer, '::before').display === 'none'
                   );
                 })(),
                 noHorizontalOverflow:
