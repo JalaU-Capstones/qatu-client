@@ -14,16 +14,30 @@ export class OrdersPageView {
    * @param {Object} [options]
    * @param {OrdersViewModel} [options.viewModel]
    * @param {Function} [options.onNavigate]
+   * @param {string|null} [options.orderNumber]
    */
-  constructor({ viewModel = new OrdersViewModel(), onNavigate = null } = {}) {
+  constructor({ viewModel = new OrdersViewModel(), onNavigate = null, orderNumber = null } = {}) {
     this.viewModel = viewModel;
     this.onNavigate = onNavigate;
+    this.orderNumber = orderNumber;
     this.element = null;
     this._orderList = new OrderListComponent({
-      onOrderClick: (order) => this.viewModel.loadOrderById(order.id),
+      onOrderClick: (order) => {
+        if (this.onNavigate) {
+          this.onNavigate(`/orders/${encodeURIComponent(order.order_number || order.id)}`);
+        } else {
+          this.viewModel.loadOrderById(order.id);
+        }
+      },
     });
     this._orderDetail = new OrderDetailComponent({
-      onBack: () => this.viewModel.clearSelectedOrder(),
+      onBack: () => {
+        if (this.orderNumber && this.onNavigate) {
+          this.onNavigate('/orders');
+        } else {
+          this.viewModel.clearSelectedOrder();
+        }
+      },
     });
     this._unsubscribe = null;
   }
@@ -46,7 +60,11 @@ export class OrdersPageView {
       return;
     }
 
-    this.viewModel.loadOrders(1);
+    if (this.orderNumber) {
+      this.viewModel.loadOrderByNumber(this.orderNumber);
+    } else {
+      this.viewModel.loadOrders(1);
+    }
   }
 
   /**
@@ -69,7 +87,7 @@ export class OrdersPageView {
    */
   render() {
     const section = document.createElement('section');
-    section.className = 'q-orders-page';
+    section.className = this.orderNumber ? 'q-orders-page q-orders-page--detail' : 'q-orders-page';
     section.setAttribute('aria-label', 'Historial de compras');
 
     const container = document.createElement('div');
@@ -175,7 +193,9 @@ export class OrdersPageView {
     if (loginLink && this.onNavigate) {
       loginLink.addEventListener('click', (e) => {
         e.preventDefault();
-        authRedirectStore.setReturnTo('/orders');
+        authRedirectStore.setReturnTo(
+          this.orderNumber ? `/orders/${encodeURIComponent(this.orderNumber)}` : '/orders'
+        );
         this.onNavigate('/login');
       });
     }

@@ -242,10 +242,11 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
-  const renderOrders = () => {
+  const renderOrders = (orderNumber = null) => {
     clearCurrentView();
     currentPageView = new OrdersPageView({
       onNavigate: (path) => router.navigate(path),
+      orderNumber,
     });
     currentPageView.mount(mainEl);
   };
@@ -551,6 +552,7 @@ if (app) {
     renderOrderConfirmation(params.orderNumber)
   );
   router.addRoute('/orders', () => renderOrders());
+  router.addRoute('/orders/:orderNumber', (_path, params) => renderOrders(params.orderNumber));
   router.addRoute('/seller/orders', () => renderSellerOrders());
   router.addRoute('/seller/products', () => renderSellerProducts());
   router.addRoute('/seller/products/new', () => renderSellerProductNew());

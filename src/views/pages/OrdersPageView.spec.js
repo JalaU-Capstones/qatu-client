@@ -149,6 +149,35 @@ describe('OrdersPageView', () => {
     expect(viewModel.setStatusFilter).toHaveBeenCalledWith('shipped');
   });
 
+  it('navigates to the order-number route from the order list', async () => {
+    const onNavigate = jasmine.createSpy('onNavigate');
+    view = new OrdersPageView({ viewModel, onNavigate });
+    view.mount(container);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    container.querySelector('[data-testid="view-order-details-btn"]').click();
+
+    expect(onNavigate).toHaveBeenCalledWith('/orders/ORD-00100042');
+    expect(viewModel.selectedOrder).toBeNull();
+  });
+
+  it('loads a direct order-number route and returns to the list', async () => {
+    const onNavigate = jasmine.createSpy('onNavigate');
+    view = new OrdersPageView({ viewModel, onNavigate, orderNumber: 'ORD-00100042' });
+    view.mount(container);
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(mockApi.listOrders).toHaveBeenCalledWith({ page: 1, limit: 100 });
+    expect(container.querySelector('[data-testid="order-detail"]')).not.toBeNull();
+    expect(
+      container.querySelector('.q-orders-page').classList.contains('q-orders-page--detail')
+    ).toBeTrue();
+
+    container.querySelector('[data-testid="order-detail-back-btn"]').click();
+    expect(onNavigate).toHaveBeenCalledWith('/orders');
+  });
+
   it('renders order detail view when an order is selected, and returns to list on back', async () => {
     mockApi.getOrderById.and.returnValue(
       Promise.resolve({

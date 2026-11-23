@@ -8,6 +8,8 @@ const TABS = [
   { id: 'reviews', label: 'Reseñas' },
 ];
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
  * ViewModel for the product detail page (`/products/:slug`).
  *
@@ -52,7 +54,7 @@ export class ProductDetailViewModel {
   }
 
   /**
-   * Loads the product by slug and up to three related products.
+   * Loads the product by slug or UUID and up to three related products.
    * @param {string} productSlug
    * @returns {Promise<void>}
    */
@@ -69,7 +71,9 @@ export class ProductDetailViewModel {
     this._notify();
 
     try {
-      const product = await this.productsApi.getProductBySlug(productSlug);
+      const product = UUID_PATTERN.test(productSlug)
+        ? await this.productsApi.getProductById(productSlug)
+        : await this.productsApi.getProductBySlug(productSlug);
       if (!product) {
         this.status = 'not-found';
         this._notify();

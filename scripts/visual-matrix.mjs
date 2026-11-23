@@ -49,6 +49,7 @@ const ROUTES = [
   },
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
+  { name: 'order-detail', path: '/orders/ORD-00100001', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
   // Seller dashboard: needs the seller role (the route guard redirects everyone else).
   { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
@@ -173,6 +174,33 @@ const ORDER_CONFIRMATION_SAMPLE = {
     country: 'BO',
   },
   items: [{ id: 'oi-matrix-1', product_name: 'Manta andina', quantity: 1, subtotal: 40 }],
+};
+
+const ORDER_DETAIL_SAMPLE = {
+  ...ORDER_CONFIRMATION_SAMPLE,
+  id: 'b5555555-5555-4555-8555-555555555555',
+  order_number: 'ORD-00100001',
+  status: 'shipped',
+  subtotal: 104.98,
+  total: 109.97,
+  items: [
+    {
+      id: 'oi-matrix-2',
+      product_id: 'c1111111-1111-4111-8111-111111111111',
+      product_name: 'Manta andina tejida a mano en lana de alpaca',
+      quantity: 2,
+      unit_price: 39.99,
+      subtotal: 79.98,
+    },
+    {
+      id: 'oi-matrix-3',
+      product_id: 'c2222222-2222-4222-8222-222222222222',
+      product_name: 'Chullo artesanal de lana con diseño tradicional',
+      quantity: 1,
+      unit_price: 25,
+      subtotal: 25,
+    },
+  ],
 };
 
 /** Categories for `GET /v1/categories` (header dropdown + wizard step 1). */
@@ -397,11 +425,13 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders =
-        route.name === 'orders' || route.name === 'order-confirmation'
-          ? [ORDER_CONFIRMATION_SAMPLE]
-          : route.name === 'seller-orders'
-            ? SELLER_SAMPLE_ORDERS
-            : [];
+        route.name === 'order-detail'
+          ? [ORDER_DETAIL_SAMPLE]
+          : route.name === 'orders' || route.name === 'order-confirmation'
+            ? [ORDER_CONFIRMATION_SAMPLE]
+            : route.name === 'seller-orders'
+              ? SELLER_SAMPLE_ORDERS
+              : [];
       const sessionCartItems = ['cart', 'checkout'].includes(route.name) ? CART_SAMPLE_ITEMS : [];
       const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
         ? SAMPLE_SELLER_PRODUCTS
@@ -923,6 +953,24 @@ for (const route of activeRoutes) {
                 orderCard: check('.q-order-card'),
                 status: check('.q-order-status'),
                 detailsButton: check('[data-testid="view-order-details-btn"]'),
+                backgroundCoversTop: (() => {
+                  const page = document.querySelector('.q-orders-page');
+                  if (!page) return false;
+                  const top = page.getBoundingClientRect().top;
+                  const backgroundTop = Number.parseFloat(getComputedStyle(page, '::before').top);
+                  return top + backgroundTop <= 1;
+                })(),
+                footer: check('.q-footer'),
+              };
+            case 'order-detail':
+              return {
+                header: check('.q-header'),
+                orderDetail: check('[data-testid="order-detail"]'),
+                orderTitle: check('[data-testid="order-detail-title"]'),
+                tracker: check('[data-testid="order-tracker"]'),
+                productLinks: check('a[data-testid="order-item-name"][data-route]'),
+                summary: check('[data-testid="order-summary-card"]'),
+                shippingAddress: check('[data-testid="order-shipping-card"]'),
                 backgroundCoversTop: (() => {
                   const page = document.querySelector('.q-orders-page');
                   if (!page) return false;

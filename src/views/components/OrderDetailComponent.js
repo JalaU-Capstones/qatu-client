@@ -88,6 +88,9 @@ export class OrderDetailComponent {
     const tracker = document.createElement('div');
     tracker.className = 'q-order-tracker';
     tracker.setAttribute('data-testid', 'order-tracker');
+    tracker.setAttribute('role', 'group');
+    tracker.setAttribute('aria-label', 'Estado del pedido');
+    tracker.dataset.status = currentStatus;
 
     const steps = [
       { key: 'pending', label: getOrderStatusLabel('pending') },
@@ -123,6 +126,9 @@ export class OrderDetailComponent {
       }
 
       item.className = `q-order-tracker__step ${statusClass}`;
+      if (idx === activeIndex) {
+        item.setAttribute('aria-current', 'step');
+      }
       item.innerHTML = `
         <span class="q-order-tracker__icon" aria-hidden="true">${idx + 1}</span>
         <span class="q-order-tracker__label">${step.label}</span>
@@ -264,10 +270,19 @@ export class OrderDetailComponent {
         const infoDiv = document.createElement('div');
         infoDiv.className = 'q-order-detail__item-info';
 
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'q-order-detail__item-name';
-        nameSpan.setAttribute('data-testid', 'order-item-name');
-        nameSpan.textContent = item.product_name || item.name || 'Producto sin nombre';
+        const productName = item.product_name || item.name || 'Producto sin nombre';
+        const productIdentifier = item.product_slug || item.slug || item.product_id;
+        const nameElement = document.createElement(
+          typeof productIdentifier === 'string' && productIdentifier.trim() ? 'a' : 'span'
+        );
+        nameElement.className = 'q-order-detail__item-name';
+        nameElement.setAttribute('data-testid', 'order-item-name');
+        nameElement.textContent = productName;
+        if (nameElement instanceof HTMLAnchorElement) {
+          nameElement.href = `/products/${encodeURIComponent(productIdentifier)}`;
+          nameElement.setAttribute('data-route', '');
+          nameElement.setAttribute('aria-label', `Ver producto: ${productName}`);
+        }
 
         const qtySpan = document.createElement('span');
         qtySpan.className = 'q-order-detail__item-qty';
@@ -275,7 +290,7 @@ export class OrderDetailComponent {
         const unitPriceStr = this._formatCurrency(item.unit_price, order.currency);
         qtySpan.textContent = `x${item.quantity} · ${unitPriceStr}`;
 
-        infoDiv.appendChild(nameSpan);
+        infoDiv.appendChild(nameElement);
         infoDiv.appendChild(qtySpan);
 
         const subtotalSpan = document.createElement('span');

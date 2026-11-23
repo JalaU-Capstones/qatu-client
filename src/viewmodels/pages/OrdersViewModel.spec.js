@@ -96,6 +96,28 @@ describe('OrdersViewModel', () => {
     expect(viewModel.selectedOrder.id).toBe('ord-1');
   });
 
+  it('loadOrderByNumber searches the buyer order pages and selects the matching order', async () => {
+    mockApi.listOrders.and.returnValues(
+      Promise.resolve({ data: [], meta: { page: 1, total_pages: 2 } }),
+      Promise.resolve({
+        data: [{ id: 'ord-2', order_number: 'ORD-00100042', items: [{ product_id: 'p1' }] }],
+        meta: { page: 2, total_pages: 2 },
+      })
+    );
+
+    await viewModel.loadOrderByNumber('ORD-00100042');
+
+    expect(mockApi.listOrders.calls.argsFor(0)).toEqual([{ page: 1, limit: 100 }]);
+    expect(mockApi.listOrders.calls.argsFor(1)).toEqual([{ page: 2, limit: 100 }]);
+    expect(viewModel.selectedOrder).toEqual({
+      id: 'ord-2',
+      order_number: 'ORD-00100042',
+      items: [{ product_id: 'p1' }],
+    });
+    expect(viewModel.errorMessage).toBe('');
+    expect(viewModel.isLoading).toBeFalse();
+  });
+
   it('clearSelectedOrder clears selectedOrder and notifies listeners', () => {
     viewModel.selectedOrder = { id: 'ord-1' };
     const notifySpy = jasmine.createSpy('notify');

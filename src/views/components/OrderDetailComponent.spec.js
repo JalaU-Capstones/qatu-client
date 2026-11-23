@@ -16,6 +16,7 @@ describe('OrderDetailComponent', () => {
     items: [
       {
         id: 'item-1',
+        product_id: 'c1111111-1111-4111-8111-111111111111',
         product_name: 'Wireless Mouse',
         quantity: 2,
         unit_price: 25,
@@ -23,6 +24,7 @@ describe('OrderDetailComponent', () => {
       },
       {
         id: 'item-2',
+        product_id: 'c2222222-2222-4222-8222-222222222222',
         product_name: 'Mechanical Keyboard',
         quantity: 1,
         unit_price: 50,
@@ -48,6 +50,12 @@ describe('OrderDetailComponent', () => {
 
     const firstItemName = el.querySelector('[data-testid="order-item-name"]');
     expect(firstItemName.textContent).toBe('Wireless Mouse');
+    expect(firstItemName.tagName).toBe('A');
+    expect(firstItemName.getAttribute('href')).toBe(
+      '/products/c1111111-1111-4111-8111-111111111111'
+    );
+    expect(firstItemName.getAttribute('aria-label')).toBe('Ver producto: Wireless Mouse');
+    expect(firstItemName.hasAttribute('data-route')).toBeTrue();
 
     const totalEl = el.querySelector('[data-testid="order-detail-total"]');
     expect(totalEl.textContent).toContain('120.00');
@@ -68,6 +76,7 @@ describe('OrderDetailComponent', () => {
     const currentStep = el.querySelector('.q-order-tracker__step--current');
     expect(currentStep).not.toBeNull();
     expect(currentStep.textContent).toContain('Confirmada');
+    expect(currentStep.getAttribute('aria-current')).toBe('step');
 
     const completedStep = el.querySelector('.q-order-tracker__step--completed');
     expect(completedStep).not.toBeNull();

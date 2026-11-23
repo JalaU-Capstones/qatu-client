@@ -90,6 +90,48 @@ export class OrdersViewModel {
   }
 
   /**
+   * Loads an order by its public order number from the authenticated buyer's orders.
+   * @param {string} orderNumber
+   * @returns {Promise<void>}
+   */
+  async loadOrderByNumber(orderNumber) {
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.forbiddenError = false;
+    this.selectedOrder = null;
+    this._notify();
+
+    try {
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const { data, meta } = await this.ordersApi.listOrders({ page, limit: 100 });
+        const orders = Array.isArray(data) ? data : [];
+        this.selectedOrder = orders.find(
+          (order) => order.order_number === orderNumber || order.id === orderNumber
+        );
+        totalPages = Math.max(page, Number(meta?.total_pages) || 0);
+
+        if (this.selectedOrder) break;
+        page += 1;
+      }
+
+      if (!this.selectedOrder) {
+        this.errorMessage = 'No se encontró la orden solicitada.';
+      }
+    } catch (err) {
+      if (err?.statusCode === 403 || err?.code === 'FORBIDDEN') {
+        this.forbiddenError = true;
+      }
+      this.errorMessage = err?.message || 'Failed to load order details';
+    } finally {
+      this.isLoading = false;
+      this._notify();
+    }
+  }
+
+  /**
    * Loads a specific order by ID (e.g. when viewing details).
    * @param {string} orderId
    * @returns {Promise<void>}

@@ -45,6 +45,9 @@ const createApi = ({
   getProductBySlug: jasmine
     .createSpy('getProductBySlug')
     .and.callFake(() => (error ? Promise.reject(error) : Promise.resolve(product))),
+  getProductById: jasmine
+    .createSpy('getProductById')
+    .and.callFake(() => (error ? Promise.reject(error) : Promise.resolve(product))),
   getSimilarProducts: jasmine
     .createSpy('getSimilarProducts')
     .and.callFake(() => (error ? Promise.reject(error) : Promise.resolve(similar))),
@@ -86,6 +89,19 @@ describe('ProductDetailViewModel', () => {
     expect(vm.quantity).toBe(1);
     expect(vm.activeTab).toBe('description');
     expect(vm.selectedImage).toBe(0);
+  });
+
+  it('load() resolves UUID product routes directly by ID', async () => {
+    const productId = 'c1111111-1111-4111-8111-111111111111';
+    api = createApi({ product: createProduct({ id: productId }) });
+    vm = new ProductDetailViewModel({ productsApi: api, cartService });
+
+    await vm.load(productId);
+
+    expect(api.getProductById).toHaveBeenCalledWith(productId);
+    expect(api.getProductBySlug).not.toHaveBeenCalled();
+    expect(vm.status).toBe('ready');
+    expect(vm.product.id).toBe(productId);
   });
 
   it('load() sets not-found when the product does not exist', async () => {
