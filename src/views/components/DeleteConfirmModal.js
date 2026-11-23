@@ -31,23 +31,36 @@ function createIcon(name) {
 
 export class DeleteConfirmModal {
   /**
-   * Modal that asks the user to confirm deletion of a product.
-   *
-   * Design decisions:
-   * - closeOnBackdropClick: false (data-loss risk mid-flight)
-   * - closeOnEsc: true when idle; ignored while onConfirm is in-flight
-   * - Uses .q-btn--danger for the destructive button (token: --q-color-red-56)
+   * Modal that asks the user to confirm deletion of an item (product, category, etc.).
    *
    * @param {Object} options
    * @param {string} options.productId
-   * @param {string} options.productName          Used in the confirm copy
-   * @param {Function} options.onConfirm          Async; called on "Eliminar" click.
-   *   Should delegate to SellerProductsViewModel.deleteProduct(productId).
+   * @param {string} [options.productName]
+   * @param {string} [options.itemName]
+   * @param {string} [options.title='Eliminar producto']
+   * @param {string} [options.fallbackItemName='este producto']
+   * @param {string} [options.warningText='La eliminación es permanente y no se puede deshacer.']
+   * @param {string} [options.errorFallback='Error al eliminar el producto.']
+   * @param {Function} options.onConfirm
    * @param {'sm'|'md'} [options.size='sm']
    */
-  constructor({ productId, productName, onConfirm, size = 'sm' } = {}) {
+  constructor({
+    productId,
+    productName,
+    itemName,
+    title = 'Eliminar producto',
+    fallbackItemName = 'este producto',
+    warningText = 'La eliminación es permanente y no se puede deshacer.',
+    errorFallback = 'Error al eliminar el producto.',
+    onConfirm,
+    size = 'sm',
+  } = {}) {
     this.productId = productId;
-    this.productName = productName;
+    this.productName = itemName ?? productName;
+    this.title = title;
+    this.fallbackItemName = fallbackItemName;
+    this.warningText = warningText;
+    this.errorFallback = errorFallback;
     this.onConfirm = onConfirm;
     this.size = size;
 
@@ -75,15 +88,14 @@ export class DeleteConfirmModal {
     this._footerContainer.className = 'q-delete-confirm-modal__footer';
 
     this._modal = new ModalView({
-      title: 'Eliminar producto',
+      title: this.title,
       body: this._bodyContainer,
       footer: this._footerContainer,
       size: this.size,
       closeOnBackdropClick: false,
-      closeOnEsc: false, // we handle Esc manually to block it while in-flight
+      closeOnEsc: false,
     });
 
-    // Manual Esc handler: allow close only when idle
     this._onKeydown = (e) => {
       if (e.key === 'Escape' && !this._isDeleting) {
         e.preventDefault();
@@ -144,12 +156,12 @@ export class DeleteConfirmModal {
     p1.appendChild(document.createTextNode('¿Quieres eliminar '));
     const name = document.createElement('strong');
     name.className = 'q-delete-confirm-modal__product-name';
-    name.textContent = this.productName || 'este producto';
+    name.textContent = this.productName || this.fallbackItemName;
     p1.append(name, document.createTextNode('?'));
 
     const p2 = document.createElement('p');
     p2.className = 'q-delete-confirm-modal__warning';
-    p2.textContent = 'La eliminación es permanente y no se puede deshacer.';
+    p2.textContent = this.warningText;
 
     copy.append(p1, p2);
     summary.append(badge, copy);
@@ -189,7 +201,7 @@ export class DeleteConfirmModal {
     );
     deleteBtn.disabled = this._isDeleting;
     deleteBtn.addEventListener('click', async () => {
-      if (this._isDeleting) return; // double-click guard
+      if (this._isDeleting) return;
       this._isDeleting = true;
       this._errorMessage = '';
       this._render();
@@ -203,7 +215,7 @@ export class DeleteConfirmModal {
         this._modal.close();
       } catch (err) {
         this._isDeleting = false;
-        this._errorMessage = err?.message || 'Error al eliminar el producto.';
+        this._errorMessage = err?.message || this.errorFallback;
         this._render();
       }
     });

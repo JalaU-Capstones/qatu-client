@@ -48,6 +48,7 @@ export class HeaderViewModel {
     this.searchValue = '';
     this.onSearch = options.onSearch || null;
     this.onCategoryClick = options.onCategoryClick || null;
+    this.onAdminCategoriesClick = options.onAdminCategoriesClick || null;
     this.isDropdownOpen = false;
     this._listeners = new Set();
   }
@@ -230,6 +231,14 @@ export class HeaderViewModel {
 
   triggerCategory(categoryId) {
     if (typeof this.onCategoryClick === 'function') this.onCategoryClick(categoryId);
+  }
+
+  triggerAdminCategories() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminCategoriesClick === 'function') {
+      this.onAdminCategoriesClick();
+    }
+    this._notify();
   }
 
   /**

@@ -32,6 +32,7 @@ import './views/pages/cart.css';
 import './views/pages/checkout.css';
 import './views/styles/modal.css';
 import './views/pages/edit-product-modal.css';
+import './views/pages/admin-categories.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
@@ -46,6 +47,7 @@ import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
 import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
+import { AdminCategoriesViewModel } from './viewmodels/pages/AdminCategoriesViewModel.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
@@ -55,6 +57,7 @@ import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
 import { AboutView } from './views/pages/AboutView.js';
+import { AdminCategoriesPageView } from './views/pages/AdminCategoriesPageView.js';
 import { AdminReportsPageView } from './views/pages/AdminReportsPageView.js';
 import { AdminSellerApplicationsPageView } from './views/pages/AdminSellerApplicationsPageView.js';
 import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
@@ -515,6 +518,40 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderAdminCategories = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/admin/categories') return;
+
+    const access = getAdminRouteAccess(authStore);
+    if (access === 'login') {
+      authRedirectStore.setReturnTo('/admin/categories');
+      router.navigate('/login', { replace: true });
+      return;
+    }
+
+    const viewModel = new AdminCategoriesViewModel({
+      onCategoriesChanged: (updated) => {
+        categories = updated;
+        header.viewModel.setCategories(updated);
+      },
+    });
+
+    currentPageView = new AdminCategoriesPageView({
+      viewModel,
+      onNavigate: (path) => router.navigate(path),
+    });
+
+    if (access === 'forbidden') {
+      currentPageView.render();
+      mainEl.appendChild(currentPageView.element);
+      currentPageView._renderForbidden();
+      return;
+    }
+
+    currentPageView.mount(mainEl);
+  };
+
   /**
    * Product-card "Añadir" handler: delegates to CartService; guests are
    * redirected to /login and their intent is queued for replay after login.
@@ -567,6 +604,7 @@ if (app) {
   router.addRoute('/admin/reports', () => renderAdminReports());
   router.addRoute('/reports', () => renderAdminReports());
   router.addRoute('/admin/seller-applications', () => renderAdminSellerApplications());
+  router.addRoute('/admin/categories', () => renderAdminCategories());
 
   router.addRoute('/auth/callback', () => {
     clearCurrentView();
@@ -597,6 +635,7 @@ if (app) {
     router.navigate('/products?category=' + encodeURIComponent(categoryId));
   header.viewModel.onSellerApplyClick = () => router.navigate('/seller/apply');
   header.viewModel.onAdminReportsClick = () => router.navigate('/admin/reports');
+  header.viewModel.onAdminCategoriesClick = () => router.navigate('/admin/categories');
   header.viewModel.onAdminSellerApplicationsClick = () =>
     router.navigate('/admin/seller-applications');
 

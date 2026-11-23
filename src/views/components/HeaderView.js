@@ -15,6 +15,8 @@ const DROPDOWN_ICONS = {
     '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
   logout:
     '<path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path>',
+  categories:
+    '<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect>',
 };
 
 /**
@@ -382,6 +384,20 @@ export class HeaderView {
     return link;
   }
 
+  _createAdminCategoriesLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-admin-categories-btn';
+    link.href = '/admin/categories';
+    link.dataset.route = '';
+    this._setDropdownItemContent(link, 'Categorías', 'categories');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerAdminCategories();
+    });
+    return link;
+  }
+
   _setDropdownItemContent(item, label, icon) {
     const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     iconElement.setAttribute('class', 'q-header-dropdown-icon');
@@ -413,9 +429,15 @@ export class HeaderView {
     const existingOrders = dropdown.querySelector('.q-header-seller-orders-btn');
     const existingAdminReports = dropdown.querySelector('.q-header-admin-reports-btn');
     const existingAdminApps = dropdown.querySelector('.q-header-admin-applications-btn');
+    const existingAdminCategories = dropdown.querySelector('.q-header-admin-categories-btn');
     const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
     const separator = dropdown.querySelector('.q-header-dropdown-separator');
-    const adminAnchor = existingAdminReports || existingAdminApps || separator || logoutBtn;
+    const adminAnchor =
+      existingAdminReports ||
+      existingAdminApps ||
+      existingAdminCategories ||
+      separator ||
+      logoutBtn;
 
     if (vm.isSeller) {
       if (existingApply) existingApply.remove();
@@ -437,15 +459,22 @@ export class HeaderView {
       if (!existingAdminReports) {
         dropdown.insertBefore(
           this._createAdminReportsLink(),
-          existingAdminApps || separator || logoutBtn
+          existingAdminApps || existingAdminCategories || separator || logoutBtn
         );
       }
       if (!existingAdminApps) {
-        dropdown.insertBefore(this._createAdminSellerApplicationsLink(), separator || logoutBtn);
+        dropdown.insertBefore(
+          this._createAdminSellerApplicationsLink(),
+          existingAdminCategories || separator || logoutBtn
+        );
+      }
+      if (!existingAdminCategories) {
+        dropdown.insertBefore(this._createAdminCategoriesLink(), separator || logoutBtn);
       }
     } else {
       if (existingAdminReports) existingAdminReports.remove();
       if (existingAdminApps) existingAdminApps.remove();
+      if (existingAdminCategories) existingAdminCategories.remove();
     }
   }
 
@@ -573,6 +602,7 @@ export class HeaderView {
     if (this.viewModel.isAdmin) {
       dropdown.appendChild(this._createAdminReportsLink());
       dropdown.appendChild(this._createAdminSellerApplicationsLink());
+      dropdown.appendChild(this._createAdminCategoriesLink());
     }
 
     const logoutBtn = document.createElement('button');
