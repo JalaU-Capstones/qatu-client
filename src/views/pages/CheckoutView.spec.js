@@ -94,6 +94,21 @@ describe('CheckoutView', () => {
       expect(back.textContent).toContain('Volver al carrito');
     });
 
+    it('shows the current checkout step before the shipping details', async () => {
+      await mountView();
+
+      const steps = [...container.querySelectorAll('.q-checkout__step')];
+      expect(steps.map((step) => step.textContent)).toEqual([
+        'PASO 1 DE 3 · ENVÍO',
+        '2 · PAGO',
+        '3 · REVISIÓN',
+      ]);
+      expect(steps[0].getAttribute('aria-current')).toBe('step');
+      expect(
+        steps[0].parentElement.nextElementSibling.classList.contains('q-checkout__panel')
+      ).toBe(true);
+    });
+
     it('has the "Datos de envío" card with the six mockup fields', async () => {
       await mountView();
 

@@ -41,6 +41,7 @@ const ROUTES = [
   { name: 'catalog', path: '/products' },
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart', authenticated: true },
+  { name: 'checkout', path: '/checkout', authenticated: true },
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
@@ -369,7 +370,7 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
-      const sessionCartItems = route.name === 'cart' ? CART_SAMPLE_ITEMS : [];
+      const sessionCartItems = ['cart', 'checkout'].includes(route.name) ? CART_SAMPLE_ITEMS : [];
       const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
         ? SAMPLE_SELLER_PRODUCTS
         : [];
@@ -811,6 +812,48 @@ for (const route of activeRoutes) {
                   if (!layout) return false;
                   const columns = getComputedStyle(layout).gridTemplateColumns.split(' ').length;
                   return columns === (window.innerWidth <= 1023 ? 1 : 2);
+                })(),
+                footer: check('.q-footer'),
+              };
+            case 'checkout':
+              return {
+                header: check('.q-header'),
+                checkoutPage: check('.q-checkout'),
+                eyebrow:
+                  document.querySelector('.q-checkout__eyebrow')?.textContent === 'Envío y pago',
+                title:
+                  document.querySelector('.q-checkout__title')?.textContent === 'Finalizar compra',
+                currentStep:
+                  document.querySelector('.q-checkout__step[aria-current="step"]')?.textContent ===
+                  'PASO 1 DE 3 · ENVÍO',
+                backToCart: check('.q-checkout__back[href="/cart"]'),
+                shippingForm: check('.q-checkout__main'),
+                orderSummary: check('.q-checkout__summary'),
+                confirmButton: check('.q-checkout__submit'),
+                responsiveColumns: (() => {
+                  const layout = document.querySelector('.q-checkout__layout');
+                  if (!layout) return false;
+                  const columns = getComputedStyle(layout).gridTemplateColumns.split(' ').length;
+                  return columns === (window.innerWidth <= 1023 ? 1 : 2);
+                })(),
+                summaryBelowForm: (() => {
+                  if (window.innerWidth > 1023) return true;
+                  const form = document.querySelector('.q-checkout__main');
+                  const summary = document.querySelector('.q-checkout__summary');
+                  return Boolean(
+                    form &&
+                    summary &&
+                    summary.getBoundingClientRect().top >= form.getBoundingClientRect().bottom
+                  );
+                })(),
+                backgroundReachesTop: (() => {
+                  const checkout = document.querySelector('.q-checkout');
+                  if (!checkout) return false;
+                  const top = checkout.getBoundingClientRect().top;
+                  const backgroundTop = Number.parseFloat(
+                    getComputedStyle(checkout, '::before').top
+                  );
+                  return top + backgroundTop <= 1;
                 })(),
                 footer: check('.q-footer'),
               };

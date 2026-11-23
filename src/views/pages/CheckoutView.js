@@ -193,8 +193,32 @@ export class CheckoutView {
       void this._submit();
     });
 
-    form.append(this._renderShippingPanel(), this._renderPaymentPanel());
+    const shipping = document.createElement('div');
+    shipping.className = 'q-checkout__shipping';
+    shipping.append(this._renderSteps(), this._renderShippingPanel());
+
+    form.append(shipping, this._renderPaymentPanel());
     return form;
+  }
+
+  _renderSteps() {
+    const steps = document.createElement('ol');
+    steps.className = 'q-checkout__steps';
+    steps.setAttribute('aria-label', 'Progreso de compra');
+
+    [
+      { label: 'PASO 1 DE 3 · ENVÍO', current: true },
+      { label: '2 · PAGO' },
+      { label: '3 · REVISIÓN' },
+    ].forEach(({ label, current }) => {
+      const step = document.createElement('li');
+      step.className = `q-checkout__step${current ? ' is-active' : ''}`;
+      if (current) step.setAttribute('aria-current', 'step');
+      step.textContent = label;
+      steps.appendChild(step);
+    });
+
+    return steps;
   }
 
   _renderShippingPanel() {
