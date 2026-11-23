@@ -42,6 +42,11 @@ const ROUTES = [
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart', authenticated: true },
   { name: 'checkout', path: '/checkout', authenticated: true },
+  {
+    name: 'order-confirmation',
+    path: '/order-confirmation/ORD-00100042',
+    authenticated: true,
+  },
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
@@ -147,6 +152,27 @@ const SELLER_SAMPLE_ORDERS = [
     items: [{ product_name: 'Cuchillos de cocina de acero inoxidable', quantity: 1, subtotal: 79 }],
   },
 ];
+
+const ORDER_CONFIRMATION_SAMPLE = {
+  id: 'b4444444-4444-4444-8444-444444444444',
+  order_number: 'ORD-00100042',
+  buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  status: 'pending',
+  currency: 'USD',
+  subtotal: 40,
+  shipping_cost: 4.99,
+  tax: 0,
+  total: 44.99,
+  shipping_address: {
+    full_name: 'Camila Morales',
+    phone: '71234567',
+    street: 'Av. Arce #123',
+    city: 'La Paz',
+    state: 'La Paz',
+    country: 'BO',
+  },
+  items: [{ id: 'oi-matrix-1', product_name: 'Manta andina', quantity: 1, subtotal: 40 }],
+};
 
 /** Categories for `GET /v1/categories` (header dropdown + wizard step 1). */
 const SAMPLE_CATEGORIES = [
@@ -369,7 +395,12 @@ for (const route of activeRoutes) {
 
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
-      const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
+      const sessionOrders =
+        route.name === 'seller-orders'
+          ? SELLER_SAMPLE_ORDERS
+          : route.name === 'order-confirmation'
+            ? [ORDER_CONFIRMATION_SAMPLE]
+            : [];
       const sessionCartItems = ['cart', 'checkout'].includes(route.name) ? CART_SAMPLE_ITEMS : [];
       const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
         ? SAMPLE_SELLER_PRODUCTS
@@ -853,6 +884,32 @@ for (const route of activeRoutes) {
                   const backgroundTop = Number.parseFloat(
                     getComputedStyle(checkout, '::before').top
                   );
+                  return top + backgroundTop <= 1;
+                })(),
+                footer: check('.q-footer'),
+              };
+            case 'order-confirmation':
+              return {
+                header: check('.q-header'),
+                confirmationPage: check('.q-order-confirmation'),
+                canonicalPath: window.location.pathname === '/order-confirmation/ORD-00100042',
+                greeting: document
+                  .querySelector('.q-order-confirmation h1')
+                  ?.textContent.includes('¡Gracias por tu compra'),
+                confirmationCard: check('[data-testid="order-confirmation"]'),
+                orderNumber:
+                  document
+                    .querySelector('[data-testid="order-confirmation-number"]')
+                    ?.textContent.includes('ORD-00100042') ?? false,
+                timeline: check('[data-testid="order-timeline"]'),
+                summary: check('.q-order-confirmation__receipt'),
+                summaryItem: check('[data-testid="receipt-item"]'),
+                shippingAddress: check('[data-testid="receipt-address"]'),
+                backgroundReachesTop: (() => {
+                  const page = document.querySelector('.q-order-confirmation');
+                  if (!page) return false;
+                  const top = page.getBoundingClientRect().top;
+                  const backgroundTop = Number.parseFloat(getComputedStyle(page, '::before').top);
                   return top + backgroundTop <= 1;
                 })(),
                 footer: check('.q-footer'),

@@ -222,15 +222,17 @@ if (app) {
         router.navigate('/login');
       },
       onOrderPlaced: (order) =>
-        router.navigate(`/orders/${order.id}/confirmation`, { replace: true }),
+        router.navigate(`/order-confirmation/${encodeURIComponent(order.order_number)}`, {
+          replace: true,
+        }),
     });
     currentPageView.mount(mainEl);
   };
 
-  const renderOrderConfirmation = (orderId) => {
+  const renderOrderConfirmation = (orderNumber) => {
     clearCurrentView();
     currentPageView = new OrderConfirmationView({
-      orderId,
+      orderNumber,
       onNavigate: (path) => router.navigate(path),
       onLogin: () => {
         authRedirectStore.setReturnTo(window.location.pathname);
@@ -545,8 +547,8 @@ if (app) {
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());
   router.addRoute('/checkout', () => renderCheckout());
-  router.addRoute('/orders/:orderId/confirmation', (_path, params) =>
-    renderOrderConfirmation(params.orderId)
+  router.addRoute('/order-confirmation/:orderNumber', (_path, params) =>
+    renderOrderConfirmation(params.orderNumber)
   );
   router.addRoute('/orders', () => renderOrders());
   router.addRoute('/seller/orders', () => renderSellerOrders());

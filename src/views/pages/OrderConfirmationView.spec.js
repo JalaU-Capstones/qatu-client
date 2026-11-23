@@ -40,7 +40,12 @@ describe('OrderConfirmationView', () => {
       subscribe: () => () => {},
     };
     const viewModel = new OrderConfirmationViewModel({ ordersApi, authStore });
-    view = new OrderConfirmationView({ orderId: 'ord-1', viewModel, onNavigate, onLogin });
+    view = new OrderConfirmationView({
+      orderNumber: 'ORD-00100042',
+      viewModel,
+      onNavigate,
+      onLogin,
+    });
     view.mount(container);
     await tick();
   };
@@ -51,9 +56,9 @@ describe('OrderConfirmationView', () => {
     authenticated = true;
     profile = { full_name: 'Valeria Quispe' };
     ordersApi = {
-      getOrderById: jasmine
-        .createSpy('getOrderById')
-        .and.returnValue(Promise.resolve({ data: order, meta: {} })),
+      listOrders: jasmine
+        .createSpy('listOrders')
+        .and.returnValue(Promise.resolve({ data: [order], meta: { total_pages: 1 } })),
     };
     onNavigate = jasmine.createSpy('onNavigate');
     onLogin = jasmine.createSpy('onLogin');
@@ -69,7 +74,7 @@ describe('OrderConfirmationView', () => {
     it('greets the buyer by first name under the "Pedido confirmado" eyebrow', async () => {
       await mountView();
 
-      expect(ordersApi.getOrderById).toHaveBeenCalledWith('ord-1');
+      expect(ordersApi.listOrders).toHaveBeenCalledWith({ page: 1, limit: 100 });
       expect(container.querySelector('.q-checkout__eyebrow').textContent).toBe('Pedido confirmado');
       expect(container.querySelector('h1').textContent).toBe('¡Gracias por tu compra, Valeria!');
       const back = container.querySelector('.q-checkout__back');
@@ -97,6 +102,7 @@ describe('OrderConfirmationView', () => {
       const cta = card.querySelector('a.q-btn--primary');
       expect(cta.textContent).toBe('Ver mis pedidos');
       expect(cta.getAttribute('href')).toBe('/orders');
+      expect(cta.classList.contains('q-btn--block')).toBe(true);
     });
 
     it('marks only the "Pendiente" step as reached for a new order', async () => {
@@ -119,8 +125,8 @@ describe('OrderConfirmationView', () => {
     });
 
     it('advances the timeline when the order has progressed', async () => {
-      ordersApi.getOrderById.and.returnValue(
-        Promise.resolve({ data: { ...order, status: 'shipped' }, meta: {} })
+      ordersApi.listOrders.and.returnValue(
+        Promise.resolve({ data: [{ ...order, status: 'shipped' }], meta: { total_pages: 1 } })
       );
 
       await mountView();
@@ -132,8 +138,11 @@ describe('OrderConfirmationView', () => {
     });
 
     it('shows "Cancelado" instead of the timeline for a cancelled order', async () => {
-      ordersApi.getOrderById.and.returnValue(
-        Promise.resolve({ data: { ...order, status: 'cancelled' }, meta: {} })
+      ordersApi.listOrders.and.returnValue(
+        Promise.resolve({
+          data: [{ ...order, status: 'cancelled' }],
+          meta: { total_pages: 1 },
+        })
       );
 
       await mountView();
@@ -161,8 +170,11 @@ describe('OrderConfirmationView', () => {
     });
 
     it('shows taxes only when there are some', async () => {
-      ordersApi.getOrderById.and.returnValue(
-        Promise.resolve({ data: { ...order, tax: 5.2, total: 50.19 }, meta: {} })
+      ordersApi.listOrders.and.returnValue(
+        Promise.resolve({
+          data: [{ ...order, tax: 5.2, total: 50.19 }],
+          meta: { total_pages: 1 },
+        })
       );
 
       await mountView();
@@ -181,8 +193,11 @@ describe('OrderConfirmationView', () => {
     });
 
     it('omits the address block when the order has none', async () => {
-      ordersApi.getOrderById.and.returnValue(
-        Promise.resolve({ data: { ...order, shipping_address: null }, meta: {} })
+      ordersApi.listOrders.and.returnValue(
+        Promise.resolve({
+          data: [{ ...order, shipping_address: null }],
+          meta: { total_pages: 1 },
+        })
       );
 
       await mountView();
@@ -192,14 +207,14 @@ describe('OrderConfirmationView', () => {
   });
 
   it('shows a loading state before the order arrives', () => {
-    ordersApi.getOrderById.and.returnValue(new Promise(() => {}));
+    ordersApi.listOrders.and.returnValue(new Promise(() => {}));
     const authStore = {
       isAuthenticated: () => true,
       getProfile: () => profile,
       subscribe: () => () => {},
     };
     view = new OrderConfirmationView({
-      orderId: 'ord-1',
+      orderNumber: 'ORD-00100042',
       viewModel: new OrderConfirmationViewModel({ ordersApi, authStore }),
     });
     view.mount(container);
@@ -208,7 +223,7 @@ describe('OrderConfirmationView', () => {
   });
 
   it('explains when the order belongs to someone else (403)', async () => {
-    ordersApi.getOrderById.and.returnValue(
+    ordersApi.listOrders.and.returnValue(
       Promise.reject(Object.assign(new Error('x'), { statusCode: 403, code: 'FORBIDDEN' }))
     );
 
@@ -228,6 +243,6 @@ describe('OrderConfirmationView', () => {
     expect(container.querySelector('h1').textContent).toBe('Inicia sesión para ver tu pedido');
     container.querySelector('button').click();
     expect(onLogin).toHaveBeenCalled();
-    expect(ordersApi.getOrderById).not.toHaveBeenCalled();
+    expect(ordersApi.listOrders).not.toHaveBeenCalled();
   });
 });

@@ -18,9 +18,9 @@ describe('OrderConfirmationViewModel', () => {
 
   beforeEach(() => {
     ordersApi = {
-      getOrderById: jasmine
-        .createSpy('getOrderById')
-        .and.returnValue(Promise.resolve({ data: order, meta: {} })),
+      listOrders: jasmine
+        .createSpy('listOrders')
+        .and.returnValue(Promise.resolve({ data: [order], meta: { total_pages: 1 } })),
     };
     authListeners = new Set();
     profile = { full_name: 'Aaron Florez' };
@@ -37,20 +37,42 @@ describe('OrderConfirmationViewModel', () => {
 
   afterEach(() => viewModel.destroy());
 
-  it('loads the order from the API by id (so it survives a page refresh)', async () => {
-    await viewModel.load('ord-1');
+  it('loads the order by its human-readable number (so it survives a page refresh)', async () => {
+    await viewModel.load('ORD-00100042');
 
-    expect(ordersApi.getOrderById).toHaveBeenCalledWith('ord-1');
+    expect(ordersApi.listOrders).toHaveBeenCalledWith({ page: 1, limit: 100 });
     expect(viewModel.order).toEqual(order);
     expect(viewModel.isLoading).toBe(false);
     expect(viewModel.errorMessage).toBe('');
+  });
+
+  it('searches additional order pages when resolving an order number', async () => {
+    ordersApi.listOrders.and.returnValues(
+      Promise.resolve({ data: [], meta: { total_pages: 2 } }),
+      Promise.resolve({ data: [order], meta: { total_pages: 2 } })
+    );
+
+    await viewModel.load('ORD-00100042');
+
+    expect(ordersApi.listOrders.calls.allArgs()).toEqual([
+      [{ page: 1, limit: 100 }],
+      [{ page: 2, limit: 100 }],
+    ]);
+    expect(viewModel.order).toEqual(order);
+  });
+
+  it('reports an order number that is not in the buyer order history', async () => {
+    await viewModel.load('ORD-UNKNOWN');
+
+    expect(viewModel.order).toBeNull();
+    expect(viewModel.errorMessage).toBe('No encontramos este pedido.');
   });
 
   it('notifies loading and loaded states', async () => {
     const states = [];
     viewModel.subscribe((vm) => states.push(vm.isLoading));
 
-    await viewModel.load('ord-1');
+    await viewModel.load('ORD-00100042');
 
     expect(states).toEqual([true, false]);
   });
@@ -63,7 +85,7 @@ describe('OrderConfirmationViewModel', () => {
   });
 
   it('formats amounts in the order currency without recomputing them', async () => {
-    await viewModel.load('ord-1');
+    await viewModel.load('ORD-00100042');
 
     expect(viewModel.formatAmount(44.99)).toBe('US$ 44.99');
   });
@@ -71,15 +93,15 @@ describe('OrderConfirmationViewModel', () => {
   it('asks guests to log in without calling the API', async () => {
     authStore.isAuthenticated = () => false;
 
-    await viewModel.load('ord-1');
+    await viewModel.load('ORD-00100042');
 
     expect(viewModel.requiresAuth).toBe(true);
-    expect(ordersApi.getOrderById).not.toHaveBeenCalled();
+    expect(ordersApi.listOrders).not.toHaveBeenCalled();
   });
 
   it('loads by itself once the session resolves after a cold start', async () => {
     authStore.isAuthenticated = () => false;
-    await viewModel.load('ord-1');
+    await viewModel.load('ORD-00100042');
 
     authStore.isAuthenticated = () => true;
     authListeners.forEach((listener) => listener());
@@ -89,26 +111,22 @@ describe('OrderConfirmationViewModel', () => {
     expect(viewModel.order).toEqual(order);
   });
 
-  it('explains 403 (another buyer order) and 404', async () => {
-    ordersApi.getOrderById.and.returnValue(Promise.reject(apiError(403, 'FORBIDDEN')));
-    await viewModel.load('ord-x');
+  it('shows a permission error when the buyer order list is forbidden', async () => {
+    ordersApi.listOrders.and.returnValue(Promise.reject(apiError(403, 'FORBIDDEN')));
+    await viewModel.load('ORD-00100042');
     expect(viewModel.errorMessage).toBe('No tienes permiso para ver este pedido.');
     expect(viewModel.order).toBeNull();
-
-    ordersApi.getOrderById.and.returnValue(Promise.reject(apiError(404, 'NOT_FOUND')));
-    await viewModel.load('ord-y');
-    expect(viewModel.errorMessage).toBe('No encontramos este pedido.');
   });
 
   it('shows a generic message for other failures and stays silent on SESSION_EXPIRED', async () => {
-    ordersApi.getOrderById.and.returnValue(Promise.reject(apiError(500)));
-    await viewModel.load('ord-1');
+    ordersApi.listOrders.and.returnValue(Promise.reject(apiError(500)));
+    await viewModel.load('ORD-00100042');
     expect(viewModel.errorMessage).toBe(
       'No pudimos cargar tu pedido. Inténtalo de nuevo en unos minutos.'
     );
 
-    ordersApi.getOrderById.and.returnValue(Promise.reject(apiError(undefined, 'SESSION_EXPIRED')));
-    await viewModel.load('ord-1');
+    ordersApi.listOrders.and.returnValue(Promise.reject(apiError(undefined, 'SESSION_EXPIRED')));
+    await viewModel.load('ORD-00100042');
     expect(viewModel.errorMessage).toBe('');
   });
 });
