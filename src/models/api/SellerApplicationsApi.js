@@ -34,7 +34,8 @@ export class SellerApplicationsApi {
    * @param {{
    *   business_name: string,
    *   business_description: string,
-   *   contact_phone?: string|null,
+   *   country_code?: string|null,
+   *   phone_number?: string|null,
    *   contact_email?: string|null,
    * }} payload
    * @returns {Promise<{ data: Object, meta: Object }>}
@@ -46,8 +47,14 @@ export class SellerApplicationsApi {
         typeof payload.business_description === 'string' ? payload.business_description.trim() : '',
     };
 
-    if (typeof payload.contact_phone === 'string' && payload.contact_phone.trim() !== '') {
-      bodyPayload.contact_phone = payload.contact_phone.trim();
+    if (
+      typeof payload.country_code === 'string' &&
+      payload.country_code.trim() !== '' &&
+      typeof payload.phone_number === 'string' &&
+      payload.phone_number.trim() !== ''
+    ) {
+      bodyPayload.country_code = payload.country_code.trim();
+      bodyPayload.phone_number = payload.phone_number.trim();
     }
     if (typeof payload.contact_email === 'string' && payload.contact_email.trim() !== '') {
       bodyPayload.contact_email = payload.contact_email.trim();

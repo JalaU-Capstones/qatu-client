@@ -4,7 +4,10 @@ import {
 } from '../../models/validation/sellerApplicationValidation.js';
 import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
-import { SellerApplyViewModel } from '../../viewmodels/pages/SellerApplyViewModel.js';
+import {
+  SELLER_PHONE_COUNTRIES,
+  SellerApplyViewModel,
+} from '../../viewmodels/pages/SellerApplyViewModel.js';
 
 export class SellerApplyPageView {
   /**
@@ -88,7 +91,7 @@ export class SellerApplyPageView {
     successAlert.setAttribute('hidden', '');
 
     const formCard = document.createElement('div');
-    formCard.className = 'q-seller-apply-card';
+    formCard.className = 'q-seller-apply-card q-glass-panel';
     formCard.dataset.role = 'form-card';
     formCard.appendChild(this._buildForm());
 
@@ -108,7 +111,7 @@ export class SellerApplyPageView {
     const nameField = this._createInputField({
       id: 'q-apply-business-name',
       name: 'business_name',
-      label: 'Nombre del negocio o tienda *',
+      label: 'Nombre del negocio o tienda',
       type: 'text',
       placeholder: 'Ej. Cerámica Andina',
       maxLength: BUSINESS_NAME_MAX,
@@ -124,7 +127,10 @@ export class SellerApplyPageView {
     const descLabel = document.createElement('label');
     descLabel.className = 'q-seller-apply-label';
     descLabel.htmlFor = 'q-apply-business-description';
-    descLabel.textContent = 'Descripción del negocio *';
+    descLabel.append(
+      document.createTextNode('Descripción del negocio '),
+      this._requiredIndicator()
+    );
 
     const descCounter = document.createElement('span');
     descCounter.className = 'q-seller-apply-counter';
@@ -139,6 +145,7 @@ export class SellerApplyPageView {
     descInput.className = 'q-seller-apply-textarea';
     descInput.rows = 5;
     descInput.required = true;
+    descInput.maxLength = BUSINESS_DESC_MAX;
     descInput.placeholder =
       'Cuéntanos qué productos deseas ofrecer, su origen y tu experiencia vendiendo (mínimo 20 caracteres).';
     descInput.setAttribute('aria-describedby', 'q-apply-error-business_description');
@@ -154,25 +161,8 @@ export class SellerApplyPageView {
 
     descField.append(descLabelRow, descInput, descError);
 
-    const emailField = this._createInputField({
-      id: 'q-apply-contact-email',
-      name: 'contact_email',
-      label: 'Correo de contacto (opcional)',
-      type: 'email',
-      placeholder: 'contacto@mitienda.com',
-      maxLength: 255,
-      required: false,
-    });
-
-    const phoneField = this._createInputField({
-      id: 'q-apply-contact-phone',
-      name: 'contact_phone',
-      label: 'Teléfono de contacto (opcional)',
-      type: 'tel',
-      placeholder: '+51 999 888 777',
-      maxLength: 40,
-      required: false,
-    });
+    const emailField = this._createEmailField();
+    const phoneField = this._createPhoneField();
 
     const actions = document.createElement('div');
     actions.className = 'q-seller-apply-actions';
@@ -202,6 +192,9 @@ export class SellerApplyPageView {
     labelEl.className = 'q-seller-apply-label';
     labelEl.htmlFor = id;
     labelEl.textContent = label;
+    if (required) {
+      labelEl.append(document.createTextNode(' '), this._requiredIndicator());
+    }
 
     const input = document.createElement('input');
     input.id = id;
@@ -224,6 +217,161 @@ export class SellerApplyPageView {
 
     field.append(labelEl, input, errorEl);
     return field;
+  }
+
+  _requiredIndicator() {
+    const indicator = document.createElement('span');
+    indicator.className = 'q-seller-apply-required';
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.textContent = '*';
+    return indicator;
+  }
+
+  _createPhoneField() {
+    const field = document.createElement('div');
+    field.className = 'q-seller-apply-field';
+
+    const label = document.createElement('span');
+    label.className = 'q-seller-apply-label';
+    label.textContent = 'Teléfono de contacto (opcional)';
+
+    const controls = document.createElement('div');
+    controls.className = 'q-seller-apply-phone';
+
+    const countryField = document.createElement('div');
+    countryField.className = 'q-seller-apply-phone__country';
+    const countryLabel = document.createElement('label');
+    countryLabel.className = 'q-seller-apply-sr-only';
+    countryLabel.htmlFor = 'q-apply-country-code';
+    countryLabel.textContent = 'Código de país';
+
+    const countrySelect = document.createElement('select');
+    countrySelect.id = 'q-apply-country-code';
+    countrySelect.name = 'country_region';
+    countrySelect.className = 'q-seller-apply-input';
+    countrySelect.autocomplete = 'tel-country-code';
+    countrySelect.setAttribute('aria-label', 'País y código de país');
+    SELLER_PHONE_COUNTRIES.forEach(({ code, name, dialCode }) => {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = `${name} (${dialCode})`;
+      countrySelect.appendChild(option);
+    });
+    countrySelect.addEventListener('change', () => {
+      this.viewModel.setField('country_region', countrySelect.value);
+    });
+    countryField.append(countryLabel, countrySelect, this._fieldError('country_code'));
+
+    const numberField = document.createElement('div');
+    numberField.className = 'q-seller-apply-phone__number';
+    const numberLabel = document.createElement('label');
+    numberLabel.className = 'q-seller-apply-sr-only';
+    numberLabel.htmlFor = 'q-apply-phone-number';
+    numberLabel.textContent = 'Número de teléfono';
+
+    const phoneInput = document.createElement('input');
+    phoneInput.id = 'q-apply-phone-number';
+    phoneInput.name = 'phone_number';
+    phoneInput.type = 'tel';
+    phoneInput.inputMode = 'numeric';
+    phoneInput.pattern = '[0-9]*';
+    phoneInput.maxLength = 15;
+    phoneInput.autocomplete = 'tel-national';
+    phoneInput.className = 'q-seller-apply-input';
+    phoneInput.placeholder = 'Ej. 71234567';
+    phoneInput.setAttribute('aria-label', 'Número de teléfono, solo dígitos');
+    phoneInput.addEventListener('input', (event) => {
+      const digitsOnly = event.target.value.replace(/\D/g, '');
+      if (event.target.value !== digitsOnly) event.target.value = digitsOnly;
+      this.viewModel.setField('phone_number', digitsOnly);
+    });
+    numberField.append(numberLabel, phoneInput, this._fieldError('phone_number'));
+
+    controls.append(countryField, numberField);
+    field.append(label, controls);
+    return field;
+  }
+
+  _createEmailField() {
+    const field = document.createElement('fieldset');
+    field.className = 'q-seller-apply-field q-seller-apply-email';
+
+    const legend = document.createElement('legend');
+    legend.className = 'q-seller-apply-label';
+    legend.textContent = 'Correo de contacto';
+
+    const options = document.createElement('div');
+    options.className = 'q-seller-apply-email__options';
+    options.setAttribute('role', 'radiogroup');
+    options.setAttribute('aria-label', 'Opción de correo de contacto');
+
+    const accountChoice = this._emailChoice({
+      value: 'account',
+      label: 'Usar el correo de mi cuenta',
+    });
+    const accountOption = document.createElement('div');
+    accountOption.className = 'q-seller-apply-email__account-option';
+    const accountEmail = document.createElement('input');
+    accountEmail.id = 'q-apply-account-email';
+    accountEmail.className = 'q-seller-apply-input q-seller-apply-email__account';
+    accountEmail.type = 'email';
+    accountEmail.readOnly = true;
+    accountEmail.value = this.viewModel.accountEmail;
+    accountEmail.setAttribute('aria-label', 'Correo electrónico de la cuenta');
+    accountOption.append(accountChoice, accountEmail);
+
+    const customChoice = this._emailChoice({
+      value: 'custom',
+      label: 'Usar un correo de contacto diferente',
+    });
+    options.append(accountOption, customChoice);
+
+    const customField = document.createElement('div');
+    customField.className = 'q-seller-apply-email__custom';
+    customField.dataset.role = 'custom-email-field';
+    const customLabel = document.createElement('label');
+    customLabel.className = 'q-seller-apply-sr-only';
+    customLabel.htmlFor = 'q-apply-custom-email';
+    customLabel.textContent = 'Correo de contacto alternativo';
+
+    const customInput = document.createElement('input');
+    customInput.id = 'q-apply-custom-email';
+    customInput.name = 'custom_contact_email';
+    customInput.type = 'email';
+    customInput.className = 'q-seller-apply-input';
+    customInput.placeholder = 'contacto@mitienda.com';
+    customInput.maxLength = 255;
+    customInput.autocomplete = 'email';
+    customInput.addEventListener('input', () => {
+      this.viewModel.setField('custom_contact_email', customInput.value);
+    });
+    customField.append(customLabel, customInput);
+
+    field.append(legend, options, customField, this._fieldError('contact_email'));
+    return field;
+  }
+
+  _emailChoice({ value, label }) {
+    const choice = document.createElement('label');
+    choice.className = 'q-seller-apply-email__choice';
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'email_option';
+    radio.value = value;
+    radio.addEventListener('change', () => this.viewModel.setField('email_option', value));
+    const text = document.createElement('span');
+    text.textContent = label;
+    choice.append(radio, text);
+    return choice;
+  }
+
+  _fieldError(name) {
+    const error = document.createElement('p');
+    error.id = `q-apply-error-${name}`;
+    error.className = 'q-seller-apply-field-error';
+    error.dataset.errorFor = name;
+    error.setAttribute('hidden', '');
+    return error;
   }
 
   _update() {
@@ -290,15 +438,17 @@ export class SellerApplyPageView {
     for (const fieldName of [
       'business_name',
       'business_description',
-      'contact_email',
-      'contact_phone',
+      'country_region',
+      'phone_number',
+      'custom_contact_email',
     ]) {
       const input = this.element.querySelector(`[name="${fieldName}"]`);
       if (input && input.value !== (vm.formData[fieldName] ?? '')) {
         input.value = vm.formData[fieldName] ?? '';
       }
-      const errEl = this.element.querySelector(`[data-error-for="${fieldName}"]`);
-      const errMsg = vm.fieldErrors[fieldName];
+      const errorName = fieldName === 'country_region' ? 'country_code' : fieldName;
+      const errEl = this.element.querySelector(`[data-error-for="${errorName}"]`);
+      const errMsg = vm.fieldErrors[errorName];
       if (errEl) {
         if (errMsg) {
           errEl.textContent = errMsg;
@@ -318,6 +468,26 @@ export class SellerApplyPageView {
       }
     }
 
+    const emailOption = vm.formData.email_option;
+    this.element.querySelectorAll('[name="email_option"]').forEach((radio) => {
+      radio.checked = radio.value === emailOption;
+    });
+    const accountEmail = this.element.querySelector('#q-apply-account-email');
+    if (accountEmail && accountEmail.value !== vm.accountEmail) {
+      accountEmail.value = vm.accountEmail;
+    }
+    const customEmailField = this.element.querySelector('[data-role="custom-email-field"]');
+    const customEmailInput = this.element.querySelector('[name="custom_contact_email"]');
+    if (customEmailField) customEmailField.hidden = emailOption !== 'custom';
+    if (customEmailInput) customEmailInput.required = emailOption === 'custom';
+
+    const emailError = this.element.querySelector('[data-error-for="contact_email"]');
+    if (emailError) {
+      const message = vm.fieldErrors.contact_email;
+      emailError.textContent = message || '';
+      emailError.hidden = !message;
+    }
+
     const descCounter = this.element.querySelector('[data-role="desc-counter"]');
     if (descCounter) {
       const len = (vm.formData.business_description || '').trim().length;
@@ -333,7 +503,7 @@ export class SellerApplyPageView {
 
   _buildAlreadySellerCard() {
     const card = document.createElement('div');
-    card.className = 'q-seller-apply-card q-seller-apply-status-card';
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
@@ -362,7 +532,7 @@ export class SellerApplyPageView {
 
   _buildPendingCard(application) {
     const card = document.createElement('div');
-    card.className = 'q-seller-apply-card q-seller-apply-status-card';
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--pending';
@@ -387,7 +557,7 @@ export class SellerApplyPageView {
 
   _buildApprovedCard(application) {
     const card = document.createElement('div');
-    card.className = 'q-seller-apply-card q-seller-apply-status-card';
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--approved';
@@ -442,7 +612,7 @@ export class SellerApplyPageView {
 
     statusRegion.replaceChildren();
     const card = document.createElement('div');
-    card.className = 'q-seller-apply-card q-seller-apply-status-card';
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
 
     const p = document.createElement('p');
     p.textContent = 'Debes iniciar sesión para postularte como vendedor.';

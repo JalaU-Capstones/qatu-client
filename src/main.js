@@ -449,10 +449,10 @@ if (app) {
   const renderSellerApply = async () => {
     clearCurrentView();
     await sessionReady;
-    if (currentPageView || router.currentPath !== '/seller/apply') return;
+    if (currentPageView || !['/seller/apply', '/apply-seller'].includes(router.currentPath)) return;
 
     if (!authStore.isAuthenticated()) {
-      authRedirectStore.setReturnTo('/seller/apply');
+      authRedirectStore.setReturnTo(router.currentPath);
       router.navigate('/login', { replace: true });
       return;
     }
@@ -563,6 +563,7 @@ if (app) {
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
   router.addRoute('/seller/apply', () => renderSellerApply());
+  router.addRoute('/apply-seller', () => renderSellerApply());
   router.addRoute('/admin/reports', () => renderAdminReports());
   router.addRoute('/reports', () => renderAdminReports());
   router.addRoute('/admin/seller-applications', () => renderAdminSellerApplications());

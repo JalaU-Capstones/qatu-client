@@ -12,7 +12,8 @@ describe('SellerApplicationsApi', () => {
     const res = await api.apply({
       business_name: '  Cerámica Andina  ',
       business_description: '  Artesanías hechas a mano en barro cocido  ',
-      contact_phone: '  +51 999 111 222  ',
+      country_code: '  +51  ',
+      phone_number: '  999111222  ',
       contact_email: '  tienda@andina.pe  ',
     });
 
@@ -25,10 +26,30 @@ describe('SellerApplicationsApi', () => {
         body: JSON.stringify({
           business_name: 'Cerámica Andina',
           business_description: 'Artesanías hechas a mano en barro cocido',
-          contact_phone: '+51 999 111 222',
+          country_code: '+51',
+          phone_number: '999111222',
           contact_email: 'tienda@andina.pe',
         }),
       })
+    );
+  });
+
+  it('omits incomplete optional phone details from the request', async () => {
+    const fetchSpy = jasmine
+      .createSpy('apiFetch')
+      .and.resolveTo(
+        new Response(JSON.stringify({ data: { id: 'app-1' }, meta: {} }), { status: 201 })
+      );
+    const api = new SellerApplicationsApi({ apiFetchFn: fetchSpy });
+
+    await api.apply({
+      business_name: 'Cerámica Andina',
+      business_description: 'Artesanías hechas a mano en barro cocido.',
+      country_code: '+51',
+    });
+
+    expect(JSON.parse(fetchSpy.calls.mostRecent().args[1].body)).not.toEqual(
+      jasmine.objectContaining({ country_code: jasmine.any(String) })
     );
   });
 

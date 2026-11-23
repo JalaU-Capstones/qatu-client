@@ -51,6 +51,7 @@ const ROUTES = [
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'order-detail', path: '/orders/ORD-00100001', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
+  { name: 'apply-seller', path: '/apply-seller', authenticated: true },
   // Seller dashboard: needs the seller role (the route guard redirects everyone else).
   { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
   {
@@ -497,6 +498,7 @@ for (const route of activeRoutes) {
             url.includes('/v1/profiles/') ||
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
+            url.includes('/v1/seller-applications') ||
             url.includes('/v1/seller/products') ||
             url.includes('/v1/products/') ||
             url.includes('/v1/categories') ||
@@ -534,6 +536,8 @@ for (const route of activeRoutes) {
               },
               meta: { timestamp: '2026-10-14T12:00:00.000Z' },
             };
+          } else if (url.includes('/v1/seller-applications')) {
+            body = { data: null, meta: { timestamp: '2026-11-18T12:00:00.000Z' } };
           } else if (url.includes('/v1/products/') && url.includes('/images')) {
             body = {
               data: [
@@ -636,6 +640,7 @@ for (const route of activeRoutes) {
                 id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
                 username: 'camila_m',
                 full_name: 'Camila Morales',
+                email: 'buyer@example.com',
                 avatar_path: null,
                 bio: 'Coleccionista de artesanía y textiles andinos.',
                 locale: 'es-PE',
@@ -650,6 +655,7 @@ for (const route of activeRoutes) {
                     id: profile.id,
                     username: profile.username,
                     full_name: profile.full_name,
+                    email: profile.email,
                   },
                   profile,
                   roles,
@@ -668,6 +674,7 @@ for (const route of activeRoutes) {
                   url.includes('/v1/products/') ||
                   url.includes('/v1/categories') ||
                   url.includes('/v1/orders') ||
+                  url.includes('/v1/seller-applications') ||
                   url.includes('/v1/admin/reports')
                 ) {
                   let body;
@@ -678,11 +685,17 @@ for (const route of activeRoutes) {
                           id: profile.id,
                           username: profile.username,
                           full_name: profile.full_name,
+                          email: profile.email,
                         },
                         profile,
                         roles,
                       },
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                    };
+                  } else if (url.includes('/v1/seller-applications')) {
+                    body = {
+                      data: null,
+                      meta: { timestamp: '2026-11-18T12:00:00.000Z' },
                     };
                   } else if (url.includes('/v1/products/') && url.includes('/images')) {
                     body = {
@@ -989,6 +1002,47 @@ for (const route of activeRoutes) {
                   const top = page.getBoundingClientRect().top;
                   const backgroundTop = Number.parseFloat(getComputedStyle(page, '::before').top);
                   return top + backgroundTop <= 1;
+                })(),
+                footer: check('.q-footer'),
+              };
+            case 'apply-seller':
+              return {
+                header: check('.q-header'),
+                applicationSection: check('.q-seller-apply-page'),
+                formCard: check('.q-seller-apply-card[data-role="form-card"]'),
+                businessName: check('#q-apply-business-name'),
+                description: check('#q-apply-business-description'),
+                descriptionFitsCard: (() => {
+                  const card = document.querySelector(
+                    '.q-seller-apply-card[data-role="form-card"]'
+                  );
+                  const textarea = document.querySelector('#q-apply-business-description');
+                  return Boolean(
+                    card &&
+                    textarea &&
+                    textarea.getBoundingClientRect().right <= card.getBoundingClientRect().right + 1
+                  );
+                })(),
+                countryCode: check('select[name="country_region"]'),
+                phoneNumber: check('input[name="phone_number"]'),
+                accountEmail: check('#q-apply-account-email[readonly]'),
+                emailChoices: document.querySelectorAll('[name="email_option"]').length === 2,
+                backgroundReachesTop: (() => {
+                  const section = document.querySelector('.q-seller-apply-page');
+                  if (!section) return false;
+                  const top = section.getBoundingClientRect().top;
+                  const backgroundTop = Number.parseFloat(
+                    getComputedStyle(section, '::before').top
+                  );
+                  return top + backgroundTop <= 1;
+                })(),
+                cardFitsViewport: (() => {
+                  const card = document.querySelector(
+                    '.q-seller-apply-card[data-role="form-card"]'
+                  );
+                  if (!card) return false;
+                  const rect = card.getBoundingClientRect();
+                  return rect.left >= -1 && rect.right <= window.innerWidth + 1;
                 })(),
                 footer: check('.q-footer'),
               };
