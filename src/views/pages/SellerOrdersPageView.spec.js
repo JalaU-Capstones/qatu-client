@@ -105,6 +105,13 @@ describe('SellerOrdersPageView', () => {
       view.mount(container);
       await tick();
 
+      expect(container.querySelector('.q-seller-orders-page__title').textContent).toBe(
+        'Mis ventas'
+      );
+      expect(container.querySelector('.q-seller-orders-page__subtitle').textContent).toBe(
+        'Pedidos que incluyen tus productos y control de estado'
+      );
+      expect(container.querySelector('.q-seller-orders-page__filter')).not.toBeNull();
       expect(ordersApi.listOrders).toHaveBeenCalledWith(
         jasmine.objectContaining({ view: 'seller' })
       );
@@ -115,6 +122,15 @@ describe('SellerOrdersPageView', () => {
       expect(text).toContain('Chair ×2');
       expect(text).toContain('40.00');
       expect(text).toContain('Confirmada');
+      expect([...container.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual([
+        'Pedido',
+        'Fecha',
+        'Comprador',
+        'Productos',
+        'Ingreso',
+        'Estado',
+        'Actualizar',
+      ]);
     });
 
     it('shows an empty state when there are no sales', async () => {
@@ -148,6 +164,11 @@ describe('SellerOrdersPageView', () => {
       const kpis = container.querySelector('[data-role="kpis"]').textContent;
       expect(kpis).toContain('Por confirmar');
       expect(kpis).toContain('80.00');
+      expect(container.querySelectorAll('.q-seller-orders-kpi').length).toBe(4);
+      expect(
+        container.querySelector('.q-seller-orders-kpi--revenue .q-seller-orders-kpi__label')
+          .textContent
+      ).toBe('Ingresos (página)');
     });
   });
 

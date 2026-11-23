@@ -992,11 +992,52 @@ for (const route of activeRoutes) {
               return {
                 header: check('.q-header'),
                 sellerPage: check('.q-seller-orders-page'),
-                title: check('.q-seller-orders-page__title'),
-                kpis: check('.q-seller-orders-kpi'),
+                title:
+                  document.querySelector('.q-seller-orders-page__title')?.textContent ===
+                  'Mis ventas',
+                subtitle:
+                  document.querySelector('.q-seller-orders-page__subtitle')?.textContent ===
+                  'Pedidos que incluyen tus productos y control de estado',
+                statusFilter: check('.q-seller-orders-page__filter #seller-order-status-filter'),
+                kpiCount: document.querySelectorAll('.q-seller-orders-kpi').length === 4,
+                kpiLayout: (() => {
+                  const kpis = document.querySelector('.q-seller-orders-kpis');
+                  if (!kpis) return false;
+                  const columns = getComputedStyle(kpis).gridTemplateColumns.split(' ').length;
+                  const expectedColumns =
+                    window.innerWidth <= 420 ? 1 : window.innerWidth < 1280 ? 2 : 4;
+                  return columns === expectedColumns;
+                })(),
                 table: check('.q-seller-orders-table'),
                 row: check('.q-seller-orders-table tbody tr'),
                 statusSelector: check('.q-seller-orders-table tbody select'),
+                pageBackgroundCoversTop: (() => {
+                  const page = document.querySelector('.q-seller-orders-page');
+                  if (!page) return false;
+                  const background = getComputedStyle(page);
+                  return (
+                    page.getBoundingClientRect().top <= 1 &&
+                    background.backgroundColor !== 'rgba(0, 0, 0, 0)'
+                  );
+                })(),
+                mobileCards: (() => {
+                  if (window.innerWidth > 767) return true;
+                  const row = document.querySelector('.q-seller-orders-table tbody tr');
+                  return (
+                    row !== null &&
+                    getComputedStyle(row).display === 'grid' &&
+                    row.querySelectorAll('td[data-label]').length === 7
+                  );
+                })(),
+                tabletTableScroll: (() => {
+                  if (window.innerWidth < 768 || window.innerWidth >= 1280) return true;
+                  const wrap = document.querySelector('.q-seller-orders-table-wrap');
+                  return (
+                    wrap !== null &&
+                    getComputedStyle(wrap).overflowX === 'auto' &&
+                    wrap.scrollWidth > wrap.clientWidth
+                  );
+                })(),
                 footer: check('.q-footer'),
               };
             case 'seller-products':

@@ -59,6 +59,9 @@ export class SellerOrdersPageView {
     const header = document.createElement('div');
     header.className = 'q-seller-orders-page__header';
 
+    const heading = document.createElement('div');
+    heading.className = 'q-seller-orders-page__heading';
+
     const title = document.createElement('h1');
     title.className = 'q-seller-orders-page__title';
     title.textContent = 'Mis ventas';
@@ -67,8 +70,7 @@ export class SellerOrdersPageView {
     subtitle.className = 'q-seller-orders-page__subtitle';
     subtitle.textContent = 'Pedidos que incluyen tus productos y control de estado';
 
-    header.appendChild(title);
-    header.appendChild(subtitle);
+    heading.append(title, subtitle);
 
     const filterContainer = document.createElement('div');
     filterContainer.className = 'q-orders-filter';
@@ -94,7 +96,9 @@ export class SellerOrdersPageView {
     });
     filterContainer.appendChild(filterLabel);
     filterContainer.appendChild(filterSelect);
-    header.appendChild(filterContainer);
+    filterContainer.setAttribute('aria-label', 'Filtrar ventas por estado');
+    filterContainer.classList.add('q-seller-orders-page__filter');
+    header.append(heading, filterContainer);
 
     const kpis = document.createElement('div');
     kpis.className = 'q-seller-orders-kpis';
@@ -172,15 +176,15 @@ export class SellerOrdersPageView {
   _renderKpis(kpisEl) {
     const kpi = this.viewModel.getKpis();
     const entries = [
-      ['Por confirmar', String(kpi.toConfirm)],
-      ['Por enviar', String(kpi.toShip)],
-      ['Enviados', String(kpi.shipped)],
-      ['Ingresos (página)', kpi.revenue.toFixed(2)],
+      ['Por confirmar', String(kpi.toConfirm), 'pending'],
+      ['Por enviar', String(kpi.toShip), 'confirmed'],
+      ['Enviados', String(kpi.shipped), 'shipped'],
+      ['Ingresos (página)', kpi.revenue.toFixed(2), 'revenue'],
     ];
     kpisEl.replaceChildren(
-      ...entries.map(([label, value]) => {
+      ...entries.map(([label, value, type]) => {
         const card = document.createElement('div');
-        card.className = 'q-seller-orders-kpi';
+        card.className = `q-seller-orders-kpi q-seller-orders-kpi--${type}`;
         const labelEl = document.createElement('span');
         labelEl.className = 'q-seller-orders-kpi__label';
         labelEl.textContent = label;
@@ -216,6 +220,9 @@ export class SellerOrdersPageView {
     const vm = this.viewModel;
     const wrap = document.createElement('div');
     wrap.className = 'q-seller-orders-table-wrap';
+    wrap.setAttribute('role', 'region');
+    wrap.setAttribute('aria-label', 'Pedidos de tus productos');
+    wrap.tabIndex = 0;
     if (vm.isLoading) {
       wrap.classList.add('is-loading');
       wrap.setAttribute('aria-busy', 'true');
