@@ -159,6 +159,7 @@ const ORDER_CONFIRMATION_SAMPLE = {
   buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   status: 'pending',
   currency: 'USD',
+  created_at: '2026-10-14T11:00:00.000Z',
   subtotal: 40,
   shipping_cost: 4.99,
   tax: 0,
@@ -396,10 +397,10 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders =
-        route.name === 'seller-orders'
-          ? SELLER_SAMPLE_ORDERS
-          : route.name === 'order-confirmation'
-            ? [ORDER_CONFIRMATION_SAMPLE]
+        route.name === 'orders' || route.name === 'order-confirmation'
+          ? [ORDER_CONFIRMATION_SAMPLE]
+          : route.name === 'seller-orders'
+            ? SELLER_SAMPLE_ORDERS
             : [];
       const sessionCartItems = ['cart', 'checkout'].includes(route.name) ? CART_SAMPLE_ITEMS : [];
       const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
@@ -919,10 +920,16 @@ for (const route of activeRoutes) {
                 header: check('.q-header'),
                 ordersPage: check('.q-orders-page'),
                 title: check('.q-orders-page__title'),
-                // The matrix runs anonymous, so the page shows the unauthenticated
-                // prompt. `.q-orders-empty` matches both the empty state and the
-                // unauthenticated state, so it's a safe positive check.
-                emptyOrPrompt: check('.q-orders-empty'),
+                orderCard: check('.q-order-card'),
+                status: check('.q-order-status'),
+                detailsButton: check('[data-testid="view-order-details-btn"]'),
+                backgroundCoversTop: (() => {
+                  const page = document.querySelector('.q-orders-page');
+                  if (!page) return false;
+                  const top = page.getBoundingClientRect().top;
+                  const backgroundTop = Number.parseFloat(getComputedStyle(page, '::before').top);
+                  return top + backgroundTop <= 1;
+                })(),
                 footer: check('.q-footer'),
               };
             case 'profile':

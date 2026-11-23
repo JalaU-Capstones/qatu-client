@@ -79,6 +79,9 @@ export class OrdersPageView {
     const header = document.createElement('div');
     header.className = 'q-orders-page__header';
 
+    const heading = document.createElement('div');
+    heading.className = 'q-orders-page__heading';
+
     const title = document.createElement('h1');
     title.className = 'q-orders-page__title';
     title.textContent = 'Mis Órdenes';
@@ -87,8 +90,9 @@ export class OrdersPageView {
     subtitle.className = 'q-orders-page__subtitle';
     subtitle.textContent = 'Revisa el historial y estado de todas tus compras';
 
-    header.appendChild(title);
-    header.appendChild(subtitle);
+    heading.appendChild(title);
+    heading.appendChild(subtitle);
+    header.appendChild(heading);
 
     // Status filter dropdown (aligned with API contract: pending, confirmed, shipped, delivered, cancelled)
     const filterContainer = document.createElement('div');
