@@ -1156,12 +1156,14 @@ for (const route of activeRoutes) {
                     headerZIndex > 0
                   );
                 })(),
-                footerSeamRemoved: (() => {
+                footerGradientLineVisible: (() => {
                   const footer = document.querySelector('.q-footer');
+                  if (!footer) return false;
+                  const line = getComputedStyle(footer, '::before');
                   return (
-                    footer !== null &&
-                    getComputedStyle(footer).backgroundImage === 'none' &&
-                    getComputedStyle(footer, '::before').display === 'none'
+                    line.display !== 'none' &&
+                    line.height === '5px' &&
+                    line.backgroundImage.includes('linear-gradient')
                   );
                 })(),
                 noHorizontalOverflow:

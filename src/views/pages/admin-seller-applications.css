@@ -6,19 +6,6 @@
   background-repeat: no-repeat;
 }
 
-.q-app:has(.q-admin-applications-page) .q-footer {
-  padding-top: 0;
-  background: transparent;
-}
-
-.q-app:has(.q-admin-applications-page) .q-footer::before {
-  display: none;
-}
-
-.q-app:has(.q-admin-applications-page) .q-footer-container {
-  padding-top: calc(var(--q-geist-space-8x, 32) * 1px);
-}
-
 .q-admin-applications-page {
   position: relative;
   isolation: isolate;
