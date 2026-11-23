@@ -1,3 +1,4 @@
+import { ConversationsApi } from '../../models/api/ConversationsApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { cartService as defaultCartService } from '../../services/CartService.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
@@ -25,10 +26,16 @@ export class ProductDetailViewModel {
    * @param {Object} [options]
    * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    * @param {import('../../services/CartService.js').CartService} [options.cartService]
+   * @param {import('../../models/api/ConversationsApi.js').ConversationsApi} [options.conversationsApi]
    */
-  constructor({ productsApi = new ProductsApi(), cartService = defaultCartService } = {}) {
+  constructor({
+    productsApi = new ProductsApi(),
+    cartService = defaultCartService,
+    conversationsApi = new ConversationsApi(),
+  } = {}) {
     this.productsApi = productsApi;
     this.cartService = cartService;
+    this.conversationsApi = conversationsApi;
 
     this.productSlug = null;
     /** @type {Object|null} */
@@ -217,6 +224,40 @@ export class ProductDetailViewModel {
       this.isDeleting = false;
       this._notify();
     }
+  }
+
+  /**
+   * Starts (or reuses) a conversation with the product's seller and sends a message.
+   *
+   * @param {string} content
+   * @returns {Promise<{ conversation: Object, message: Object }>}
+   */
+  async contactSeller(content) {
+    if (!this.product?.seller_id) {
+      throw new Error('No se encontró información del vendedor.');
+    }
+
+    const trimmed = typeof content === 'string' ? content.trim() : '';
+    if (!trimmed) {
+      throw new Error('El mensaje no puede estar vacío.');
+    }
+
+    const conversationRes = await this.conversationsApi.createOrGetConversation({
+      sellerId: this.product.seller_id,
+      productId: this.product.id,
+    });
+
+    const messageRes = await this.conversationsApi.sendMessage(conversationRes.data.id, {
+      content: trimmed,
+    });
+
+    this.feedback = 'Mensaje enviado al vendedor.';
+    this._notify();
+
+    return {
+      conversation: conversationRes.data,
+      message: messageRes.data,
+    };
   }
 
   /** @returns {boolean} */

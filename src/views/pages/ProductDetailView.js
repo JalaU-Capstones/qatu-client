@@ -2,6 +2,7 @@ import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
+import { ContactSellerModal } from '../components/ContactSellerModal.js';
 import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
@@ -685,6 +686,7 @@ export class ProductDetailView {
    */
   _renderSellerCard() {
     const vm = this.viewModel;
+    const product = vm.product;
     const section = document.createElement('section');
     section.className = 'q-product-detail__seller-card';
     section.setAttribute('aria-label', `Sobre ${vm.getSellerLine()}`);
@@ -717,15 +719,45 @@ export class ProductDetailView {
 
     info.appendChild(stats);
 
+    const actions = document.createElement('div');
+    actions.className = 'q-product-detail__seller-actions';
+
+    const user = this.authStore.getUser();
+    const isOwn = Boolean(user && user.id && product?.seller_id && user.id === product.seller_id);
+
+    if (!isOwn && product?.seller_id) {
+      const contactBtn = document.createElement('button');
+      contactBtn.type = 'button';
+      contactBtn.className = 'q-btn q-btn--primary q-product-detail__contact-seller';
+      contactBtn.textContent = 'Contactar vendedor';
+      contactBtn.addEventListener('click', () => {
+        if (!this.authStore.isAuthenticated()) {
+          if (typeof this.onAuthRequired === 'function') {
+            this.onAuthRequired();
+          }
+          return;
+        }
+
+        const modal = new ContactSellerModal({
+          sellerName: vm.getSellerLine(),
+          productName: product.name,
+          onSend: (content) => vm.contactSeller(content),
+        });
+        void modal.open();
+      });
+      actions.appendChild(contactBtn);
+    }
+
     const link = document.createElement('a');
     link.className = 'q-product-detail__seller-link';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Ver tienda';
+    actions.appendChild(link);
 
     section.appendChild(avatar);
     section.appendChild(info);
-    section.appendChild(link);
+    section.appendChild(actions);
     return section;
   }
 
