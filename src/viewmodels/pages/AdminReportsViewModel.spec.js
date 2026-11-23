@@ -30,7 +30,25 @@ describe('AdminReportsViewModel', () => {
       })
     );
     expect(viewModel.sales.total_orders).toBe(2);
+    expect(api.getUsersReport).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        from: jasmine.any(String),
+        to: jasmine.any(String),
+      })
+    );
+    expect(viewModel.users.buyer_count).toBe(4);
     expect(viewModel.isLoading).toBe(false);
+  });
+
+  it('keeps sales available when the users summary cannot be loaded', async () => {
+    api.getUsersReport.and.rejectWith(new Error('Users report unavailable'));
+
+    await viewModel.load();
+
+    expect(viewModel.sales.total_orders).toBe(2);
+    expect(viewModel.users).toBeNull();
+    expect(viewModel.usersErrorMessage).toBe('Users report unavailable');
+    expect(viewModel.errorMessage).toBe('');
   });
 
   it('caches a tab and does not request it again', async () => {

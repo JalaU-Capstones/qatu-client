@@ -41,6 +41,7 @@ function formatCount(value) {
 function shortPeriod(period) {
   if (typeof period !== 'string') return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return period.slice(5);
+  if (/^\d{4}-\d{2}$/.test(period)) return period.slice(5);
   return period;
 }
 
@@ -114,7 +115,7 @@ export class AdminReportsPageView {
     );
 
     const rangeGroup = el('div', 'q-orders-filter');
-    const rangeLabel = el('label', 'q-orders-filter__label', 'Periodo:');
+    const rangeLabel = el('label', 'q-orders-filter__label', 'Período:');
     rangeLabel.htmlFor = 'admin-reports-range';
     const rangeSelect = document.createElement('select');
     rangeSelect.id = 'admin-reports-range';
@@ -210,25 +211,47 @@ export class AdminReportsPageView {
 
     if (vm.tab === 'users') content.appendChild(this._renderUsers(payload));
     else if (vm.tab === 'products') content.appendChild(this._renderProducts(payload));
-    else content.appendChild(this._renderSales(payload));
+    else content.appendChild(this._renderSales(payload, vm.users, vm.usersErrorMessage));
   }
 
   /**
    * @param {Object} sales
+   * @param {Object|null} users
+   * @param {string} usersErrorMessage
    * @returns {HTMLElement}
    */
-  _renderSales(sales) {
+  _renderSales(sales, users, usersErrorMessage = '') {
     const wrap = el('div', 'q-reports-stack');
     const currency = sales.currency || null;
     const kpis = el('div', 'q-reports-kpis');
+    const averageTicket =
+      Number(sales.total_orders) > 0
+        ? Number(sales.total_revenue) / Number(sales.total_orders)
+        : null;
     kpis.append(
       this._kpi(
         'Ingresos',
         currency ? formatPrice(sales.total_revenue, currency) : '—',
         currency ? `Moneda ${currency}` : 'Sin ventas'
       ),
-      this._kpi('Pedidos', formatCount(sales.total_orders), 'Sin cancelados ni reembolsos')
+      this._kpi('Pedidos', formatCount(sales.total_orders), 'Sin cancelados ni reembolsos'),
+      this._kpi(
+        'Ticket promedio',
+        currency && averageTicket !== null ? formatPrice(averageTicket, currency) : '—',
+        'Por pedido'
+      ),
+      this._kpi('Compradores', users ? formatCount(users.buyer_count) : '—', 'Con el rol buyer'),
+      this._kpi('Vendedores', users ? formatCount(users.seller_count) : '—', 'Con el rol seller'),
+      this._kpi(
+        'Pendientes',
+        users ? formatCount(users.pending_seller_applications) : '—',
+        'Solicitudes de vendedores'
+      )
     );
+
+    if (usersErrorMessage) {
+      kpis.appendChild(el('p', 'q-reports-note', usersErrorMessage));
+    }
 
     const others = Array.isArray(sales.revenue_by_currency)
       ? sales.revenue_by_currency.filter((row) => row.currency && row.currency !== sales.currency)
@@ -393,7 +416,7 @@ export class AdminReportsPageView {
    */
   _renderChart(periods, currency) {
     const panel = el('div', 'q-reports-chart');
-    const title = el('h2', 'q-reports-chart__title', `Ventas por periodo (${currency})`);
+    const title = el('h2', 'q-reports-chart__title', 'Ventas por período');
     const max = Math.max(...periods.map((period) => Number(period.revenue) || 0), 0);
     const slot = 36;
     const width = Math.max(periods.length * slot, 280);
@@ -401,6 +424,8 @@ export class AdminReportsPageView {
     const barMax = 110;
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
     svg.setAttribute('role', 'img');
     svg.setAttribute(
       'aria-label',
@@ -416,10 +441,10 @@ export class AdminReportsPageView {
     gradient.setAttribute('y2', '1');
     const stopTop = document.createElementNS(SVG_NS, 'stop');
     stopTop.setAttribute('offset', '0%');
-    stopTop.setAttribute('stop-color', 'var(--q-geist-highlight-pink, #ff0080)');
+    stopTop.setAttribute('stop-color', 'var(--q-cat-pink)');
     const stopBottom = document.createElementNS(SVG_NS, 'stop');
     stopBottom.setAttribute('offset', '100%');
-    stopBottom.setAttribute('stop-color', 'var(--q-ds-amber-700, #ffb224)');
+    stopBottom.setAttribute('stop-color', 'var(--q-cat-amber)');
     gradient.append(stopTop, stopBottom);
     defs.appendChild(gradient);
     svg.appendChild(defs);

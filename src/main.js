@@ -466,11 +466,11 @@ if (app) {
   const renderAdminReports = async () => {
     clearCurrentView();
     await sessionReady;
-    if (currentPageView || router.currentPath !== '/admin/reports') return;
+    if (currentPageView || !['/admin/reports', '/reports'].includes(router.currentPath)) return;
 
     const access = getAdminRouteAccess(authStore);
     if (access === 'login') {
-      authRedirectStore.setReturnTo('/admin/reports');
+      authRedirectStore.setReturnTo(router.currentPath);
       router.navigate('/login', { replace: true });
       return;
     }
@@ -564,6 +564,7 @@ if (app) {
   router.addRoute('/login', () => renderAuth('login'));
   router.addRoute('/seller/apply', () => renderSellerApply());
   router.addRoute('/admin/reports', () => renderAdminReports());
+  router.addRoute('/reports', () => renderAdminReports());
   router.addRoute('/admin/seller-applications', () => renderAdminSellerApplications());
 
   router.addRoute('/auth/callback', () => {

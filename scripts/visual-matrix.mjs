@@ -72,6 +72,7 @@ const ROUTES = [
     roles: ['seller'],
   },
   { name: 'admin-reports', path: '/admin/reports', authenticated: true, roles: ['admin'] },
+  { name: 'reports', path: '/reports', authenticated: true, roles: ['admin'] },
 ];
 
 const ADMIN_REPORTS = {
@@ -616,9 +617,19 @@ for (const route of activeRoutes) {
           cartItems,
           sellerProductsData,
           categoriesData,
-          editProductData
+          editProductData,
+          reportData
         ) => {
           try {
+            const getReportBody = (url) => {
+              const data = url.includes('/admin/reports/users')
+                ? reportData.users
+                : url.includes('/admin/reports/products')
+                  ? reportData.products
+                  : reportData.sales;
+              return { data, meta: { timestamp: '2026-11-18T12:00:00.000Z' } };
+            };
+
             window.localStorage.setItem('qatu.theme', t);
             if (isAuth) {
               const profile = {
@@ -751,7 +762,7 @@ for (const route of activeRoutes) {
                       },
                     };
                   } else if (url.includes('/v1/admin/reports')) {
-                    body = adminReportBody(url);
+                    body = getReportBody(url);
                   } else {
                     body = {
                       data: profile,
@@ -778,7 +789,8 @@ for (const route of activeRoutes) {
         sessionCartItems,
         sessionSellerProducts,
         SAMPLE_CATEGORIES,
-        SELLER_PRODUCT_TEMPLATES[0]
+        SELLER_PRODUCT_TEMPLATES[0],
+        ADMIN_REPORTS
       );
 
       try {
@@ -980,6 +992,17 @@ for (const route of activeRoutes) {
                 })(),
                 footer: check('.q-footer'),
               };
+            case 'admin-reports':
+            case 'reports':
+              return {
+                header: check('.q-header'),
+                reportsPage: check('.q-reports-page'),
+                title: check('.q-reports-title'),
+                metrics: document.querySelectorAll('.q-reports-kpi').length === 6,
+                chart: check('.q-reports-chart svg'),
+                tables: document.querySelectorAll('.q-reports-table-block').length === 2,
+                footer: check('.q-footer'),
+              };
             case 'profile':
               return {
                 header: check('.q-header'),
@@ -1128,6 +1151,27 @@ for (const route of activeRoutes) {
           .map(([k]) => k);
         if (missing.length > 0) {
           combo.errors.push('MISSING_ELEMENTS: ' + missing.join(','));
+        }
+
+        if (route.name === 'reports' || route.name === 'admin-reports') {
+          const background = await page.evaluate(() => {
+            const section = document.querySelector('.q-reports-page');
+            if (!section) return null;
+            const style = getComputedStyle(section, '::before');
+            return {
+              top: section.getBoundingClientRect().top + Number.parseFloat(style.top),
+              image: style.backgroundImage,
+              headerZIndex: Number.parseInt(
+                getComputedStyle(document.querySelector('.q-header')).zIndex,
+                10
+              ),
+            };
+          });
+          if (!background || background.top > 1 || background.image === 'none') {
+            combo.errors.push('BACKGROUND_GAP: reports background does not extend behind header');
+          } else if (!Number.isFinite(background.headerZIndex) || background.headerZIndex <= 0) {
+            combo.errors.push('HEADER_NOT_OVER_BACKGROUND: fixed header stacking order is invalid');
+          }
         }
 
         // ── Validation 3: failed images must not expose their alt text

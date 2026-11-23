@@ -29,7 +29,12 @@ describe('AdminReportsPageView', () => {
       isForbidden: false,
       errorMessage: '',
       sales,
-      users: null,
+      users: {
+        buyer_count: 7,
+        seller_count: 2,
+        pending_seller_applications: 1,
+      },
+      usersErrorMessage: '',
       products: null,
       subscribe() {
         return () => {};
@@ -63,8 +68,15 @@ describe('AdminReportsPageView', () => {
 
     expect(container.textContent).toContain('Bs 40.00');
     expect(container.textContent).toContain('Pedidos');
+    expect(container.textContent).toContain('Ticket promedio');
+    expect(container.textContent).toContain('Compradores');
+    expect(container.textContent).toContain('Vendedores');
+    expect(container.textContent).toContain('Pendientes');
     expect(container.querySelector('.q-reports-chart svg')).not.toBeNull();
     expect(container.querySelectorAll('.q-reports-chart rect').length).toBe(2);
+    expect(container.querySelector('.q-reports-chart__title').textContent).toBe(
+      'Ventas por período'
+    );
     expect(vm.load).toHaveBeenCalled();
   });
 
@@ -94,6 +106,26 @@ describe('AdminReportsPageView', () => {
 
     expect(container.textContent).toContain('No hay ventas en este periodo.');
     expect(container.querySelector('.q-reports-chart')).toBeNull();
+  });
+
+  it('uses compact month labels in the chart', () => {
+    view = new AdminReportsPageView({
+      viewModel: viewModel({
+        sales: {
+          ...sales,
+          period_breakdown: [
+            { period: '2026-06', revenue: 10, order_count: 1 },
+            { period: '2026-07', revenue: 30, order_count: 1 },
+          ],
+        },
+      }),
+    });
+    view.mount(container);
+
+    const labels = [...container.querySelectorAll('.q-reports-chart svg text')].map(
+      (label) => label.textContent
+    );
+    expect(labels).toEqual(['06', '07']);
   });
 
   it('shows buyers, sellers, and pending applications on the users tab', () => {

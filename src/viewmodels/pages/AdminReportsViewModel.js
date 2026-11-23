@@ -18,6 +18,7 @@ export class AdminReportsViewModel {
     this.errorMessage = '';
     this.sales = null;
     this.users = null;
+    this.usersErrorMessage = '';
     this.products = null;
     this._cache = new Map();
     this._requestId = 0;
@@ -79,15 +80,33 @@ export class AdminReportsViewModel {
     const requestId = ++this._requestId;
     this.isLoading = true;
     this.errorMessage = '';
+    this.usersErrorMessage = '';
     this.isForbidden = false;
     this._notify();
 
     try {
       const range = resolveReportRange(rangeKey);
-      const data = await this._fetchTab(tab, range);
+      const needsUsersSummary =
+        tab === 'sales' && !this.users && !this._cache.has(`${rangeKey}:users`);
+      const requests = [this._fetchTab(tab, range)];
+      if (needsUsersSummary) requests.push(this._fetchTab('users', range));
+      const results = await Promise.allSettled(requests);
       if (requestId !== this._requestId) return;
+      if (results[0].status === 'rejected') throw results[0].reason;
+
+      const data = results[0].value;
       this._cache.set(`${rangeKey}:${tab}`, data);
       this._store(tab, data);
+      if (needsUsersSummary) {
+        const usersResult = results[1];
+        if (usersResult.status === 'fulfilled') {
+          this._cache.set(`${rangeKey}:users`, usersResult.value);
+          this._store('users', usersResult.value);
+        } else {
+          this.usersErrorMessage =
+            usersResult.reason?.message || 'No se pudieron cargar los datos de usuarios.';
+        }
+      }
     } catch (err) {
       if (requestId !== this._requestId) return;
       if (err?.statusCode === 403 || err?.code === 'FORBIDDEN') {
