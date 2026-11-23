@@ -40,7 +40,7 @@ const ROUTES = [
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
-  { name: 'cart', path: '/cart' },
+  { name: 'cart', path: '/cart', authenticated: true },
   { name: 'search', path: '/products?q=the' },
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
@@ -154,6 +154,51 @@ const SAMPLE_CATEGORIES = [
   { id: 'cat-home', name: 'Hogar y Jardín', slug: 'home-and-garden' },
   { id: 'cat-sports', name: 'Deportes', slug: 'sports' },
   { id: 'cat-books', name: 'Libros', slug: 'books' },
+];
+
+const CART_SAMPLE_ITEMS = [
+  {
+    id: 'cart-item-aguayo',
+    product_id: 'p-cart-aguayo',
+    quantity: 1,
+    seller: 'Tejidos Illimani · Bolivia',
+    product: {
+      id: 'p-cart-aguayo',
+      slug: 'aguayo-tradicional',
+      name: 'Aguayo tradicional de Tarabuco',
+      price: 14,
+      currency: 'USD',
+      primary_image_path: 'http://localhost:5173/product-images/cart-aguayo.webp',
+    },
+  },
+  {
+    id: 'cart-item-cafe',
+    product_id: 'p-cart-cafe',
+    quantity: 1,
+    seller: 'Café Altura Cusco · Perú',
+    product: {
+      id: 'p-cart-cafe',
+      slug: 'cafe-cusco',
+      name: 'Café de especialidad de Cusco 500 g',
+      price: 12,
+      currency: 'USD',
+      primary_image_path: 'http://localhost:5173/product-images/cart-cafe.webp',
+    },
+  },
+  {
+    id: 'cart-item-jarron',
+    product_id: 'p-cart-jarron',
+    quantity: 1,
+    seller: 'Barro Negro Oaxaca · México',
+    product: {
+      id: 'p-cart-jarron',
+      slug: 'jarron-barro-negro',
+      name: 'Jarrón de barro negro de Oaxaca',
+      price: 18,
+      currency: 'USD',
+      primary_image_path: 'http://localhost:5173/product-images/cart-jarron.webp',
+    },
+  },
 ];
 
 /** Products returned for `GET /v1/seller/products`. */
@@ -324,6 +369,7 @@ for (const route of activeRoutes) {
       // Per-route mocked session: the role set and the orders the API would return.
       const sessionRoles = (route.roles || ['buyer']).map((name) => ({ name }));
       const sessionOrders = route.name === 'seller-orders' ? SELLER_SAMPLE_ORDERS : [];
+      const sessionCartItems = route.name === 'cart' ? CART_SAMPLE_ITEMS : [];
       const sessionSellerProducts = ['seller-products', 'seller-product-edit'].includes(route.name)
         ? SAMPLE_SELLER_PRODUCTS
         : [];
@@ -443,10 +489,23 @@ for (const route of activeRoutes) {
               meta: { timestamp: '2026-11-18T12:00:00.000Z' },
             };
           } else if (url.includes('/v1/cart')) {
-            body = {
-              data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
-              meta: { timestamp: '2026-10-14T12:00:00.000Z' },
-            };
+            const method = req.method();
+            if (method === 'GET') {
+              body = {
+                data: sessionCartItems,
+                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+              };
+            } else if (method === 'PATCH') {
+              const cartItemId = new URL(url).pathname.split('/').pop();
+              const item = sessionCartItems.find((cartItem) => cartItem.id === cartItemId);
+              const quantity = JSON.parse(req.postData() || '{}').quantity;
+              body = {
+                data: { ...item, quantity },
+                meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+              };
+            } else {
+              return req.respond({ status: 204, headers: corsHeaders });
+            }
           } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
             body = sellerProductsResponse(url, sessionSellerProducts);
           } else if (url.includes('/v1/categories') && req.method() === 'GET') {
@@ -486,7 +545,16 @@ for (const route of activeRoutes) {
 
       // Set theme and optional authenticated session before navigation so first paint is themed
       await page.evaluateOnNewDocument(
-        (t, isAuth, roles, ordersData, sellerProductsData, categoriesData, editProductData) => {
+        (
+          t,
+          isAuth,
+          roles,
+          ordersData,
+          cartItems,
+          sellerProductsData,
+          categoriesData,
+          editProductData
+        ) => {
           try {
             window.localStorage.setItem('qatu.theme', t);
             if (isAuth) {
@@ -561,10 +629,28 @@ for (const route of activeRoutes) {
                       meta: { timestamp: '2026-11-18T12:00:00.000Z' },
                     };
                   } else if (url.includes('/v1/cart')) {
-                    body = {
-                      data: { id: 'cart-1', items: [], subtotal: 0, item_count: 0 },
-                      meta: { timestamp: '2026-10-14T12:00:00.000Z' },
-                    };
+                    const method = (init?.method || 'GET').toUpperCase();
+                    if (method === 'GET') {
+                      body = {
+                        data: cartItems,
+                        meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                      };
+                    } else if (method === 'PATCH') {
+                      const cartItemId = new URL(url, window.location.origin).pathname
+                        .split('/')
+                        .pop();
+                      const item = cartItems.find((cartItem) => cartItem.id === cartItemId);
+                      const quantity = JSON.parse(init?.body || '{}').quantity;
+                      body = {
+                        data: { ...item, quantity },
+                        meta: { timestamp: '2026-10-14T12:00:00.000Z' },
+                      };
+                    } else {
+                      return new window.Response(null, {
+                        status: 204,
+                        headers: { 'Content-Type': 'application/json' },
+                      });
+                    }
                   } else if (url.includes('/v1/seller/products') && !url.includes('/images/')) {
                     const query = new URL(url, window.location.origin).searchParams;
                     const page = Math.max(1, Number(query.get('page')) || 1);
@@ -626,6 +712,7 @@ for (const route of activeRoutes) {
         Boolean(route.authenticated),
         sessionRoles,
         sessionOrders,
+        sessionCartItems,
         sessionSellerProducts,
         SAMPLE_CATEGORIES,
         SELLER_PRODUCT_TEMPLATES[0]
@@ -711,9 +798,20 @@ for (const route of activeRoutes) {
               return {
                 header: check('.q-header'),
                 cartSection: check('.q-cart'),
-                title: check('.q-cart__title'),
-                emptyState: check('.q-cart__empty'),
-                continueShopping: check('.q-cart__continue'),
+                title: document.querySelector('.q-cart__title')?.textContent === 'Tu carrito',
+                itemList: check('.q-cart__items'),
+                products: document.querySelectorAll('.q-cart-item').length === 3,
+                summary: check('.q-cart__summary'),
+                shippingProgress: check('.q-cart__shipping-progress'),
+                quantityControls: document.querySelectorAll('.q-quantity-selector').length === 3,
+                removeControls: document.querySelectorAll('.q-cart-item__remove').length === 3,
+                continueShopping: check('.q-cart__summary .q-cart__continue'),
+                responsiveColumns: (() => {
+                  const layout = document.querySelector('.q-cart__layout');
+                  if (!layout) return false;
+                  const columns = getComputedStyle(layout).gridTemplateColumns.split(' ').length;
+                  return columns === (window.innerWidth <= 1023 ? 1 : 2);
+                })(),
                 footer: check('.q-footer'),
               };
             case 'orders':
@@ -860,7 +958,61 @@ for (const route of activeRoutes) {
         const file = join(OUT_DIR, `${route.name}-${theme}-${vp.name}.png`);
         await page.screenshot({ path: file, fullPage: true });
 
-        if (route.name === 'seller-product-new') {
+        if (route.name === 'cart') {
+          await page
+            .locator('.q-cart-item:first-child .q-quantity-selector__btn--increase')
+            .click();
+          await page.waitForFunction(
+            () => document.querySelector('.q-quantity-selector__input')?.value === '2',
+            { timeout: 5000 }
+          );
+          const increasedTotals = await page.evaluate(() => ({
+            subtotal: document.querySelector('.q-cart__summary-rows .q-cart__summary-value')
+              ?.textContent,
+            shipping: document.querySelectorAll('.q-cart__summary-rows .q-cart__summary-value')[1]
+              ?.textContent,
+            total: document.querySelector('.q-cart__summary-row--total .q-cart__summary-value')
+              ?.textContent,
+          }));
+          if (increasedTotals.subtotal !== 'US$ 58.00')
+            combo.errors.push(`QUANTITY_SUBTOTAL_NOT_UPDATED: ${increasedTotals.subtotal}`);
+          if (increasedTotals.shipping !== 'Gratis')
+            combo.errors.push(`FREE_SHIPPING_NOT_UPDATED: ${increasedTotals.shipping}`);
+          if (increasedTotals.total !== 'US$ 58.00')
+            combo.errors.push(`QUANTITY_TOTAL_NOT_UPDATED: ${increasedTotals.total}`);
+
+          await page.locator('[data-product-id="p-cart-cafe"] .q-cart-item__remove').click();
+          await page.waitForFunction(() => document.querySelectorAll('.q-cart-item').length === 2, {
+            timeout: 5000,
+          });
+          const removedTotals = await page.evaluate(() => ({
+            subtotal: document.querySelector('.q-cart__summary-rows .q-cart__summary-value')
+              ?.textContent,
+            shipping: document.querySelectorAll('.q-cart__summary-rows .q-cart__summary-value')[1]
+              ?.textContent,
+            total: document.querySelector('.q-cart__summary-row--total .q-cart__summary-value')
+              ?.textContent,
+          }));
+          if (removedTotals.subtotal !== 'US$ 46.00')
+            combo.errors.push(`REMOVE_SUBTOTAL_NOT_UPDATED: ${removedTotals.subtotal}`);
+          if (removedTotals.shipping !== 'US$ 4.99')
+            combo.errors.push(`REMOVE_SHIPPING_NOT_UPDATED: ${removedTotals.shipping}`);
+          if (removedTotals.total !== 'US$ 50.99')
+            combo.errors.push(`REMOVE_TOTAL_NOT_UPDATED: ${removedTotals.total}`);
+
+          await page.locator('.q-cart__checkout').click();
+          await page.waitForFunction(() => window.location.pathname === '/checkout', {
+            timeout: 5000,
+          });
+          await page.goBack();
+          await page.waitForSelector('.q-cart__clear', { timeout: 5000 });
+          await page.locator('.q-cart__clear').click();
+          await page.waitForSelector('.q-cart__empty', { timeout: 5000 });
+          await page.locator('.q-cart__empty .q-cart__continue').click();
+          await page.waitForFunction(() => window.location.pathname === '/products', {
+            timeout: 5000,
+          });
+        } else if (route.name === 'seller-product-new') {
           await page.locator('input[name="name"]').fill('Producto de matriz');
           await page.locator('input[name="price"]').fill('24.99');
           await page.select('select[name="categoryId"]', 'cat-electronics');

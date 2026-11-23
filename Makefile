@@ -1,4 +1,4 @@
-.PHONY: help install network up-dev up-prod down logs build clean dev test lint format tokens e2e e2e-prod matrix matrix-prod publish-check tag tag-push
+.PHONY: help install network up-dev up-prod down logs build clean dev test lint format format-check tokens e2e e2e-prod matrix matrix-prod publish-check tag tag-push
 
 help:
 	@echo "Usage: make <target>"
@@ -18,6 +18,7 @@ help:
 	@echo "  test      Run Jasmine specs"
 	@echo "  lint      Run ESLint"
 	@echo "  format    Run Prettier write"
+	@echo "  format-check  Verify Prettier formatting"
 	@echo "  tokens    Regenerate design tokens"
 	@echo ""
 	@echo "Publish:"
@@ -68,6 +69,9 @@ lint:
 
 format:
 	pnpm format
+
+format-check:
+	pnpm format:check
 
 tokens:
 	pnpm tokens:build

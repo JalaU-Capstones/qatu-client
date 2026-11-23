@@ -229,6 +229,21 @@ describe('CartViewModel', () => {
     expect(vm.getTotalLabel()).toBe('US$ 120.00');
     expect(vm.getItemCountLabel()).toBe('3 artículos');
     expect(vm.getShippingNotice()).toBe('¡Tienes envío gratis!');
+    expect(vm.getShippingProgressPercentage()).toBe(100);
+  });
+
+  it('calculates shipping progress without changing shipping totals', () => {
+    store.items.push(product({ price: 25 }));
+    vm.refresh();
+
+    expect(vm.getShippingProgressPercentage()).toBe(50);
+    expect(vm.shipping).toBe(4.99);
+
+    store.items[0].price = 60;
+    vm.refresh();
+
+    expect(vm.getShippingProgressPercentage()).toBe(100);
+    expect(vm.shipping).toBe(0);
   });
 
   it('checkout shows the placeholder notice and dismiss clears it', () => {

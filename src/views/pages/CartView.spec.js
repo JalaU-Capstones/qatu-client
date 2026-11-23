@@ -33,6 +33,7 @@ const createMockViewModel = (overrides = {}) => {
     getTotalLabel: () => 'US$ 80.00',
     getItemCountLabel: () => '2 artículos',
     getShippingNotice: () => '¡Tienes envío gratis!',
+    getShippingProgressPercentage: () => 100,
     setQuantity: jasmine.createSpy('setQuantity'),
     increment: jasmine.createSpy('increment'),
     decrement: jasmine.createSpy('decrement'),
@@ -98,20 +99,27 @@ describe('CartView', () => {
   it('renders the item list and order summary', () => {
     view.mount(container);
 
-    expect(container.querySelector('.q-cart__title').textContent).toBe('Carrito de compras');
+    expect(container.querySelector('.q-cart__eyebrow').textContent).toBe('Compra segura');
+    expect(container.querySelector('.q-cart__title').textContent).toBe('Tu carrito');
+    expect(container.querySelector('.q-cart__back').getAttribute('href')).toBe('/');
+    expect(container.querySelector('.q-cart__items-title').textContent).toBe('Productos (1)');
     expect(container.querySelectorAll('.q-cart-item').length).toBe(1);
     expect(container.querySelector('.q-cart-item__name').textContent).toBe('Aguayo tradicional');
     expect(container.querySelector('.q-cart-item__name').getAttribute('href')).toBe('/products/p1');
     expect(container.querySelector('.q-cart-item__seller').textContent).toBe('Tejidos Illimani');
     expect(container.querySelector('.q-cart-item__unit-price').textContent).toBe('US$ 40.00 c/u');
-    expect(container.querySelector('.q-cart-item__subtotal-value').textContent).toBe('US$ 80.00');
     expect(container.querySelectorAll('.q-quantity-selector').length).toBe(1);
     expect(container.querySelector('.q-cart__summary')).not.toBeNull();
+    expect(container.querySelector('.q-cart__shipping-progress').value).toBe(100);
+    expect(container.querySelector('.q-cart__shipping-notice').textContent).toBe(
+      '¡Tienes envío gratis!'
+    );
     expect(container.querySelector('.q-cart__summary-row--total').textContent).toContain(
       'US$ 80.00'
     );
     expect(container.querySelector('.q-cart__checkout').textContent).toBe('Continuar al pago');
     expect(container.querySelector('.q-cart__clear').textContent).toBe('Vaciar carrito');
+    expect(container.querySelector('.q-cart__continue').getAttribute('href')).toBe('/products');
   });
 
   it('quantity controls update the item quantity through the view model', () => {
