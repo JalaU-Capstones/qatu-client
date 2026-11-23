@@ -73,6 +73,12 @@ const ROUTES = [
     roles: ['seller'],
   },
   { name: 'admin-reports', path: '/admin/reports', authenticated: true, roles: ['admin'] },
+  {
+    name: 'seller-applications',
+    path: '/admin/seller-applications',
+    authenticated: true,
+    roles: ['admin'],
+  },
   { name: 'reports', path: '/reports', authenticated: true, roles: ['admin'] },
 ];
 
@@ -121,6 +127,37 @@ function adminReportBody(url) {
   if (url.includes('/admin/reports/products')) return { data: ADMIN_REPORTS.products, meta };
   return { data: ADMIN_REPORTS.sales, meta };
 }
+
+const ADMIN_SELLER_APPLICATIONS = [
+  {
+    id: 'matrix-app-pending',
+    business_name: 'Taller Illimani',
+    business_description: 'Textiles y artesanía andina hechos a mano.',
+    contact_email: 'taller@example.com',
+    contact_phone: '+591 700 12345',
+    created_at: '2026-11-18T12:00:00.000Z',
+    status: 'pending',
+  },
+  {
+    id: 'matrix-app-approved',
+    business_name: 'Café Altura',
+    business_description: 'Café de altura de origen local.',
+    contact_email: 'cafe@example.com',
+    contact_phone: '+591 700 67890',
+    created_at: '2026-11-16T12:00:00.000Z',
+    status: 'approved',
+  },
+  {
+    id: 'matrix-app-rejected',
+    business_name: 'Cerámica del Valle',
+    business_description: 'Piezas utilitarias y decorativas de cerámica.',
+    contact_email: 'ceramica@example.com',
+    contact_phone: '+591 700 54321',
+    created_at: '2026-11-14T12:00:00.000Z',
+    status: 'rejected',
+    rejection_reason: 'Completa la información comercial.',
+  },
+];
 
 /** Orders returned for `GET /v1/orders?view=seller` (long names exercise the mobile layout). */
 const SELLER_SAMPLE_ORDERS = [
@@ -498,6 +535,7 @@ for (const route of activeRoutes) {
             url.includes('/v1/profiles/') ||
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
+            url.includes('/v1/admin/seller-applications') ||
             url.includes('/v1/seller-applications') ||
             url.includes('/v1/seller/products') ||
             url.includes('/v1/products/') ||
@@ -536,8 +574,20 @@ for (const route of activeRoutes) {
               },
               meta: { timestamp: '2026-10-14T12:00:00.000Z' },
             };
-          } else if (url.includes('/v1/seller-applications')) {
-            body = { data: null, meta: { timestamp: '2026-11-18T12:00:00.000Z' } };
+          } else if (
+            url.includes('/v1/admin/seller-applications') ||
+            url.includes('/v1/seller-applications')
+          ) {
+            body = {
+              data: url.includes('/admin/seller-applications') ? ADMIN_SELLER_APPLICATIONS : null,
+              meta: {
+                page: 1,
+                limit: 20,
+                total: ADMIN_SELLER_APPLICATIONS.length,
+                totalPages: 1,
+                timestamp: '2026-11-18T12:00:00.000Z',
+              },
+            };
           } else if (url.includes('/v1/products/') && url.includes('/images')) {
             body = {
               data: [
@@ -622,7 +672,8 @@ for (const route of activeRoutes) {
           sellerProductsData,
           categoriesData,
           editProductData,
-          reportData
+          reportData,
+          sellerApplicationsData
         ) => {
           try {
             const getReportBody = (url) => {
@@ -674,6 +725,7 @@ for (const route of activeRoutes) {
                   url.includes('/v1/products/') ||
                   url.includes('/v1/categories') ||
                   url.includes('/v1/orders') ||
+                  url.includes('/v1/admin/seller-applications') ||
                   url.includes('/v1/seller-applications') ||
                   url.includes('/v1/admin/reports')
                 ) {
@@ -692,10 +744,21 @@ for (const route of activeRoutes) {
                       },
                       meta: { timestamp: '2026-10-14T12:00:00.000Z' },
                     };
-                  } else if (url.includes('/v1/seller-applications')) {
+                  } else if (
+                    url.includes('/v1/admin/seller-applications') ||
+                    url.includes('/v1/seller-applications')
+                  ) {
                     body = {
-                      data: null,
-                      meta: { timestamp: '2026-11-18T12:00:00.000Z' },
+                      data: url.includes('/admin/seller-applications')
+                        ? sellerApplicationsData
+                        : null,
+                      meta: {
+                        page: 1,
+                        limit: 20,
+                        total: sellerApplicationsData.length,
+                        totalPages: 1,
+                        timestamp: '2026-11-18T12:00:00.000Z',
+                      },
                     };
                   } else if (url.includes('/v1/products/') && url.includes('/images')) {
                     body = {
@@ -803,7 +866,8 @@ for (const route of activeRoutes) {
         sessionSellerProducts,
         SAMPLE_CATEGORIES,
         SELLER_PRODUCT_TEMPLATES[0],
-        ADMIN_REPORTS
+        ADMIN_REPORTS,
+        ADMIN_SELLER_APPLICATIONS
       );
 
       try {
@@ -1055,6 +1119,74 @@ for (const route of activeRoutes) {
                 metrics: document.querySelectorAll('.q-reports-kpi').length === 6,
                 chart: check('.q-reports-chart svg'),
                 tables: document.querySelectorAll('.q-reports-table-block').length === 2,
+                footer: check('.q-footer'),
+              };
+            case 'seller-applications':
+              return {
+                header: check('.q-header'),
+                page: check('.q-admin-applications-page'),
+                title:
+                  document.querySelector('.q-admin-applications-title')?.textContent ===
+                  'Solicitudes de vendedores',
+                subtitle:
+                  document.querySelector('.q-admin-applications-subtitle')?.textContent ===
+                  "Revisa, aprueba o rechaza las postulaciones para vender en Q'atu",
+                statusFilter: check('#admin-seller-app-status-filter'),
+                table: check('.q-admin-applications-table'),
+                rows:
+                  document.querySelectorAll('.q-admin-applications-table tbody tr').length === 3,
+                statusBadges:
+                  document.querySelectorAll('.q-admin-applications-table .q-seller-app-badge')
+                    .length === 3,
+                pageBackgroundCoversTop: (() => {
+                  const page = document.querySelector('.q-admin-applications-page');
+                  if (!page) return false;
+                  const style = getComputedStyle(page);
+                  const headerZIndex = Number.parseInt(
+                    getComputedStyle(document.querySelector('.q-header')).zIndex,
+                    10
+                  );
+                  return (
+                    page.getBoundingClientRect().top <= 1 &&
+                    style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+                    style.backgroundImage !== 'none' &&
+                    Number.isFinite(headerZIndex) &&
+                    headerZIndex > 0
+                  );
+                })(),
+                noHorizontalOverflow:
+                  document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+                desktopTableFits: (() => {
+                  if (window.innerWidth < 1280) return true;
+                  const table = document.querySelector('.q-admin-applications-table');
+                  return table !== null && table.scrollWidth <= table.clientWidth;
+                })(),
+                mobileCards: (() => {
+                  if (window.innerWidth > 767) return true;
+                  const table = document.querySelector('.q-admin-applications-table');
+                  const row = table?.querySelector('tbody tr');
+                  const thead = table?.querySelector('thead');
+                  const labels = [...(row?.querySelectorAll('td[data-label]') || [])].map(
+                    (cell) => cell.dataset.label
+                  );
+                  return (
+                    table !== null &&
+                    row !== null &&
+                    getComputedStyle(row).display === 'grid' &&
+                    thead !== null &&
+                    getComputedStyle(thead).display === 'none' &&
+                    labels.join(',') === 'Negocio,Descripción,Contacto,Fecha,Estado,Acciones'
+                  );
+                })(),
+                tabletTableScroll: (() => {
+                  if (window.innerWidth < 768 || window.innerWidth >= 1280) return true;
+                  const wrap = document.querySelector('.q-admin-applications-table-wrap');
+                  return (
+                    wrap !== null &&
+                    getComputedStyle(wrap).overflowX === 'auto' &&
+                    wrap.scrollWidth > wrap.clientWidth
+                  );
+                })(),
                 footer: check('.q-footer'),
               };
             case 'profile':

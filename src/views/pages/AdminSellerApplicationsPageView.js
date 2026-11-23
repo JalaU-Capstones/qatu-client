@@ -3,9 +3,9 @@ import { authStore } from '../../store/authStore.js';
 import { AdminSellerApplicationsViewModel } from '../../viewmodels/pages/AdminSellerApplicationsViewModel.js';
 
 const STATUS_LABELS = Object.freeze({
-  pending: 'Pendiente (pending)',
-  approved: 'Aprobada (approved)',
-  rejected: 'Rechazada (rejected)',
+  pending: 'Pendiente',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
 });
 
 export class AdminSellerApplicationsPageView {
@@ -65,13 +65,14 @@ export class AdminSellerApplicationsPageView {
     header.className = 'q-admin-applications-header';
 
     const titleGroup = document.createElement('div');
+    titleGroup.className = 'q-admin-applications-heading';
     const title = document.createElement('h1');
     title.className = 'q-admin-applications-title';
     title.textContent = 'Solicitudes de vendedores';
 
     const subtitle = document.createElement('p');
     subtitle.className = 'q-admin-applications-subtitle';
-    subtitle.textContent = 'Revisa, aprueba o rechaza las postulaciones para vender en Q’atu.';
+    subtitle.textContent = "Revisa, aprueba o rechaza las postulaciones para vender en Q'atu";
     titleGroup.append(title, subtitle);
 
     const filterGroup = document.createElement('div');
@@ -181,6 +182,9 @@ export class AdminSellerApplicationsPageView {
     const vm = this.viewModel;
     const wrap = document.createElement('div');
     wrap.className = 'q-admin-applications-table-wrap';
+    wrap.setAttribute('role', 'region');
+    wrap.setAttribute('aria-label', 'Solicitudes de vendedores');
+    wrap.tabIndex = 0;
     if (vm.isLoading) {
       wrap.classList.add('is-loading');
       wrap.setAttribute('aria-busy', 'true');
