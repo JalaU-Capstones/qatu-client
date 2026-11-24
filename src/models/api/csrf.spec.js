@@ -80,3 +80,90 @@ describe('csrf helpers', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('csrf helpers (recovered 1)', () => {
+    beforeEach(() => {
+      // Clear all cookies in the test environment
+      document.cookie.split(';').forEach((c) => {
+        const name = c.split('=')[0].trim();
+        if (name) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        }
+      });
+    });
+
+    describe('isMutatingMethod (recovered 2)', () => {
+      [
+        ['POST', true],
+        ['PUT', true],
+        ['PATCH', true],
+        ['DELETE', true],
+        ['GET', false],
+        ['HEAD', false],
+        ['OPTIONS', false],
+      ].forEach(([method, expected]) => {
+        it(`${method} -> ${expected}`, () => {
+          expect(isMutatingMethod(method)).toBe(expected);
+        });
+      });
+    });
+  });
+
+  (() => {
+    describe('csrf helpers additional branches (recovered 3)', () => {
+      afterEach(() => {
+        document.cookie.split(';').forEach((cookie) => {
+          const name = cookie.split('=')[0].trim();
+          if (name) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+          }
+        });
+      });
+
+      it('finds a cookie between other cookies and ignores similarly named ones', () => {
+        document.cookie = 'other=1; path=/';
+        document.cookie = 'xcsrf_token=wrong; path=/';
+        document.cookie = 'csrf_token=right; path=/';
+        document.cookie = 'csrf_token_extra=wrong; path=/';
+
+        expect(readCookie('csrf_token')).toBe('right');
+        expect(getCsrfToken()).toBe('right');
+      });
+
+      it('decodes encoded values and returns null for empty values', () => {
+        document.cookie = `csrf_token=${encodeURIComponent('a b/c')}; path=/`;
+        expect(readCookie('csrf_token')).toBe('a b/c');
+
+        document.cookie = 'csrf_token=; path=/';
+        expect(getCsrfToken()).toBeNull();
+      });
+
+      it('returns null for unknown cookie names', () => {
+        expect(readCookie('missing_cookie')).toBeNull();
+        expect(readCookie('')).toBeNull();
+      });
+
+      it('normalizes mixed-case, null, empty and non-string methods', () => {
+        expect(isMutatingMethod('PoSt')).toBe(true);
+        expect(isMutatingMethod('delete')).toBe(true);
+        expect(isMutatingMethod(null)).toBe(false);
+        expect(isMutatingMethod('')).toBe(false);
+        expect(isMutatingMethod(' post ')).toBe(false);
+        expect(() => isMutatingMethod(42)).toThrowError(TypeError);
+      });
+
+      it('exempts only paths under /auth/', () => {
+        expect(isCsrfExemptPath('/auth')).toBe(false);
+        expect(isCsrfExemptPath('/auth/')).toBe(true);
+        expect(isCsrfExemptPath('/Auth/login')).toBe(false);
+        expect(isCsrfExemptPath('/auth/login?x=1')).toBe(true);
+        expect(isCsrfExemptPath('/oauth/token')).toBe(false);
+        expect(isCsrfExemptPath('')).toBe(false);
+        expect(isCsrfExemptPath(123)).toBe(false);
+        expect(isCsrfExemptPath({})).toBe(false);
+      });
+    });
+  })();
+})();

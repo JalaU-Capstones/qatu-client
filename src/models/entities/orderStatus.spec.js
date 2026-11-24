@@ -4,6 +4,7 @@ import {
   isTerminalOrderStatus,
   ORDER_STATUS_LABELS,
   ORDER_STATUSES,
+  ORDER_VIEWS,
 } from './orderStatus.js';
 
 describe('orderStatus', () => {
@@ -35,3 +36,50 @@ describe('orderStatus', () => {
     expect(isTerminalOrderStatus('pending')).toBe(false);
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('orderStatus additional branches (recovered 1)', () => {
+      it('exports frozen status, view and label contracts', () => {
+        expect(ORDER_VIEWS).toEqual(['buyer', 'seller', 'admin']);
+        expect(Object.isFrozen(ORDER_STATUSES)).toBe(true);
+        expect(Object.isFrozen(ORDER_VIEWS)).toBe(true);
+        expect(Object.isFrozen(ORDER_STATUS_LABELS)).toBe(true);
+        expect(ORDER_STATUS_LABELS).toEqual({
+          pending: 'Pendiente',
+          confirmed: 'Confirmada',
+          shipped: 'Enviada',
+          delivered: 'Entregada',
+          cancelled: 'Cancelada',
+        });
+      });
+
+      it('maps labels for prototype-like keys and missing values', () => {
+        expect(getOrderStatusLabel('shipped')).toBe('Enviada');
+        expect(getOrderStatusLabel(undefined)).toBe('');
+        expect(getOrderStatusLabel('unknown')).toBe('unknown');
+      });
+
+      it('returns a copy of the seller transitions for every status', () => {
+        expect(getSellerNextStatuses('shipped')).toEqual(['delivered']);
+        expect(getSellerNextStatuses('delivered')).toEqual([]);
+        expect(getSellerNextStatuses('cancelled')).toEqual([]);
+        expect(getSellerNextStatuses(undefined)).toEqual([]);
+
+        const copy = getSellerNextStatuses('pending');
+        copy.push('delivered');
+        expect(getSellerNextStatuses('pending')).toEqual(['confirmed']);
+      });
+
+      it('identifies terminal and non-terminal statuses', () => {
+        expect(isTerminalOrderStatus('cancelled')).toBe(true);
+        expect(isTerminalOrderStatus('delivered')).toBe(true);
+        expect(isTerminalOrderStatus('confirmed')).toBe(false);
+        expect(isTerminalOrderStatus('shipped')).toBe(false);
+        expect(isTerminalOrderStatus(null)).toBe(false);
+        expect(isTerminalOrderStatus('Delivered')).toBe(false);
+      });
+    });
+  })();
+})();

@@ -1,4 +1,4 @@
-import { AVATAR_MAX_LENGTH } from '../../models/validation/profileValidation.js';
+import { AVATAR_MAX_LENGTH, BIO_MAX_LENGTH } from '../../models/validation/profileValidation.js';
 import { AuthStore } from '../../store/authStore.js';
 import { ProfileViewModel } from '../../viewmodels/pages/ProfileViewModel.js';
 import { ProfileView } from './ProfileView.js';
@@ -427,3 +427,388 @@ describe('ProfileView', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const createMockViewModel = (overrides = {}) => {
+      const listeners = new Set();
+      const vm = {
+        profile: null,
+        viewProfile: null,
+        formData: {
+          full_name: '',
+          bio: '',
+          avatar_path: '',
+          locale: 'en',
+        },
+        fieldErrors: {},
+        selectedAvatarFile: null,
+        avatarPreviewUrl: '',
+        isLoading: false,
+        isSaving: false,
+        isUploadingAvatar: false,
+        errorMessage: '',
+        successMessage: '',
+        loadProfile: jasmine.createSpy('loadProfile').and.resolveTo(null),
+        setField: jasmine.createSpy('setField'),
+        selectAvatarFile: jasmine.createSpy('selectAvatarFile'),
+        uploadAvatar: jasmine.createSpy('uploadAvatar').and.resolveTo(true),
+        resetForm: jasmine.createSpy('resetForm'),
+        dismissMessages: jasmine.createSpy('dismissMessages'),
+        saveProfile: jasmine.createSpy('saveProfile').and.resolveTo(true),
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        notify() {
+          listeners.forEach((listener) => listener(vm));
+        },
+        ...overrides,
+      };
+      return vm;
+    };
+
+    const setFileInputFiles = (input, fileName = 'foto.png') => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(['contenido'], fileName, { type: 'image/png' }));
+      input.files = transfer.files;
+      return input.files[0];
+    };
+
+    describe('ProfileView additional branches (recovered 1)', () => {
+      let container;
+      let viewModel;
+      let view;
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        viewModel = createMockViewModel();
+        view = new ProfileView(viewModel, { autoLoad: false });
+      });
+
+      afterEach(() => {
+        view?.destroy();
+        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+        document.body.style.overflow = '';
+        container.remove();
+      });
+
+      it('calls loadProfile on mount by default and skips it when autoLoad is false', () => {
+        view = new ProfileView(viewModel);
+        view.mount(container);
+        expect(viewModel.loadProfile).toHaveBeenCalledTimes(1);
+
+        view.destroy();
+        const secondViewModel = createMockViewModel();
+        view = new ProfileView(secondViewModel, { autoLoad: false });
+        view.mount(container);
+        expect(secondViewModel.loadProfile).not.toHaveBeenCalled();
+      });
+
+      it('render() is idempotent and _bindEvents/_update guard a missing element', () => {
+        const first = view.render();
+        expect(view.render()).toBe(first);
+        view.mount(container);
+        expect(container.querySelectorAll('.q-profile').length).toBe(1);
+        expect(view.render()).toBe(first);
+
+        view.element = null;
+        expect(() => view._bindEvents()).not.toThrow();
+        expect(() => view._update(viewModel)).not.toThrow();
+      });
+
+      it('destroy() unsubscribes, removes the element and is safe twice', () => {
+        const listeners = new Set();
+        let unsubscribed = 0;
+        viewModel.subscribe = (listener) => {
+          listeners.add(listener);
+          return () => {
+            unsubscribed += 1;
+            listeners.delete(listener);
+          };
+        };
+
+        view = new ProfileView(viewModel, { autoLoad: false });
+        const updateSpy = spyOn(view, '_update').and.callThrough();
+        view.mount(container);
+        expect(listeners.size).toBe(1);
+
+        updateSpy.calls.reset();
+        view.destroy();
+        expect(unsubscribed).toBe(1);
+        expect(view._unsubscribe).toBeNull();
+        expect(container.querySelector('.q-profile')).toBeNull();
+
+        viewModel.formData = { ...viewModel.formData, full_name: 'Otro nombre' };
+        viewModel.notify();
+        expect(updateSpy).not.toHaveBeenCalled();
+        expect(() => view.destroy()).not.toThrow();
+        expect(unsubscribed).toBe(1);
+      });
+
+      it('stores a selected avatar file from the file input and clears the input value', () => {
+        const el = view.mount(container);
+        const input = el.querySelector('#q-profile-avatar-file');
+        const file = setFileInputFiles(input);
+        expect(input.value).not.toBe('');
+
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+
+        expect(viewModel.selectAvatarFile).toHaveBeenCalledWith(file);
+        expect(input.value).toBe('');
+        expect(input.files.length).toBe(0);
+      });
+
+      it('ignores an avatar file change without a selected file', () => {
+        const el = view.mount(container);
+        const input = el.querySelector('#q-profile-avatar-file');
+
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+
+        expect(viewModel.selectAvatarFile).not.toHaveBeenCalled();
+        expect(input.value).toBe('');
+      });
+
+      it('opens the file picker and tracks drag state on the dropzone', () => {
+        const el = view.mount(container);
+        const dropzone = el.querySelector('.q-profile-dropzone');
+        const input = el.querySelector('#q-profile-avatar-file');
+        const clickSpy = spyOn(input, 'click');
+
+        dropzone.click();
+        expect(clickSpy).toHaveBeenCalled();
+
+        const dragEvent = new Event('dragover', { bubbles: true, cancelable: true });
+        const dataTransfer = { dropEffect: 'none' };
+        Object.defineProperty(dragEvent, 'dataTransfer', { value: dataTransfer });
+        dropzone.dispatchEvent(dragEvent);
+        expect(dragEvent.defaultPrevented).toBe(true);
+        expect(dataTransfer.dropEffect).toBe('copy');
+        expect(dropzone.classList.contains('is-dragover')).toBe(true);
+
+        const innerLeave = new Event('dragleave', { bubbles: true });
+        Object.defineProperty(innerLeave, 'relatedTarget', {
+          value: dropzone.querySelector('.q-profile-dropzone-copy'),
+        });
+        dropzone.dispatchEvent(innerLeave);
+        expect(dropzone.classList.contains('is-dragover')).toBe(true);
+
+        const outerLeave = new Event('dragleave', { bubbles: true });
+        Object.defineProperty(outerLeave, 'relatedTarget', { value: container });
+        dropzone.dispatchEvent(outerLeave);
+        expect(dropzone.classList.contains('is-dragover')).toBe(false);
+
+        const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
+        Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: [] } });
+        dropzone.dispatchEvent(dropEvent);
+        expect(dropEvent.defaultPrevented).toBe(true);
+        expect(viewModel.selectAvatarFile).not.toHaveBeenCalled();
+      });
+
+      it('toggles the avatar studio and exposes preset pressed states', () => {
+        const el = view.mount(container);
+        const toggle = el.querySelector('.q-profile-studio-toggle');
+        const studio = el.querySelector('#q-profile-avatar-studio');
+        const presets = el.querySelectorAll('.q-profile-avatar-preset');
+        expect(presets.length).toBe(3);
+        expect(Array.from(presets, (preset) => preset.getAttribute('aria-pressed'))).toEqual([
+          'false',
+          'false',
+          'false',
+        ]);
+
+        toggle.click();
+        expect(studio.hasAttribute('hidden')).toBe(false);
+        expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+        toggle.click();
+        expect(studio.hasAttribute('hidden')).toBe(true);
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        viewModel.formData = { ...viewModel.formData, avatar_path: presets[1].dataset.avatarPath };
+        viewModel.notify();
+        expect(
+          Array.from(el.querySelectorAll('.q-profile-avatar-preset'), (preset) =>
+            preset.getAttribute('aria-pressed')
+          )
+        ).toEqual(['false', 'true', 'false']);
+      });
+
+      it('uploads the selected avatar and resets the file input on cancel', () => {
+        const el = view.mount(container);
+        viewModel.selectedAvatarFile = { name: 'foto.png', type: 'image/png', size: 1024 };
+        viewModel.formData = { ...viewModel.formData, full_name: 'Cambio' };
+        viewModel.notify();
+
+        const uploadBtn = el.querySelector('.q-profile-upload-btn');
+        expect(uploadBtn.hasAttribute('hidden')).toBe(false);
+        uploadBtn.click();
+        expect(viewModel.uploadAvatar).toHaveBeenCalled();
+
+        const input = el.querySelector('#q-profile-avatar-file');
+        setFileInputFiles(input);
+        expect(input.value).not.toBe('');
+        el.querySelector('.q-profile-reset-btn').click();
+        expect(viewModel.resetForm).toHaveBeenCalled();
+        expect(input.value).toBe('');
+      });
+
+      it('dismisses messages from the success banner and hides banners when cleared', () => {
+        const el = view.mount(container);
+        viewModel.errorMessage = 'Fallo';
+        viewModel.successMessage = 'Listo';
+        viewModel.notify();
+
+        const errorBanner = el.querySelector('.q-profile-alert-error');
+        const successBanner = el.querySelector('.q-profile-alert-success');
+        expect(errorBanner.hasAttribute('hidden')).toBe(false);
+        expect(successBanner.hasAttribute('hidden')).toBe(false);
+        expect(el.querySelector('.q-profile-alert-text').textContent).toBe('Listo');
+
+        el.querySelector('.q-profile-alert-close').click();
+        expect(viewModel.dismissMessages).toHaveBeenCalled();
+
+        viewModel.errorMessage = '';
+        viewModel.successMessage = '';
+        viewModel.notify();
+        expect(errorBanner.hasAttribute('hidden')).toBe(true);
+        expect(errorBanner.textContent).toBe('');
+        expect(successBanner.hasAttribute('hidden')).toBe(true);
+        expect(el.querySelector('.q-profile-alert-text').textContent).toBe('');
+      });
+
+      it('uses display fallbacks when the view model has no profile', () => {
+        viewModel.avatarPreviewUrl = 'blob:avatar-preview';
+        const el = view.mount(container);
+
+        expect(el.querySelector('.q-profile-display-name').textContent).toBe('Usuario');
+        expect(el.querySelector('.q-profile-display-bio').textContent).toBe(
+          'Sin biografía registrada.'
+        );
+        expect(el.querySelector('.q-profile-username').textContent).toBe('');
+        const avatar = el.querySelector('.q-profile-avatar-img');
+        expect(avatar.getAttribute('src')).toBe('blob:avatar-preview');
+        expect(avatar.getAttribute('alt')).toBe('Foto de perfil');
+      });
+
+      it('disables upload, dropzone and form actions for each busy state', () => {
+        const el = view.mount(container);
+        const uploadBtn = el.querySelector('.q-profile-upload-btn');
+        const dropzone = el.querySelector('.q-profile-dropzone');
+        const saveBtn = el.querySelector('.q-profile-save-btn');
+        const resetBtn = el.querySelector('.q-profile-reset-btn');
+        expect(uploadBtn.hasAttribute('hidden')).toBe(true);
+        expect(dropzone.disabled).toBe(false);
+        expect(saveBtn.disabled).toBe(true);
+        expect(resetBtn.disabled).toBe(true);
+
+        for (const flag of ['isLoading', 'isSaving']) {
+          viewModel[flag] = true;
+          viewModel.notify();
+          expect(uploadBtn.hasAttribute('hidden')).toBe(true);
+          expect(dropzone.disabled).toBe(true);
+          expect(saveBtn.disabled).toBe(true);
+          expect(resetBtn.disabled).toBe(true);
+          viewModel[flag] = false;
+          viewModel.notify();
+        }
+
+        viewModel.isUploadingAvatar = true;
+        viewModel.notify();
+        expect(uploadBtn.hasAttribute('hidden')).toBe(false);
+        expect(uploadBtn.disabled).toBe(true);
+        expect(uploadBtn.textContent).toBe('Subiendo...');
+        expect(dropzone.disabled).toBe(true);
+        expect(saveBtn.disabled).toBe(true);
+
+        viewModel.isUploadingAvatar = false;
+        viewModel.notify();
+        expect(uploadBtn.hasAttribute('hidden')).toBe(true);
+        expect(uploadBtn.textContent).toBe('Subir imagen');
+      });
+
+      it('appends and selects a custom locale option, leaving stale options behind', () => {
+        viewModel.formData = { ...viewModel.formData, locale: 'fr-CA' };
+        const el = view.mount(container);
+        const select = el.querySelector('#q-profile-locale');
+
+        expect(select.options.length).toBe(5);
+        const custom = select.querySelector('option[value="fr-CA"]');
+        expect(custom.textContent).toBe('fr-CA');
+        expect(select.value).toBe('fr-CA');
+
+        viewModel.formData = { ...viewModel.formData, locale: 'es' };
+        viewModel.notify();
+        expect(select.value).toBe('es');
+        expect(select.querySelector('option[value="fr-CA"]')).not.toBeNull();
+      });
+
+      it('shows an over-limit bio counter for 505 characters', () => {
+        viewModel.formData = { ...viewModel.formData, bio: 'x'.repeat(505) };
+        const el = view.mount(container);
+        const counter = el.querySelector('.q-profile-bio-counter');
+
+        expect(counter.textContent).toBe(`505 / ${BIO_MAX_LENGTH}`);
+        expect(counter.classList.contains('is-over-limit')).toBe(true);
+      });
+
+      it('shows the exact oversized avatar error with aria-invalid on the dropzone', () => {
+        viewModel.fieldErrors = { avatar: 'La imagen excede el límite de 2 MB' };
+        const el = view.mount(container);
+        const errorEl = el.querySelector('[data-error-for="avatar"]');
+        const dropzone = el.querySelector('.q-profile-dropzone');
+
+        expect(errorEl.hasAttribute('hidden')).toBe(false);
+        expect(errorEl.textContent).toBe('La imagen excede el límite de 2 MB');
+        expect(dropzone.classList.contains('is-invalid')).toBe(true);
+        expect(dropzone.getAttribute('aria-invalid')).toBe('true');
+      });
+
+      it('keeps focus when no invalid field exists and focuses the first invalid field', () => {
+        const el = view.mount(container);
+        const dropzone = el.querySelector('.q-profile-dropzone');
+        dropzone.focus();
+
+        expect(() => view._focusFirstInvalidField()).not.toThrow();
+        expect(document.activeElement).toBe(dropzone);
+
+        const fullNameInput = el.querySelector('#q-profile-full-name');
+        fullNameInput.setAttribute('aria-invalid', 'true');
+        view._focusFirstInvalidField();
+        expect(document.activeElement).toBe(fullNameInput);
+      });
+
+      it('characterizes unguarded formData and fieldErrors in _update', () => {
+        viewModel.formData = undefined;
+        let broken = new ProfileView(viewModel, { autoLoad: false });
+        expect(() => broken.render()).toThrowError(TypeError);
+        broken.destroy();
+
+        viewModel.formData = { full_name: '', bio: '', avatar_path: '', locale: 'en' };
+        viewModel.fieldErrors = undefined;
+        broken = new ProfileView(viewModel, { autoLoad: false });
+        expect(() => broken.render()).toThrowError(TypeError);
+        broken.destroy();
+      });
+
+      it('characterizes the studio state that survives destroy and remount', () => {
+        const first = view.mount(container);
+        first.querySelector('.q-profile-studio-toggle').click();
+        expect(first.querySelector('#q-profile-avatar-studio').hasAttribute('hidden')).toBe(false);
+
+        view.destroy();
+        view.mount(container);
+        const reopened = container.querySelector('.q-profile');
+        expect(reopened).not.toBe(first);
+        expect(reopened.querySelector('#q-profile-avatar-studio').hasAttribute('hidden')).toBe(
+          false
+        );
+        expect(
+          reopened.querySelector('.q-profile-studio-toggle').getAttribute('aria-expanded')
+        ).toBe('true');
+      });
+    });
+  })();
+})();

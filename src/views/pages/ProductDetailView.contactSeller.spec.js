@@ -95,7 +95,9 @@ describe('ProductDetailView contact seller', () => {
     viewModel = createMockViewModel();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    document.querySelector('.q-contact-seller-modal__cancel')?.click();
+    await tick(10);
     document.querySelectorAll('.q-modal').forEach((el) => el.remove());
     document.body.style.overflow = '';
     if (view) {

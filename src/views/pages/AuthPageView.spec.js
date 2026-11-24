@@ -1,3 +1,4 @@
+import { authStore } from '../../store/authStore.js';
 import { AuthPageView } from './AuthPageView.js';
 
 describe('AuthPageView', () => {
@@ -338,3 +339,266 @@ describe('AuthPageView', () => {
     expect(onForgotPassword).toHaveBeenCalled();
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('AuthPageView (recovered 1)', () => {
+    let container;
+    let views;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      views = [];
+    });
+
+    afterEach(() => {
+      views.forEach((view) => view.destroy());
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    });
+
+    const createView = (options) => {
+      const view = new AuthPageView(options);
+      views.push(view);
+      return view;
+    };
+
+    it('should default mode to "register" when constructed without arguments', () => {
+      const view = createView();
+      expect(view.mode).toBe('register');
+    });
+  });
+
+  (() => {
+    describe('AuthPageView additional branches (recovered 2)', () => {
+      let container;
+      let view;
+      let initialHref;
+
+      const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+      function createView(options = {}) {
+        view = new AuthPageView(options);
+        return view;
+      }
+
+      function mountView(options = {}) {
+        createView(options);
+        view.mount(container);
+        return view;
+      }
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        initialHref = window.location.href;
+        history.replaceState(null, '', '/login');
+      });
+
+      afterEach(() => {
+        view?.destroy();
+        view = null;
+        container.remove();
+        authStore.clearSession();
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        history.replaceState(null, '', initialHref);
+      });
+
+      it('applies the exact oauth_cancelled feedback from the constructor query string', () => {
+        history.replaceState(null, '', '/login?error=oauth_cancelled');
+        createView({ mode: 'login' });
+
+        const message = 'Autorización cancelada. Puedes intentarlo de nuevo.';
+        expect(view.viewModel.errorMessage).toBe(message);
+        view.mount(container);
+        const error = container.querySelector('.q-auth-login-panel .q-auth__error');
+        // Bug: the constructor applies the feedback to the view model, but the first
+        // render copies the still-empty alert text, leaving the message invisible.
+        expect(error.textContent).toBe('');
+        expect(error.style.display).toBe('flex');
+      });
+
+      it('does nothing for unknown or missing error query parameters', () => {
+        history.replaceState(null, '', '/login?error=not-a-real-code');
+        createView({ mode: 'login' });
+
+        expect(view.viewModel.errorMessage).toBe('');
+        expect(view.viewModel.applyOAuthErrorFeedback('?error=another-unknown')).toBe(false);
+        expect(view.viewModel.applyOAuthErrorFeedback('')).toBe(false);
+
+        view.mount(container);
+        const error = container.querySelector('.q-auth-login-panel .q-auth__error');
+        expect(error.textContent).toBe('');
+        expect(error.style.display).toBe('block');
+      });
+
+      it('memoizes the rendered element across render() and mount()', () => {
+        createView({ mode: 'login' });
+        const first = view.render();
+        expect(view.render()).toBe(first);
+
+        view.mount(container);
+        expect(view.element).toBe(first);
+        expect(view.render()).toBe(first);
+        expect(container.querySelectorAll('.q-auth__layout').length).toBe(1);
+        expect(container.querySelectorAll('.q-auth__logo').length).toBe(2);
+      });
+
+      it('rewrites the presentation classes, aria, check icons and footer controls', () => {
+        createView({ mode: 'login' });
+        const page = view.render();
+
+        expect(page.classList.contains('q-auth-page')).toBe(true);
+        expect(page.classList.contains('q-auth__layout')).toBe(true);
+
+        const left = page.querySelector('.q-auth__left');
+        expect(left.className).toBe('q-auth__left');
+        expect(left.querySelectorAll('.q-ambient__blob').length).toBe(0);
+        expect(left.querySelector('.q-auth-marketing__brand')).toBeNull();
+        expect(left.querySelector('.q-auth__left-content')).not.toBeNull();
+        expect(page.querySelector('.q-auth__eyebrow').textContent).toBe(
+          'MERCADO LOCAL, HISTORIAS REALES'
+        );
+        expect(page.querySelector('.q-auth__eyebrow-dot').getAttribute('aria-hidden')).toBe('true');
+        const headline = page.querySelector('h1.q-auth__headline');
+        expect(headline.textContent).toBe('Qué bueno verte de nuevo.');
+        expect(page.querySelector('.q-auth__body')).not.toBeNull();
+
+        const features = page.querySelectorAll('.q-auth__features .q-auth__feature');
+        expect(features.length).toBe(3);
+        const check = features[0].querySelector('svg');
+        expect(check.getAttribute('viewBox')).toBe('0 0 16 16');
+        expect(check.getAttribute('fill')).toBe('none');
+        expect(check.getAttribute('stroke')).toBe('currentColor');
+        expect(check.getAttribute('aria-hidden')).toBe('true');
+        expect(check.querySelector('path').getAttribute('d')).toBe('M3 8.5l3 3 7-7');
+
+        expect(page.querySelector('.q-auth-form-panel').classList.contains('q-auth__right')).toBe(
+          true
+        );
+        const card = page.querySelector('.q-auth-card');
+        expect(card.className).toBe('q-auth-card q-auth__card');
+        expect(card.classList.contains('q-glass-panel')).toBe(false);
+
+        const loginPanel = page.querySelector('.q-auth-login-panel');
+        expect(loginPanel.querySelector('.q-auth-divider')).toBeNull();
+        const google = loginPanel.querySelector('.q-auth__google');
+        expect(google.textContent.trim()).toBe('Continuar con Google');
+        const paths = google.querySelectorAll('svg path');
+        expect(paths.length).toBe(4);
+        expect(
+          Array.from(paths).every((path) => path.getAttribute('fill') === 'currentColor')
+        ).toBe(true);
+        expect(loginPanel.querySelector('.q-auth__switch').className).toBe(
+          'q-auth-switch-link q-auth__switch'
+        );
+
+        const error = loginPanel.querySelector('.q-auth__error');
+        expect(error.tagName).toBe('P');
+        expect(error.className).toBe('q-auth-alert q-auth-alert-error q-auth__error');
+        expect(error.getAttribute('role')).toBe('alert');
+        expect(error.style.display).toBe('block');
+      });
+
+      it('uses the exact submit-button copy for each mode', () => {
+        mountView({ mode: 'login' });
+
+        expect(container.querySelector('.q-auth-login-panel .q-auth-submit-btn').textContent).toBe(
+          'Iniciar sesión'
+        );
+        expect(
+          container.querySelector('.q-auth-register-panel .q-auth-submit-btn').textContent
+        ).toBe('Crear cuenta');
+      });
+
+      it('relabels the specified inputs without touching the other labels', () => {
+        mountView({ mode: 'register' });
+
+        const labelText = (id) => container.querySelector(`label[for="${id}"]`).textContent;
+        expect(labelText('q-login-email')).toBe('Correo electrónico');
+        expect(labelText('q-register-name')).toBe('Nombre completo');
+        expect(labelText('q-register-email')).toBe('Correo electrónico');
+        expect(labelText('q-register-confirm-password')).toBe('Confirmar contraseña');
+        expect(labelText('q-login-password')).toBe('Contraseña');
+        expect(labelText('q-register-username')).toBe('Usuario');
+      });
+
+      it('adds is-submitted to both forms on submit', () => {
+        mountView({ mode: 'register' });
+        spyOn(view.viewModel, 'submitLogin').and.resolveTo(false);
+        spyOn(view.viewModel, 'submitRegister').and.resolveTo(false);
+
+        const loginForm = container.querySelector('.q-login-form');
+        const registerForm = container.querySelector('.q-register-form');
+        loginForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        registerForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        expect(loginForm.classList.contains('q-auth__form')).toBe(true);
+        expect(loginForm.classList.contains('is-submitted')).toBe(true);
+        expect(registerForm.classList.contains('is-submitted')).toBe(true);
+      });
+
+      it('moves the error, success, Google and switch controls to the end of the form', () => {
+        mountView({ mode: 'login' });
+
+        const panel = container.querySelector('.q-auth-login-panel');
+        const form = panel.querySelector('.q-auth-form');
+        const error = panel.querySelector('.q-auth__error');
+        const success = panel.querySelector('.q-auth__success');
+        const google = panel.querySelector('.q-auth__google');
+        const switchLink = panel.querySelector('.q-auth__switch');
+
+        expect(success.className).toBe('q-auth-alert q-auth-alert-success q-auth__success');
+        expect(form.lastElementChild).toBe(switchLink);
+        expect(switchLink.previousElementSibling).toBe(google);
+        expect(google.previousElementSibling).toBe(success);
+        expect(success.previousElementSibling).toBe(error);
+        expect(panel.querySelector('.q-auth-divider')).toBeNull();
+      });
+
+      it('leaves an emptied error alert visible as a block', async () => {
+        history.replaceState(null, '', '/login?error=oauth_failed');
+        mountView({ mode: 'login' });
+        const error = container.querySelector('.q-auth__error');
+        // Bug: constructor-time OAuth feedback never reaches the initial alert text.
+        expect(error.textContent).toBe('');
+        expect(error.style.display).toBe('flex');
+
+        view.viewModel.setError('');
+        await tick();
+
+        expect(error.textContent).toBe('');
+        expect(error.style.display).toBe('block');
+      });
+
+      it('nulls its references on destroy, stays inert afterwards and tolerates a second destroy', () => {
+        mountView({ mode: 'register' });
+        const headline = container.querySelector('h1.q-auth__headline');
+        expect(headline.textContent).toBe('Crea tu cuenta y compra con propósito.');
+
+        view.destroy();
+
+        expect(view.element).toBeNull();
+        expect(view._marketingHeadline).toBeNull();
+        expect(view._unsubscribeMode).toBeNull();
+        expect(view.view.element).toBeNull();
+        expect(view.view._unsubscribe).toBeNull();
+        expect(view.view._marketing).toBeNull();
+        expect(container.children.length).toBe(0);
+
+        view.setMode('login');
+        expect(view.mode).toBe('login');
+        expect(headline.textContent).toBe('Crea tu cuenta y compra con propósito.');
+
+        view.destroy();
+        expect(view.element).toBeNull();
+        expect(view._marketingHeadline).toBeNull();
+        expect(view._unsubscribeMode).toBeNull();
+        expect(container.children.length).toBe(0);
+      });
+    });
+  })();
+})();

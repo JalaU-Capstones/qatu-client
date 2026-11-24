@@ -288,3 +288,127 @@ describe('ConversationsApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const jsonResponse = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('ConversationsApi additional branches (recovered 1)', () => {
+      let fetchFn;
+      let api;
+
+      beforeEach(() => {
+        fetchFn = jasmine.createSpy('apiFetchFn');
+        api = new ConversationsApi({ apiFetchFn: fetchFn });
+      });
+
+      it('rejects an explicitly falsy injected fetch function', () => {
+        for (const apiFetchFn of [null, '', 0, false]) {
+          expect(() => new ConversationsApi({ apiFetchFn })).toThrowError('apiFetchFn is required');
+        }
+      });
+
+      it('validates non-string seller ids and handles optional product ids', async () => {
+        for (const sellerId of [undefined, null, 123, {}]) {
+          await expectAsync(api.createOrGetConversation({ sellerId })).toBeRejectedWithError(
+            'sellerId is required'
+          );
+        }
+        expect(fetchFn).not.toHaveBeenCalled();
+
+        fetchFn.and.resolveTo(jsonResponse({ data: {}, meta: null }, 200));
+        const result = await api.createOrGetConversation({ sellerId: 's-1', productId: '' });
+        expect(JSON.parse(fetchFn.calls.first().args[1].body)).toEqual({ seller_id: 's-1' });
+        expect(result.meta).toEqual({});
+
+        await api.createOrGetConversation({ sellerId: 's-1', productId: 'p/1' });
+        expect(JSON.parse(fetchFn.calls.mostRecent().args[1].body)).toEqual({
+          seller_id: 's-1',
+          product_id: 'p/1',
+        });
+      });
+
+      it('omits falsy pagination values from list queries', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+
+        await api.listConversations({ page: 0, limit: null });
+        expect(fetchFn.calls.first().args[0]).toBe('/conversations');
+
+        await api.listMessages('conv-1', { page: '', limit: 0 });
+        expect(fetchFn.calls.mostRecent().args[0]).toBe('/conversations/conv-1/messages');
+      });
+
+      it('normalizes missing data and meta in message and conversation lists', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: 'not-an-array' }));
+
+        await expectAsync(api.listConversations()).toBeResolvedTo({ data: [], meta: {} });
+        await expectAsync(api.listMessages('conv-1')).toBeResolvedTo({ data: [], meta: {} });
+      });
+
+      it('validates non-string ids and encodes ids in URLs', async () => {
+        await expectAsync(api.listMessages(123)).toBeRejectedWithError(
+          'conversationId is required'
+        );
+        await expectAsync(api.sendMessage(null, { content: 'x' })).toBeRejectedWithError(
+          'conversationId is required'
+        );
+
+        fetchFn.and.resolveTo(jsonResponse({ data: [] }));
+        await api.listMessages('conv/1 ?');
+        expect(fetchFn.calls.first().args[0]).toBe(
+          '/conversations/conv%2F1%20%3F/messages?page=1&limit=20'
+        );
+
+        await api.sendMessage('conv/1', { content: 'hola' });
+        expect(fetchFn.calls.mostRecent().args[0]).toBe('/conversations/conv%2F1/messages');
+      });
+
+      it('rejects non-string and missing message content', async () => {
+        for (const content of [undefined, null, 42, {}, '   ']) {
+          await expectAsync(api.sendMessage('conv-1', { content })).toBeRejectedWithError(
+            'El mensaje no puede estar vacío.'
+          );
+        }
+        await expectAsync(api.sendMessage('conv-1')).toBeRejectedWithError(
+          'El mensaje no puede estar vacío.'
+        );
+        expect(fetchFn).not.toHaveBeenCalled();
+      });
+
+      it('maps status codes and backend details when the body has no error code', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ error: { details: [{ field: 'content' }] } }, 422));
+
+        let error;
+        try {
+          await api.sendMessage('conv-1', { content: 'hola' });
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('No se pudo enviar el mensaje (422)');
+        expect(error.code).toBe('UNPROCESSABLE_ENTITY');
+        expect(error.statusCode).toBe(422);
+        expect(error.details).toEqual([{ field: 'content' }]);
+
+        fetchFn.and.resolveTo(new Response('', { status: 500 }));
+        await expectAsync(api.listConversations()).toBeRejectedWithError(
+          'No se pudieron cargar las conversaciones (500)'
+        );
+      });
+
+      it('falls back when the error body is not JSON and propagates network errors', async () => {
+        fetchFn.and.resolveTo(new Response('not-json', { status: 403 }));
+        await expectAsync(api.createOrGetConversation({ sellerId: 's-1' })).toBeRejectedWithError(
+          'No se pudo iniciar la conversación (403)'
+        );
+
+        fetchFn.and.rejectWith(new Error('offline'));
+        await expectAsync(api.listMessages('conv-1')).toBeRejectedWithError('offline');
+      });
+    });
+  })();
+})();

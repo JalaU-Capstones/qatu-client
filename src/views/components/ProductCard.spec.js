@@ -187,3 +187,400 @@ describe('ProductCard', () => {
     expect(onView).toHaveBeenCalledOnceWith(product);
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('ProductCard additional branches (recovered 2)', () => {
+      let container;
+      let view = null;
+
+      const product = {
+        id: 'product-1',
+        slug: 'woven-bag',
+        name: 'Woven bag',
+        price: 42.5,
+        currency: 'USD',
+        stock: 5,
+        average_rating: 4.5,
+        ratings_count: 12,
+        category: { name: 'Accessories' },
+        images: [{ url: 'https://example.test/bag.jpg' }],
+      };
+
+      const settle = async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      };
+
+      const makeCard = (options) => {
+        view = new ProductCard(options);
+        return view.render();
+      };
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+      });
+
+      afterEach(() => {
+        view?.destroy?.();
+        container.remove();
+      });
+
+      it('falls back to an empty product and the default variant for missing or invalid inputs', () => {
+        const empty = makeCard();
+        expect(empty.tagName.toLowerCase()).toBe('article');
+        expect(empty.className).toBe('product-card product-card--default');
+        expect(empty.getAttribute('role')).toBe('listitem');
+        expect(empty.querySelector('h3')).toBeNull();
+        expect(empty.querySelector('.product-card__price')).toBeNull();
+        expect(empty.querySelector('.product-card__rating')).toBeNull();
+        expect(empty.querySelector('img').alt).toBe('Imagen del producto');
+        expect(empty.querySelector('button[aria-label^="Añadir"]').getAttribute('aria-label')).toBe(
+          'Añadir producto al carrito'
+        );
+
+        const nulled = makeCard({ product: null, variant: 'unknown-variant' });
+        expect(nulled.className).toBe('product-card product-card--default');
+        expect(nulled.querySelector('h3')).toBeNull();
+      });
+
+      it('resolves featured seller-line fallbacks from seller, store, seller_name and country fields', () => {
+        const cases = [
+          [{}, 'Accessories'],
+          [{ seller: 'Tejidos Illimani' }, 'Tejidos Illimani'],
+          [{ seller_name: 'Tienda Local' }, 'Tienda Local'],
+          [{ seller: { username: 'tejidos', country: { name: 'Bolivia' } } }, 'tejidos · Bolivia'],
+          [
+            { seller: { full_name: 'Nombre', country: 'Chile', country_name: 'País explícito' } },
+            'Nombre · País explícito',
+          ],
+          [{ seller: { name: 'Tienda', countryName: 'Perú' } }, 'Tienda · Perú'],
+          [{ seller: { store_name: 'Store' }, country_name: 'México' }, 'Store · México'],
+          [{ seller: {} }, 'Accessories'],
+        ];
+
+        cases.forEach(([extra, expected]) => {
+          const card = makeCard({ product: { ...product, ...extra }, variant: 'featured' });
+          expect(card.querySelector('.product-card__category').textContent).toBe(expected);
+        });
+      });
+
+      it('applies featured badge precedence from explicit badge, tag and derived flags', () => {
+        const cases = [
+          [{ badge: 'Oferta', is_best_seller: true }, 'Oferta'],
+          [{ tag: 'Nuevo', stock: 0 }, 'Nuevo'],
+          [{ badge: 'Desconocido', is_best_seller: true }, 'Más vendido'],
+          [{ stock: 0, is_best_seller: true }, 'Agotado'],
+          [{ isBestSeller: true, discount_price: 10 }, 'Más vendido'],
+          [{ best_seller: true, is_new: true }, 'Más vendido'],
+          [{ sale_price: 5, is_new: true }, 'Oferta'],
+          [{ discount_percentage: 15, stock: 2 }, 'Oferta'],
+          [{ is_new: true, stock: 1 }, 'Nuevo'],
+          [{ isNew: true, stock: 5 }, 'Nuevo'],
+          [{ stock: 1 }, 'Últimas unidades'],
+          [{ stock: '1' }, 'Últimas unidades'],
+          // Five units still earns the featured "Últimas unidades" pill.
+          [{ stock: 5 }, 'Últimas unidades'],
+          [{ stock: 6 }, null],
+        ];
+
+        cases.forEach(([extra, expected]) => {
+          const card = makeCard({ product: { ...product, ...extra }, variant: 'featured' });
+          const badge = card.querySelector('.product-card__status-pill');
+          if (expected === null) {
+            expect(badge).toBeNull();
+          } else {
+            expect(badge.textContent).toBe(expected);
+          }
+        });
+      });
+
+      it('reverts the featured favorite label, state and class on a second click without bubbling', () => {
+        const card = makeCard({ product, variant: 'featured' });
+        container.appendChild(card);
+        const favorite = card.querySelector('.product-card__favorite');
+        const media = card.querySelector('.product-card__media');
+        const parentClick = jasmine.createSpy('parentClick');
+        media.addEventListener('click', parentClick);
+
+        expect(favorite.getAttribute('aria-label')).toBe('Guardar Woven bag');
+        expect(favorite.getAttribute('aria-pressed')).toBe('false');
+        expect(favorite.classList.contains('is-saved')).toBe(false);
+
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        favorite.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(parentClick).not.toHaveBeenCalled();
+        expect(favorite.getAttribute('aria-pressed')).toBe('true');
+        expect(favorite.getAttribute('aria-label')).toBe('Quitar de favoritos Woven bag');
+        expect(favorite.classList.contains('is-saved')).toBe(true);
+
+        favorite.click();
+        expect(favorite.getAttribute('aria-pressed')).toBe('false');
+        expect(favorite.getAttribute('aria-label')).toBe('Guardar Woven bag');
+        expect(favorite.classList.contains('is-saved')).toBe(false);
+      });
+
+      it('handles rating edge values and orders category, rating and title in default cards', () => {
+        const card = makeCard({
+          product: { ...product, average_rating: '4.25', ratings_count: '7' },
+        });
+        const body = card.querySelector('.product-card__body');
+
+        expect(body.children[0].className).toBe('product-card__category');
+        const rating = body.children[1];
+        expect(rating.className).toBe('product-card__rating');
+        expect(body.children[2].className).toBe('product-card__title-price');
+        expect(rating.children[0].textContent).toBe('4.3');
+        expect(rating.children[1].textContent).toBe('★');
+        expect(rating.children[1].getAttribute('aria-hidden')).toBe('true');
+        expect(rating.children[2].textContent).toBe('(7)');
+
+        expect(
+          makeCard({ product: { ...product, average_rating: 0 } }).querySelector(
+            '.product-card__rating'
+          ).textContent
+        ).toBe('0.0★(12)');
+        expect(
+          makeCard({ product: { ...product, average_rating: 'abc' } }).querySelector(
+            '.product-card__rating'
+          )
+        ).toBeNull();
+        expect(
+          makeCard({ product: { ...product, average_rating: '' } }).querySelector(
+            '.product-card__rating'
+          )
+        ).toBeNull();
+        expect(
+          makeCard({ product: { ...product, average_rating: null } }).querySelector(
+            '.product-card__rating'
+          )
+        ).toBeNull();
+
+        const featured = makeCard({ product, variant: 'featured' });
+        const featuredBody = featured.querySelector('.product-card__body');
+        expect(featuredBody.children[1].className).toBe('product-card__title-price');
+        expect(featuredBody.children[2].className).toBe('product-card__rating');
+      });
+
+      it('skips non-finite prices, formats numeric strings and moves featured prices into the footer', () => {
+        expect(
+          makeCard({ product: { ...product, price: '' } }).querySelector('.product-card__price')
+        ).toBeNull();
+        expect(
+          makeCard({ product: { ...product, price: 'abc' } }).querySelector('.product-card__price')
+        ).toBeNull();
+        expect(
+          makeCard({ product: { ...product, price: 0, currency: '' } }).querySelector(
+            '.product-card__price'
+          ).textContent
+        ).toBe('Bs 0.00');
+        expect(
+          makeCard({ product: { ...product, price: '42.5', currency: 'EUR' } }).querySelector(
+            '.product-card__price'
+          ).textContent
+        ).toBe('€ 42.50');
+
+        const featured = makeCard({ product, variant: 'featured' });
+        expect(
+          featured.querySelector('.product-card__title-price .product-card__price')
+        ).toBeNull();
+        expect(
+          featured.querySelector('.product-card__footer .product-card__price').textContent
+        ).toBe('US$ 42.50');
+      });
+
+      it('renders seller state labels only for known states', () => {
+        const labels = {
+          published: 'Publicado',
+          draft: 'Borrador',
+          unpublished: 'No publicado',
+          archived: 'Archivado',
+        };
+
+        Object.entries(labels).forEach(([state, label]) => {
+          const card = makeCard({ product: { ...product, state }, variant: 'seller' });
+          const status = card.querySelector('.product-card__status');
+          expect(status.textContent).toBe(label);
+          expect(status.parentNode.className).toBe('product-card__seller-controls');
+        });
+
+        const unknown = makeCard({ product: { ...product, state: 'borrador' }, variant: 'seller' });
+        expect(unknown.querySelector('.product-card__status')).toBeNull();
+        expect(
+          makeCard({ product, variant: 'seller' }).querySelector('.product-card__status')
+        ).toBeNull();
+      });
+
+      it('uses the exact add-button classes for every supported variant', () => {
+        const expected = {
+          default: 'button is-primary is-fullwidth',
+          compact: 'button is-small is-primary',
+          seller: 'button is-small',
+          featured: 'product-card__add-button product-card__cart-action',
+        };
+
+        Object.entries(expected).forEach(([variant, className]) => {
+          const card = makeCard({ product, variant });
+          const button = card.querySelector('button[aria-label^="Añadir"]');
+          expect(button.className).toBe(className);
+          expect(button.type).toBe('button');
+          expect(button.getAttribute('aria-label')).toBe('Añadir Woven bag al carrito');
+        });
+      });
+
+      it('honors hideAddToCart and hideSellerActions independently', () => {
+        let card = makeCard({ product, variant: 'seller', hideAddToCart: true });
+        expect(card.querySelector('button[aria-label^="Añadir"]')).toBeNull();
+        expect(card.querySelector('.product-card__dropdown')).not.toBeNull();
+
+        card = makeCard({ product, variant: 'seller', hideSellerActions: true });
+        expect(card.querySelector('.product-card__dropdown')).toBeNull();
+        expect(card.querySelector('button[aria-label^="Añadir"]')).not.toBeNull();
+
+        card = makeCard({
+          product,
+          variant: 'seller',
+          hideAddToCart: true,
+          hideSellerActions: true,
+        });
+        expect(card.querySelector('.product-card__footer')).toBeNull();
+      });
+
+      it('derives add-button availability from numeric stock zero and explicit states', () => {
+        const cases = [
+          [{ stock: 0 }, true],
+          [{ stock: '0' }, false],
+          [{ stock: -1 }, false],
+          [{ state: 'draft' }, true],
+          [{ state: 'published' }, false],
+          [{ state: null }, true],
+          [{ stock: 0, state: 'published' }, true],
+        ];
+
+        cases.forEach(([extra, disabled]) => {
+          const card = makeCard({ product: { ...product, ...extra } });
+          expect(card.querySelector('button[aria-label^="Añadir"]').disabled).toBe(disabled);
+        });
+      });
+
+      it('calls onAddToCart with the product and quantity one, exposing busy state while pending', async () => {
+        const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+        const card = makeCard({ product, onAddToCart });
+        const button = card.querySelector('button[aria-label^="Añadir"]');
+
+        button.click();
+        expect(onAddToCart).toHaveBeenCalledOnceWith(product, 1);
+        expect(button.disabled).toBe(true);
+        expect(button.classList.contains('is-loading')).toBe(true);
+        expect(button.getAttribute('aria-busy')).toBe('true');
+
+        await settle();
+        expect(card.querySelector('.product-card__error')).toBeNull();
+        expect(button.classList.contains('is-loading')).toBe(false);
+        expect(button.hasAttribute('aria-busy')).toBe(false);
+        expect(button.disabled).toBe(false);
+      });
+
+      it('reuses a single error element and falls back to the default error message', async () => {
+        const onAddToCart = jasmine
+          .createSpy('onAddToCart')
+          .and.resolveTo({ status: 'error', error: new Error('Primer fallo') });
+        const card = makeCard({ product, onAddToCart });
+        const button = card.querySelector('button[aria-label^="Añadir"]');
+
+        button.click();
+        await settle();
+        const error = card.querySelector('.product-card__error');
+        expect(error.textContent).toBe('Primer fallo');
+        expect(error.getAttribute('role')).toBe('alert');
+
+        onAddToCart.and.resolveTo({ status: 'error' });
+        button.click();
+        await settle();
+        expect(card.querySelectorAll('.product-card__error').length).toBe(1);
+        expect(card.querySelector('.product-card__error').textContent).toBe('No se pudo añadir');
+      });
+
+      it('recovers after a rejected add and treats a non-Error rejection as the default message', async () => {
+        let rejectAdd;
+        const onAddToCart = jasmine.createSpy('onAddToCart').and.callFake(
+          () =>
+            new Promise((resolve, reject) => {
+              rejectAdd = reject;
+            })
+        );
+        const card = makeCard({ product, onAddToCart });
+        const button = card.querySelector('button[aria-label^="Añadir"]');
+
+        button.click();
+        expect(button.getAttribute('aria-busy')).toBe('true');
+        rejectAdd('texto plano');
+        await settle();
+
+        expect(card.querySelector('.product-card__error').textContent).toBe('No se pudo añadir');
+        expect(button.disabled).toBe(false);
+        expect(button.classList.contains('is-loading')).toBe(false);
+        expect(button.hasAttribute('aria-busy')).toBe(false);
+      });
+
+      it('does nothing when the add button is clicked without an onAddToCart callback', async () => {
+        const card = makeCard({ product });
+        const button = card.querySelector('button[aria-label^="Añadir"]');
+
+        expect(() => button.click()).not.toThrow();
+        await settle();
+        expect(button.disabled).toBe(false);
+        expect(button.classList.contains('is-loading')).toBe(false);
+        expect(card.querySelector('.product-card__error')).toBeNull();
+      });
+
+      it('toggles the seller dropdown and invokes edit and delete callbacks once', () => {
+        const onEdit = jasmine.createSpy('onEdit');
+        const onDelete = jasmine.createSpy('onDelete');
+        const card = makeCard({ product, variant: 'seller', onEdit, onDelete });
+        const dropdown = card.querySelector('.product-card__dropdown');
+        const trigger = dropdown.querySelector('button');
+
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+        trigger.click();
+        expect(dropdown.classList.contains('is-active')).toBe(true);
+        expect(trigger.getAttribute('aria-expanded')).toBe('true');
+        trigger.click();
+        expect(dropdown.classList.contains('is-active')).toBe(false);
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+
+        card.querySelector('button[aria-label^="Editar"]').click();
+        card.querySelector('button[aria-label^="Eliminar"]').click();
+        expect(onEdit).toHaveBeenCalledOnceWith(product);
+        expect(onDelete).toHaveBeenCalledOnceWith(product);
+      });
+
+      it('encodes the slug in view links and exposes route metadata and accessible labels', () => {
+        const withSlug = { ...product, slug: 'woven bag/special?' };
+        const onView = jasmine.createSpy('onView');
+        const card = makeCard({ product: withSlug, onView });
+        const links = card.querySelectorAll('.product-card__view-link');
+
+        expect(links.length).toBe(2);
+        expect(links[0].querySelector('img')).not.toBeNull();
+        const titleLink = links[1];
+        expect(titleLink.getAttribute('href')).toBe('/products/woven%20bag%2Fspecial%3F');
+        expect(titleLink.dataset.route).toBe('');
+        expect(titleLink.getAttribute('aria-label')).toBe('Ver Woven bag');
+        titleLink.addEventListener('click', (event) => event.preventDefault());
+        titleLink.click();
+        expect(onView).toHaveBeenCalledOnceWith(withSlug);
+
+        expect(
+          makeCard({ product: { ...product, slug: '' }, onView }).querySelectorAll(
+            '.product-card__view-link'
+          ).length
+        ).toBe(0);
+        expect(makeCard({ product }).querySelectorAll('.product-card__view-link').length).toBe(0);
+      });
+    });
+  })();
+})();

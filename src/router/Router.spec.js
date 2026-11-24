@@ -235,3 +235,179 @@ describe('Router', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('Router additional branches (recovered 1)', () => {
+      let router;
+
+      beforeEach(() => {
+        document.body.innerHTML = '';
+        router = new Router();
+        spyOn(window.history, 'pushState');
+        spyOn(window.history, 'replaceState');
+      });
+
+      afterEach(() => {
+        router.destroy();
+        document.body.innerHTML = '';
+      });
+
+      it('registers and removes exactly one pair of listeners across repeated starts', () => {
+        const addSpy = spyOn(window, 'addEventListener');
+        const documentAddSpy = spyOn(document, 'addEventListener');
+        const removeSpy = spyOn(window, 'removeEventListener');
+        const documentRemoveSpy = spyOn(document, 'removeEventListener');
+        const resolveSpy = spyOn(router, 'resolve');
+
+        router.start();
+        router.start();
+
+        expect(addSpy.calls.allArgs().filter(([name]) => name === 'popstate').length).toBe(1);
+        expect(documentAddSpy.calls.allArgs().filter(([name]) => name === 'click').length).toBe(1);
+        expect(resolveSpy).toHaveBeenCalledTimes(2);
+
+        router.destroy();
+        expect(removeSpy).toHaveBeenCalledWith('popstate', router._onPopState);
+        expect(documentRemoveSpy).toHaveBeenCalledWith('click', router._onDocumentClick);
+        router.destroy();
+        expect(removeSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it('resolves the current path on popstate', () => {
+        const handler = jasmine.createSpy('rootHandler');
+        router.addRoute('/', handler);
+        router.start();
+
+        window.dispatchEvent(new PopStateEvent('popstate'));
+
+        expect(handler).toHaveBeenCalled();
+      });
+
+      it('clears all routes on destroy', () => {
+        const handler = jasmine.createSpy('handler');
+        router.addRoute('/gone', handler);
+        router.destroy();
+
+        expect(() => router.resolve('/gone')).not.toThrow();
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it('falls back to a wildcard route when no exact or dynamic route matches', () => {
+        const fallback = jasmine.createSpy('fallback');
+        router.routes.set('*', fallback);
+
+        router.resolve('/unknown/path');
+
+        expect(fallback).toHaveBeenCalledWith('/unknown/path', {});
+      });
+
+      it('prefers the root route over the wildcard', () => {
+        const root = jasmine.createSpy('root');
+        const fallback = jasmine.createSpy('fallback');
+        router.routes.set('*', fallback);
+        router.addRoute('/', root);
+
+        router.resolve('/other');
+
+        expect(root).toHaveBeenCalled();
+        expect(fallback).not.toHaveBeenCalled();
+      });
+
+      it('does nothing when neither a root nor a wildcard route exists', () => {
+        expect(() => router.resolve('/missing')).not.toThrow();
+        expect(router.currentPath).toBe('/missing');
+      });
+
+      it('supports multiple dynamic segments and escapes literal regex characters', () => {
+        const handler = jasmine.createSpy('handler');
+        router.addRoute('/v1.0/:category/:item', handler);
+
+        router.resolve('/v1X0/books/123');
+
+        expect(handler).not.toHaveBeenCalled();
+        router.resolve('/v1.0/books/123');
+        expect(handler).toHaveBeenCalledWith('/v1.0/books/123', {
+          category: 'books',
+          item: '123',
+        });
+      });
+
+      it('tries later dynamic routes when an earlier one does not match', () => {
+        const first = jasmine.createSpy('first');
+        const second = jasmine.createSpy('second');
+        router.addRoute('/items/:id', first);
+        router.addRoute('/items/:id/detail', second);
+
+        router.resolve('/items/a/detail');
+
+        expect(first).not.toHaveBeenCalled();
+        expect(second).toHaveBeenCalledWith('/items/a/detail', { id: 'a' });
+      });
+
+      it('keeps the raw param value when decodeURIComponent throws', () => {
+        const handler = jasmine.createSpy('handler');
+        router.addRoute('/p/:slug', handler);
+
+        router.resolve('/p/%E0%A4%A');
+
+        expect(handler).toHaveBeenCalledWith('/p/%E0%A4%A', { slug: '%E0%A4%A' });
+      });
+
+      it('ignores target=_blank and handles nested clicks on marked anchors', () => {
+        router.start();
+        const navigateSpy = spyOn(router, 'navigate');
+        const anchor = document.createElement('a');
+        anchor.setAttribute('data-route', '');
+        anchor.href = '/products';
+        anchor.target = '_blank';
+        const child = document.createElement('span');
+        anchor.appendChild(child);
+        document.body.appendChild(anchor);
+
+        child.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(navigateSpy).not.toHaveBeenCalled();
+
+        anchor.target = '';
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        child.dispatchEvent(event);
+        expect(navigateSpy).toHaveBeenCalledWith('/products');
+        expect(event.defaultPrevented).toBe(true);
+      });
+
+      it('intercepts a same-hostname absolute URL and ignores empty hrefs', () => {
+        router.start();
+        const navigateSpy = spyOn(router, 'navigate');
+        const anchor = document.createElement('a');
+        anchor.setAttribute('data-route', '');
+        anchor.href = `${window.location.origin}/about`;
+        document.body.appendChild(anchor);
+
+        anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(navigateSpy).toHaveBeenCalledWith(anchor.href);
+
+        anchor.removeAttribute('href');
+        const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+        anchor.dispatchEvent(event);
+        expect(navigateSpy).toHaveBeenCalledTimes(1);
+        expect(event.defaultPrevented).toBe(false);
+      });
+
+      it('strips query strings and hashes before matching and normalizes navigation paths', () => {
+        const handler = jasmine.createSpy('handler');
+        router.addRoute('/products', handler);
+
+        router.resolve('  /products/?q=phone#top  ');
+
+        expect(handler).toHaveBeenCalledWith('/products', {});
+
+        router.navigate('/products/?q=phone#top');
+        expect(window.history.pushState).toHaveBeenCalledWith({}, '', '/products?q=phone#top');
+
+        router.navigate('/products', { replace: true });
+        expect(window.history.replaceState).toHaveBeenCalledWith({}, '', '/products');
+      });
+    });
+  })();
+})();

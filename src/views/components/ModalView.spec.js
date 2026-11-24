@@ -292,3 +292,335 @@ describe('ModalView', () => {
     expect(() => modal.destroy()).not.toThrow();
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('ModalView (recovered 1)', () => {
+    let modal;
+    let testContainer;
+
+    beforeEach(() => {
+      testContainer = document.createElement('div');
+      document.body.appendChild(testContainer);
+    });
+
+    afterEach(() => {
+      if (modal) {
+        modal.destroy();
+        modal = null;
+      }
+      if (testContainer?.parentNode) {
+        testContainer.parentNode.removeChild(testContainer);
+      }
+      // Clean up any stray modals left in document.body
+      document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+      document.body.style.overflow = '';
+    });
+
+    it('1. render() returns element with class="q-modal", role="dialog" on panel, aria-modal="true"', () => {
+      modal = new ModalView({ title: 'Test Modal' });
+      const el = modal.render();
+
+      expect(el.classList.contains('q-modal')).toBe(true);
+      expect(el.getAttribute('role')).toBe('presentation');
+
+      const panel = el.querySelector('.q-modal__panel');
+      expect(panel).not.toBeNull();
+      expect(panel.getAttribute('role')).toBe('dialog');
+      expect(panel.getAttribute('aria-modal')).toBe('true');
+    });
+  });
+
+  (() => {
+    const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    describe('ModalView additional branches (recovered 2)', () => {
+      let container;
+      let modal;
+      let modals;
+      let originalConsoleError;
+
+      const track = (instance) => {
+        modals.push(instance);
+        return instance;
+      };
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        modals = [];
+        modal = null;
+        originalConsoleError = globalThis.console.error;
+      });
+
+      afterEach(() => {
+        modals.forEach((instance) => instance.destroy());
+        modals = [];
+        modal = null;
+        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+        document.body.style.overflow = '';
+        globalThis.console.error = originalConsoleError;
+        container.remove();
+      });
+
+      it('normalizes falsy titles to an empty string', () => {
+        [null, undefined, 0, false, ''].forEach((title) => {
+          const instance = track(new ModalView({ title }));
+          expect(instance.title).toBe('');
+        });
+      });
+
+      it('keeps only callable onClose callbacks', () => {
+        expect(track(new ModalView({ onClose: 'not a function' })).onClose).toBeNull();
+        expect(track(new ModalView({ onClose: 42 })).onClose).toBeNull();
+        const onClose = jasmine.createSpy('onClose');
+        expect(track(new ModalView({ onClose })).onClose).toBe(onClose);
+      });
+
+      it('falls back to the md panel size for an unsupported size', () => {
+        modal = track(new ModalView({ title: 'x', size: 'xl' }));
+
+        expect(modal.size).toBe('md');
+        expect(
+          modal.render().querySelector('.q-modal__panel').classList.contains('q-modal__panel--md')
+        ).toBe(true);
+      });
+
+      it('still closes on Escape and backdrop click when the flags are numeric zero', async () => {
+        modal = track(new ModalView({ title: 'Esc', closeOnEsc: 0 }));
+        expect(modal.closeOnEsc).toBe(true);
+        const escapePromise = modal.open();
+        const escapeEvent = new KeyboardEvent('keydown', {
+          key: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(escapeEvent);
+        expect(escapeEvent.defaultPrevented).toBe(true);
+        await escapePromise;
+        expect(document.querySelector('.q-modal')).toBeNull();
+
+        modal = track(new ModalView({ title: 'Backdrop', closeOnBackdropClick: 0 }));
+        expect(modal.closeOnBackdropClick).toBe(true);
+        const backdropPromise = modal.open();
+        modal.element
+          .querySelector('.q-modal__backdrop')
+          .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await backdropPromise;
+        expect(document.querySelector('.q-modal')).toBeNull();
+      });
+
+      it('gives two modals distinct title and body ids referenced by aria attributes', () => {
+        const first = track(new ModalView({ title: 'A', body: 'a' }));
+        const second = track(new ModalView({ title: 'B', body: 'b' }));
+
+        expect(first._titleId).not.toBe(second._titleId);
+        expect(first._bodyId).not.toBe(second._bodyId);
+
+        const firstEl = first.render();
+        const secondEl = second.render();
+        expect(firstEl.querySelector('.q-modal__title').id).toBe(first._titleId);
+        expect(secondEl.querySelector('.q-modal__title').id).toBe(second._titleId);
+        expect(firstEl.querySelector('.q-modal__body').id).toBe(first._bodyId);
+        expect(secondEl.querySelector('.q-modal__body').id).toBe(second._bodyId);
+        expect(firstEl.querySelector('.q-modal__panel').getAttribute('aria-labelledby')).toBe(
+          first._titleId
+        );
+        expect(firstEl.querySelector('.q-modal__panel').getAttribute('aria-describedby')).toBe(
+          first._bodyId
+        );
+        expect(secondEl.querySelector('.q-modal__panel').getAttribute('aria-describedby')).toBe(
+          second._bodyId
+        );
+      });
+
+      it('marks the backdrop and makes the panel programmatically focusable and described', () => {
+        modal = track(new ModalView({ title: 'x', body: 'contenido' }));
+        const el = modal.render();
+
+        expect(el.querySelector('.q-modal__backdrop').getAttribute('data-modal-backdrop')).toBe('');
+        expect(el.querySelector('.q-modal__panel').getAttribute('tabindex')).toBe('-1');
+        expect(el.querySelector('.q-modal__panel').getAttribute('aria-describedby')).toBe(
+          modal._bodyId
+        );
+        expect(el.querySelector('.q-modal__body').id).toBe(modal._bodyId);
+      });
+
+      it('renders null and undefined bodies empty and a numeric body as text', () => {
+        const nullBody = track(new ModalView({ body: null }));
+        const undefinedBody = track(new ModalView({ body: undefined }));
+        const numericBody = track(new ModalView({ body: 42 }));
+
+        expect(nullBody.render().querySelector('.q-modal__body').textContent).toBe('');
+        expect(undefinedBody.render().querySelector('.q-modal__body').textContent).toBe('');
+        expect(numericBody.render().querySelector('.q-modal__body').textContent).toBe('42');
+      });
+
+      it('omits the footer for every falsy value', () => {
+        [null, undefined, '', 0, false].forEach((footer) => {
+          const instance = track(new ModalView({ title: 'x', footer }));
+          expect(instance.render().querySelector('.q-modal__footer')).toBeNull();
+        });
+      });
+
+      it('returns the same promise and creates a single modal when open is called twice', async () => {
+        modal = track(new ModalView({ title: 'x' }));
+        const first = modal.open();
+        const second = modal.open();
+
+        expect(second).toBe(first);
+        expect(document.querySelectorAll('.q-modal').length).toBe(1);
+        modal.close();
+        await first;
+        expect(document.querySelectorAll('.q-modal').length).toBe(0);
+      });
+
+      it('falls back focus to the panel when there are no focusables and reports none after destroy', () => {
+        modal = track(new ModalView({ body: 'solo texto' }));
+        modal.open();
+
+        expect(modal._getFocusables().length).toBe(0);
+        expect(document.activeElement).toBe(modal._panel);
+
+        modal.close();
+        expect(modal._getFocusables()).toEqual([]);
+      });
+
+      it('prevents the default Tab and focuses the panel when there are no focusables', () => {
+        modal = track(new ModalView({ body: 'solo texto' }));
+        modal.open();
+
+        const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+        document.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(modal._panel);
+        modal.close();
+      });
+
+      it('wraps Shift+Tab from the panel to the last focusable', () => {
+        const first = document.createElement('button');
+        const last = document.createElement('button');
+        const body = document.createElement('div');
+        body.append(first, last);
+        modal = track(new ModalView({ body }));
+        modal.open();
+
+        modal._panel.focus();
+        expect(document.activeElement).toBe(modal._panel);
+
+        const event = new KeyboardEvent('keydown', {
+          key: 'Tab',
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(last);
+        modal.close();
+      });
+
+      it('does not prevent Tab from a middle focusable', () => {
+        const first = document.createElement('button');
+        const middle = document.createElement('button');
+        const last = document.createElement('button');
+        const body = document.createElement('div');
+        body.append(first, middle, last);
+        modal = track(new ModalView({ body }));
+        modal.open();
+
+        middle.focus();
+        const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+        document.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(document.activeElement).toBe(middle);
+        modal.close();
+      });
+
+      it('does not prevent Escape when closeOnEsc is false', async () => {
+        modal = track(new ModalView({ title: 'x', closeOnEsc: false }));
+        const promise = modal.open();
+
+        const event = new KeyboardEvent('keydown', {
+          key: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+
+        expect(event.defaultPrevented).toBe(false);
+        expect(document.querySelector('.q-modal')).not.toBeNull();
+        modal.close();
+        await promise;
+      });
+
+      it('closes without throwing when the opener has been detached', async () => {
+        const opener = document.createElement('button');
+        container.appendChild(opener);
+        opener.focus();
+        modal = track(new ModalView({ title: 'x' }));
+        const promise = modal.open();
+
+        expect(modal._opener).toBe(opener);
+        opener.remove();
+
+        expect(() => modal.close()).not.toThrow();
+        expect(modal._opener).toBeNull();
+        await promise;
+      });
+
+      it('logs a throwing onClose callback and still resolves and removes the modal', async () => {
+        const boom = new Error('boom');
+        const onClose = jasmine.createSpy('onClose').and.callFake(() => {
+          throw boom;
+        });
+        const consoleErrorSpy = spyOn(globalThis.console, 'error');
+        modal = track(new ModalView({ title: 'x', onClose }));
+        const promise = modal.open();
+
+        modal.close();
+        await promise;
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(consoleErrorSpy).toHaveBeenCalledOnceWith(
+          '[ModalView] onClose callback error:',
+          boom
+        );
+        expect(document.querySelector('.q-modal')).toBeNull();
+      });
+
+      it('restores overflow and detaches the keydown handler on destroy while leaving the promise pending', async () => {
+        document.body.style.overflow = 'visible';
+        const onClose = jasmine.createSpy('onClose');
+        modal = track(new ModalView({ title: 'x', onClose }));
+        let resolved = false;
+        modal.open().then(() => {
+          resolved = true;
+        });
+
+        expect(document.body.style.overflow).toBe('hidden');
+        modal.destroy();
+
+        expect(document.body.style.overflow).toBe('visible');
+        expect(modal._isOpen).toBe(false);
+        expect(modal.element).toBeNull();
+        expect(document.querySelector('.q-modal')).toBeNull();
+
+        const event = new KeyboardEvent('keydown', {
+          key: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+        expect(onClose).not.toHaveBeenCalled();
+
+        await tick();
+        expect(resolved).toBe(false);
+      });
+    });
+  })();
+})();
