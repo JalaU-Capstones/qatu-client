@@ -2,7 +2,8 @@
   position: relative;
   isolation: isolate;
   overflow-x: clip;
-  padding: 2rem 0 3rem;
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  padding: 0 0 3rem;
 }
 
 .q-categories-page::before,
@@ -40,6 +41,8 @@
 .q-categories-page > .q-section-container {
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
+  padding: calc(var(--q-header-overlay-height, 72px) + 32px) 24px 64px;
 }
 
 [data-theme='dark'] .q-categories-page::before {
@@ -122,7 +125,12 @@
 
 @media (max-width: 767px) {
   .q-categories-page {
-    padding: 1.25rem 0 2rem;
+    padding: 0 0 2rem;
+  }
+
+  .q-categories-page > .q-section-container {
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .q-categories-page::before {
