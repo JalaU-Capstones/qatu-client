@@ -33,6 +33,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jasmine-browser-runner runSpecs",
+    "test:coverage": "node scripts/coverage.mjs",
     "test:matrix": "node scripts/visual-matrix.mjs",
     "test:e2e:auth": "node scripts/e2e-auth-cookies.mjs",
     "test:watch": "jasmine-browser-runner runSpecs --watch",
@@ -54,20 +55,37 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
     "globals": "^17.14.0",
     "husky": "^9.1.7",
     "jasmine": "^7.0.0",
     "jasmine-browser-runner": "^5.0.0",
     "lint-staged": "^17.6.1",
+    "nyc": "^18.0.0",
     "prettier": "^3.10.1",
     "puppeteer": "^25.17.0",
     "style-dictionary": "^5.8.0",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vite-plugin-istanbul": "^9.0.1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "bulma": "^1.0.4"
+  },
+  "nyc": {
+    "include": [
+      "src/**/*.js"
+    ],
+    "exclude": [
+      "src/**/*.spec.js",
+      "src/testing/**"
+    ],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ],
+    "report-dir": "coverage",
+    "temp-dir": ".nyc_output"
   }
 }

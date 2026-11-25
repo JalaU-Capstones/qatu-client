@@ -1,8 +1,17 @@
 import { defineConfig } from 'vite';
+import istanbul from 'vite-plugin-istanbul';
 
 export default defineConfig({
   root: '.',
   base: '/',
+  plugins: [
+    istanbul({
+      include: ['src/**/*.js'],
+      exclude: ['node_modules', 'src/**/*.spec.js', 'src/testing/**'],
+      extension: ['.js'],
+      requireEnv: true,
+    }),
+  ],
   server: {
     port: 5173,
     proxy: {
