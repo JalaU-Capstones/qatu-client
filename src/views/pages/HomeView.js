@@ -49,6 +49,7 @@ export class HomeView {
     this._hero.viewModel.onSearch = (term) => this.onSearch(term);
     this._hero.mount(this.element);
     void this._hero.viewModel.loadVisualProducts();
+    void this._hero.viewModel.loadTopCategories();
 
     this._categories = new CategoriesView();
     this._categories.mount(this.element);

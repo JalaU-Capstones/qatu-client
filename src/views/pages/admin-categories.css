@@ -77,6 +77,58 @@
   flex-wrap: wrap;
 }
 
+.q-admin-categories-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 639px) {
+  .q-admin-categories-table-wrap {
+    overflow: visible;
+  }
+
+  .q-admin-categories-table,
+  .q-admin-categories-table tbody,
+  .q-admin-categories-table tr,
+  .q-admin-categories-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .q-admin-categories-table thead {
+    display: none;
+  }
+
+  .q-admin-categories-table tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .q-admin-categories-table tr {
+    border: 1px solid var(--q-color-border, #e5e7eb);
+    border-radius: 12px;
+  }
+
+  .q-admin-categories-table td {
+    border: 0;
+    padding: 0.75rem 1rem;
+  }
+
+  .q-admin-categories-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--q-fg-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .q-admin-categories-actions {
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .q-admin-categories-form__fields {
     grid-template-columns: 1fr;

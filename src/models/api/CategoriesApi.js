@@ -1,3 +1,4 @@
+import { getCategoriesWithCounts, getTopCategories } from './categories.js';
 import { apiFetch } from './client.js';
 
 const BASE_URL =
@@ -40,6 +41,26 @@ export class CategoriesApi {
     }
 
     return response.json();
+  }
+
+  getCategoriesWithCounts() {
+    return getCategoriesWithCounts(async (path) => {
+      const response = await this._fetch(path, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    });
+  }
+
+  getTopCategories(limit = 5) {
+    return getTopCategories(limit, async (path) => {
+      const response = await this._fetch(path, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+      }
+      return response.json();
+    });
   }
 
   /**

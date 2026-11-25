@@ -59,6 +59,10 @@ export class CategoriesViewModel {
     this.categories = normalizeCategories(
       options.categories || CategoriesViewModel.defaultCategories()
     );
+    this.isLoading = !options.categories;
+    this.categoriesApi = options.categoriesApi || new CategoriesApi();
+    this.limit = options.limit || 6;
+    this.errorMessage = '';
     this._listeners = new Set();
   }
 
@@ -106,6 +110,31 @@ export class CategoriesViewModel {
     this._notify();
   }
 
+  async loadCategories() {
+    this.isLoading = true;
+    this.errorMessage = '';
+    this._notify();
+    try {
+      const categories = await this.categoriesApi.getCategoriesWithCounts();
+      const sorted = [...categories].sort((a, b) => {
+        if (a.product_count !== null && b.product_count !== null) {
+          const countDifference = (b.product_count || 0) - (a.product_count || 0);
+          if (countDifference !== 0) return countDifference;
+        }
+        return String(a.name || '').localeCompare(String(b.name || ''), 'es');
+      });
+      this.categories = normalizeCategories(sorted.slice(0, this.limit));
+    } catch (error) {
+      this.categories = [];
+      this.errorMessage = error?.message || '';
+      // eslint-disable-next-line no-console
+      console.warn('[CategoriesViewModel] failed to load categories:', error?.message || error);
+    } finally {
+      this.isLoading = false;
+      this._notify();
+    }
+  }
+
   /**
    * Subscribes to changes in ViewModel state.
    * @param {Function} listener
@@ -124,3 +153,4 @@ export class CategoriesViewModel {
     this._listeners.forEach((listener) => listener(this));
   }
 }
+import { CategoriesApi } from '../../models/api/CategoriesApi.js';

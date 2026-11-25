@@ -33,6 +33,7 @@ import './views/pages/checkout.css';
 import './views/styles/modal.css';
 import './views/pages/edit-product-modal.css';
 import './views/pages/admin-categories.css';
+import './views/pages/categories.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
@@ -64,6 +65,7 @@ import { AuthCallbackView } from './views/pages/AuthCallbackView.js';
 import { AuthPageView } from './views/pages/AuthPageView.js';
 import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
+import { CategoriesPageView } from './views/pages/CategoriesView.js';
 import { CheckoutView } from './views/pages/CheckoutView.js';
 import { EditProductView } from './views/pages/EditProductView.js';
 import { HomeView } from './views/pages/HomeView.js';
@@ -166,6 +168,12 @@ if (app) {
     currentPageView = new CatalogView(catalogViewModel, {
       onAddToCart: onAddToCartHandler,
     });
+    currentPageView.mount(mainEl);
+  };
+
+  const renderCategories = () => {
+    clearCurrentView('categories');
+    currentPageView = new CategoriesPageView();
     currentPageView.mount(mainEl);
   };
 
@@ -582,6 +590,7 @@ if (app) {
   router.addRoute('/', () => renderHome());
   router.addRoute('/about', () => renderAbout());
   router.addRoute('/products', () => renderCatalog());
+  router.addRoute('/categories', () => renderCategories());
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());
   router.addRoute('/checkout', () => renderCheckout());

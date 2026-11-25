@@ -1,3 +1,4 @@
+import { CategoriesApi } from '../../models/api/CategoriesApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { getProductImageUrl } from '../../utils/productImageUrl.js';
@@ -70,12 +71,14 @@ export class HeroViewModel {
     this.searchButtonLabel = options.searchButtonLabel || 'Buscar';
     this.quickLinksLabel = options.quickLinksLabel || 'Explora:';
     this.quickLinks = options.quickLinks || [
-      { id: 'artesanias', label: 'Artesanías', href: '/categorias/artesanias' },
-      { id: 'cafe', label: 'Café', href: '/categorias/cafe' },
-      { id: 'textiles', label: 'Textiles', href: '/categorias/textiles' },
-      { id: 'cacao', label: 'Cacao', href: '/categorias/cacao' },
-      { id: 'tecnologia', label: 'Tecnología', href: '/categorias/tecnologia' },
+      { id: 'artesanias', label: 'Artesanías', href: '/products?category=artesanias' },
+      { id: 'cafe', label: 'Café', href: '/products?category=cafe' },
+      { id: 'textiles', label: 'Textiles', href: '/products?category=textiles' },
+      { id: 'cacao', label: 'Cacao', href: '/products?category=cacao' },
+      { id: 'tecnologia', label: 'Tecnología', href: '/products?category=tecnologia' },
     ];
+    this.categoriesApi = options.categoriesApi || new CategoriesApi();
+    this.isCategoriesLoading = true;
     this.productsApi = options.productsApi || new ProductsApi();
     this.visualImages = Array.isArray(options.visualImages) ? options.visualImages : [];
     this.visualBadgeLabel = options.visualBadgeLabel || '100%';
@@ -99,6 +102,26 @@ export class HeroViewModel {
       this.visualImages = [];
     }
     this._notify();
+  }
+
+  async loadTopCategories() {
+    this.isCategoriesLoading = true;
+    this._notify();
+    try {
+      const categories = await this.categoriesApi.getTopCategories(5);
+      this.quickLinks = (categories || []).map((category) => ({
+        id: category.slug || category.id,
+        label: category.name,
+        href: `/products?category=${encodeURIComponent(category.slug || category.id)}`,
+      }));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('[HeroViewModel] failed to load top categories:', error?.message || error);
+      this.quickLinks = [];
+    } finally {
+      this.isCategoriesLoading = false;
+      this._notify();
+    }
   }
 
   setSearchValue(value) {

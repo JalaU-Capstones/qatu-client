@@ -1,5 +1,6 @@
 import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
+import { getCategoriesIndexPath } from '../utils/categoriesIndexPath.js';
 import { createBrandLogo } from './BrandLogo.js';
 
 /**
@@ -78,6 +79,12 @@ export class FooterView {
         const item = document.createElement('li');
         const anchor = document.createElement('a');
         let href = link.href;
+        if (link.label.toLowerCase() === 'categorías') {
+          href =
+            typeof this.authStore?.isAdmin === 'function' && this.authStore.isAdmin()
+              ? getCategoriesIndexPath('admin')
+              : getCategoriesIndexPath('user');
+        }
         if (link.label.toLowerCase().includes('vender') || link.href === '/vender') {
           href = this.authStore?.isSeller() ? '/seller/products' : '/seller/apply';
         }

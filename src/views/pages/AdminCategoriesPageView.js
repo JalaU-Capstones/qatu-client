@@ -1,6 +1,7 @@
 import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { AdminCategoriesViewModel } from '../../viewmodels/pages/AdminCategoriesViewModel.js';
+import { CategoryIcon } from '../components/CategoryIcon.js';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal.js';
 
 export class AdminCategoriesPageView {
@@ -348,7 +349,7 @@ export class AdminCategoriesPageView {
     actions.append(editBtn, deleteBtn);
 
     tr.append(
-      this._cell('Nombre', category.name || '—'),
+      this._cell('Nombre', this._buildNameCell(category)),
       this._cell('Slug', category.slug || '—'),
       this._cell('Descripción', category.description || '—'),
       this._cell('Acciones', actions)
@@ -366,6 +367,16 @@ export class AdminCategoriesPageView {
       td.textContent = String(content ?? '');
     }
     return td;
+  }
+
+  _buildNameCell(category) {
+    const wrap = document.createElement('div');
+    wrap.className = 'q-admin-categories-name';
+    wrap.appendChild(new CategoryIcon({ name: category.name, size: 22 }).render());
+    const text = document.createElement('span');
+    text.textContent = category.name || '—';
+    wrap.appendChild(text);
+    return wrap;
   }
 
   _buildPager() {
