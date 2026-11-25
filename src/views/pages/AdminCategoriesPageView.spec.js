@@ -82,6 +82,26 @@ describe('AdminCategoriesPageView', () => {
     expect(container.querySelectorAll('.q-admin-categories-delete-btn').length).toBe(2);
   });
 
+  it('renders the category name as a link to the filtered products view', async () => {
+    view.mount(container);
+    await tick();
+
+    const link = container.querySelector(
+      'tr[data-category-id="cat-1"] .q-admin-categories-name-link'
+    );
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('/products?category=electronica');
+  });
+
+  it('falls back to category id and encodes the filter in the title link', () => {
+    const wrap = view._buildNameCell(
+      mockCategory({ id: 'category with spaces', slug: null, name: 'Category Name' })
+    );
+    const link = wrap.querySelector('.q-admin-categories-name-link');
+    expect(link.tagName).toBe('A');
+    expect(link.getAttribute('href')).toBe('/products?category=category%20with%20spaces');
+  });
+
   it('submits the creation form through viewModel.createCategory()', async () => {
     view.mount(container);
     await tick();

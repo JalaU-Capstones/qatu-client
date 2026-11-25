@@ -1,5 +1,61 @@
 .q-categories-page {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
   padding: 2rem 0 3rem;
+}
+
+.q-categories-page::before,
+.q-categories-page::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.q-categories-page::before {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 660px;
+  background: radial-gradient(
+    ellipse 520px 430px at 5% 2%,
+    color-mix(in srgb, var(--q-ambient-pink) 72%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.q-categories-page::after {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 980px;
+  background: radial-gradient(
+    ellipse 480px 560px at 100% 28%,
+    color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.q-categories-page > .q-section-container {
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme='dark'] .q-categories-page::before {
+  background: radial-gradient(
+    ellipse 520px 430px at 5% 2%,
+    color-mix(in srgb, var(--q-ambient-pink) 82%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+[data-theme='dark'] .q-categories-page::after {
+  background: radial-gradient(
+    ellipse 480px 560px at 100% 28%,
+    color-mix(in srgb, var(--q-ambient-cyan) 78%, transparent) 0%,
+    transparent 72%
+  );
 }
 
 .q-categories-page__grid {
@@ -69,12 +125,46 @@
     padding: 1.25rem 0 2rem;
   }
 
+  .q-categories-page::before {
+    height: 520px;
+    background-image: radial-gradient(
+      ellipse 380px 320px at 2% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 72%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  .q-categories-page::after {
+    height: 800px;
+    background-image: radial-gradient(
+      ellipse 360px 440px at 100% 36%,
+      color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  [data-theme='dark'] .q-categories-page::before {
+    background-image: radial-gradient(
+      ellipse 380px 320px at 2% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 82%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  [data-theme='dark'] .q-categories-page::after {
+    background-image: radial-gradient(
+      ellipse 360px 440px at 100% 36%,
+      color-mix(in srgb, var(--q-ambient-cyan) 78%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
   .q-categories-page__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 374px) {
+@media (max-width: 359px) {
   .q-categories-page__grid {
     grid-template-columns: 1fr;
   }

@@ -51,6 +51,67 @@ describe('FooterView', () => {
     expect(links).toContain('Preguntas frecuentes');
   });
 
+  it('routes Categorías to /categories for unauthenticated and buyer roles', () => {
+    for (const mockAuth of [
+      { isAdmin: () => false, isSeller: () => false },
+      { isAdmin: () => false, isSeller: () => false, role: 'buyer' },
+    ]) {
+      const footer = new FooterView(viewModel, { authStore: mockAuth });
+      const categoryLink = Array.from(footer.render().querySelectorAll('.q-footer-links a')).find(
+        (link) => link.textContent === 'Categorías'
+      );
+      expect(categoryLink.getAttribute('href')).toBe('/categories');
+      footer.destroy();
+    }
+  });
+
+  it('routes Categorías to /categories for sellers', () => {
+    const footer = new FooterView(viewModel, {
+      authStore: { isAdmin: () => false, isSeller: () => true },
+    });
+    const categoryLink = Array.from(footer.render().querySelectorAll('.q-footer-links a')).find(
+      (link) => link.textContent === 'Categorías'
+    );
+    expect(categoryLink.getAttribute('href')).toBe('/categories');
+    footer.destroy();
+  });
+
+  it('routes Categorías to /admin/categories for admins', () => {
+    const footer = new FooterView(viewModel, {
+      authStore: { isAdmin: () => true, isSeller: () => true },
+    });
+    const categoryLink = Array.from(footer.render().querySelectorAll('.q-footer-links a')).find(
+      (link) => link.textContent === 'Categorías'
+    );
+    expect(categoryLink.getAttribute('href')).toBe('/admin/categories');
+    footer.destroy();
+  });
+
+  it('updates the Categorías href in place when auth role changes', () => {
+    let listener;
+    let admin = false;
+    const authStore = {
+      isAdmin: () => admin,
+      isSeller: () => false,
+      subscribe: (callback) => {
+        listener = callback;
+        return () => {
+          listener = null;
+        };
+      },
+    };
+    const footer = new FooterView(viewModel, { authStore });
+    const categoryLink = Array.from(footer.render().querySelectorAll('.q-footer-links a')).find(
+      (link) => link.textContent === 'Categorías'
+    );
+
+    expect(categoryLink.getAttribute('href')).toBe('/categories');
+    admin = true;
+    listener();
+    expect(categoryLink.getAttribute('href')).toBe('/admin/categories');
+    footer.destroy();
+  });
+
   it('renders the four-column structure and Figma navigation headings', () => {
     const el = view.render();
 

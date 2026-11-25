@@ -373,9 +373,12 @@ export class AdminCategoriesPageView {
     const wrap = document.createElement('div');
     wrap.className = 'q-admin-categories-name';
     wrap.appendChild(new CategoryIcon({ name: category.name, size: 22 }).render());
-    const text = document.createElement('span');
-    text.textContent = category.name || '—';
-    wrap.appendChild(text);
+    const link = document.createElement('a');
+    link.className = 'q-admin-categories-name-link';
+    link.href = `/products?category=${encodeURIComponent(category.slug || category.id)}`;
+    link.dataset.route = '';
+    link.textContent = category.name || '—';
+    wrap.appendChild(link);
     return wrap;
   }
 

@@ -39,6 +39,13 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
+  { name: 'categories', path: '/categories' },
+  {
+    name: 'admin-categories',
+    path: '/admin/categories',
+    authenticated: true,
+    roles: ['admin'],
+  },
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart', authenticated: true },
   { name: 'checkout', path: '/checkout', authenticated: true },
@@ -244,11 +251,28 @@ const ORDER_DETAIL_SAMPLE = {
 
 /** Categories for `GET /v1/categories` (header dropdown + wizard step 1). */
 const SAMPLE_CATEGORIES = [
-  { id: 'cat-electronics', name: 'Electrónica', slug: 'electronics' },
-  { id: 'cat-clothing', name: 'Ropa y Moda', slug: 'clothing' },
-  { id: 'cat-home', name: 'Hogar y Jardín', slug: 'home-and-garden' },
-  { id: 'cat-sports', name: 'Deportes', slug: 'sports' },
-  { id: 'cat-books', name: 'Libros', slug: 'books' },
+  {
+    id: 'cat-electronics',
+    name: 'Electrónica',
+    slug: 'electronics',
+    description: 'Gadgets y dispositivos electrónicos.',
+    product_count: 9,
+  },
+  {
+    id: 'cat-clothing',
+    name: 'Ropa y Moda',
+    slug: 'clothing',
+    description: 'Prendas y accesorios de moda.',
+    product_count: 4,
+  },
+  {
+    id: 'cat-home',
+    name: 'Hogar y Jardín',
+    slug: 'home-and-garden',
+    product_count: 7,
+  },
+  { id: 'cat-sports', name: 'Deportes', slug: 'sports', product_count: 3 },
+  { id: 'cat-books', name: 'Libros', slug: 'books', product_count: 5 },
 ];
 
 const CART_SAMPLE_ITEMS = [
@@ -924,6 +948,24 @@ for (const route of activeRoutes) {
                 header: check('.q-header'),
                 catalogSection: check('.q-catalog'),
                 grid: check('.q-catalog__grid'),
+                footer: check('.q-footer'),
+              };
+            case 'categories':
+              return {
+                header: check('.q-header'),
+                categoriesPage: check('.q-categories-page'),
+                grid: check('.q-categories-page__grid'),
+                cards: document.querySelectorAll('.q-categories-page__card').length >= 5,
+                footer: check('.q-footer'),
+              };
+            case 'admin-categories':
+              return {
+                header: check('.q-header'),
+                categoriesPage: check('.q-admin-categories-page'),
+                title: check('.q-admin-categories-title'),
+                table: check('.q-admin-categories-table'),
+                nameLink: check('.q-admin-categories-name-link'),
+                createForm: check('.q-admin-categories-form'),
                 footer: check('.q-footer'),
               };
             case 'search':
