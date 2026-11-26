@@ -213,48 +213,65 @@
   white-space: nowrap;
 }
 
-.q-admin-app-reject-box {
+.q-reject-modal__context {
+  margin: 0 0 calc(var(--q-geist-space-3x, 12) * 1px);
+  color: var(--q-fg-secondary);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
+  line-height: var(--q-leading-normal, 1.5);
+}
+
+.q-reject-modal__context strong {
+  color: var(--q-fg-primary);
+}
+
+.q-reject-modal__field {
   display: flex;
-  min-width: 0;
   flex-direction: column;
   gap: calc(var(--q-geist-space-2x, 8) * 1px);
 }
 
-.q-admin-app-reject-label {
+.q-reject-modal__field label {
   color: var(--q-fg-primary);
-  font-size: calc(var(--q-text-xs, 12) * 1px);
+  font-size: calc(var(--q-text-sm, 14) * 1px);
   font-weight: var(--q-font-weight-semibold, 600);
 }
 
-.q-admin-app-reject-input {
+.q-reject-modal__field textarea {
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   padding: calc(var(--q-geist-space-2x, 8) * 1px);
   border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-md, 6) * 1px);
-  background: var(--q-bg-primary);
+  background: var(--q-bg-surface);
   color: var(--q-fg-primary);
-  font-family: inherit;
-  font-size: calc(var(--q-text-sm, 14) * 1px);
-  box-sizing: border-box;
+  font: inherit;
   resize: vertical;
+  min-height: 96px;
 }
 
-.q-admin-app-reject-input:focus-visible {
+.q-reject-modal__field textarea:focus-visible {
   outline: 2px solid var(--q-color-focus);
   outline-offset: 2px;
 }
 
-.q-admin-app-reject-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: calc(var(--q-geist-space-2x, 8) * 1px);
+.q-reject-modal__counter {
+  align-self: flex-end;
+  color: var(--q-fg-muted);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
 }
 
-.q-admin-app-confirm-reject-btn {
-  border-color: var(--q-color-error);
-  background: var(--q-color-error);
-  color: var(--q-ds-white);
+.q-reject-modal__error {
+  margin: 0;
+  color: var(--q-color-error);
+  font-size: calc(var(--q-text-xs, 12) * 1px);
+}
+
+.q-reject-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: calc(var(--q-geist-space-2x, 8) * 1px);
 }
 
 .q-admin-app-reviewed {
@@ -287,6 +304,15 @@
 }
 
 @media (max-width: 767px) {
+  .q-reject-modal__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .q-reject-modal__footer .q-btn {
+    width: 100%;
+    min-width: 0;
+  }
   .q-admin-applications-page {
     padding-top: calc(
       var(--q-header-overlay-height, 72px) + calc(var(--q-geist-space-6x, 24) * 1px)
@@ -378,25 +404,18 @@
     border-top: 1px solid var(--q-border-default);
   }
 
-  .q-admin-app-actions,
-  .q-admin-app-reject-buttons {
+  .q-admin-app-actions {
     display: grid;
     width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .q-admin-app-actions .q-btn,
-  .q-admin-app-reject-buttons .q-btn {
+  .q-admin-app-actions .q-btn {
     width: 100%;
     min-width: 0;
     min-height: calc(var(--q-ds-size-small, 36) * 1px);
     justify-content: center;
     white-space: normal;
-  }
-
-  .q-admin-app-reject-box {
-    width: 100%;
-    text-align: left;
   }
 
   .q-admin-applications-empty,

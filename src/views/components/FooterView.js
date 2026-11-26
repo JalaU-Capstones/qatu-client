@@ -1,5 +1,6 @@
 import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
+import { getCategoriesIndexPath } from '../utils/categoriesIndexPath.js';
 import { createBrandLogo } from './BrandLogo.js';
 
 /**
@@ -17,6 +18,8 @@ export class FooterView {
     this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
+    this._unsubscribeAuth = null;
+    this._categoryLinks = new Set();
   }
 
   /**
@@ -78,6 +81,17 @@ export class FooterView {
         const item = document.createElement('li');
         const anchor = document.createElement('a');
         let href = link.href;
+        const normalizedLabel = link.label
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        if (normalizedLabel === 'categorias') {
+          href =
+            typeof this.authStore?.isAdmin === 'function' && this.authStore.isAdmin()
+              ? getCategoriesIndexPath('admin')
+              : getCategoriesIndexPath('user');
+          this._categoryLinks.add(anchor);
+        }
         if (link.label.toLowerCase().includes('vender') || link.href === '/vender') {
           href = this.authStore?.isSeller() ? '/seller/products' : '/seller/apply';
         }
@@ -122,6 +136,10 @@ export class FooterView {
 
     this.element = footer;
 
+    if (typeof this.authStore?.subscribe === 'function') {
+      this._unsubscribeAuth = this.authStore.subscribe(() => this._refreshCategoryLinks());
+    }
+
     this._unsubscribe = this.viewModel.subscribe(() => {
       // Re-render if full model changes
       if (this.element && this.element.parentNode) {
@@ -147,10 +165,25 @@ export class FooterView {
     return el;
   }
 
+  _refreshCategoryLinks() {
+    const href =
+      typeof this.authStore?.isAdmin === 'function' && this.authStore.isAdmin()
+        ? getCategoriesIndexPath('admin')
+        : getCategoriesIndexPath('user');
+    this._categoryLinks.forEach((link) => {
+      link.href = href;
+    });
+  }
+
   /**
    * Cleans up event listeners and subscriptions.
    */
   destroy() {
+    if (typeof this._unsubscribeAuth === 'function') {
+      this._unsubscribeAuth();
+      this._unsubscribeAuth = null;
+    }
+    this._categoryLinks.clear();
     if (typeof this._unsubscribe === 'function') {
       this._unsubscribe();
       this._unsubscribe = null;

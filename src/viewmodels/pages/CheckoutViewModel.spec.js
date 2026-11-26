@@ -423,3 +423,298 @@ describe('CheckoutViewModel', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const GENERIC_ERROR = 'No pudimos procesar tu pedido. Inténtalo de nuevo en unos minutos.';
+
+    const apiError = (code, statusCode, message, details) =>
+      Object.assign(new Error(message), { code, statusCode, details });
+
+    const createItem = (overrides = {}) => ({
+      id: 'p-1',
+      productId: 'p-1',
+      name: 'Clean Code',
+      price: 20,
+      currency: 'USD',
+      quantity: 2,
+      ...overrides,
+    });
+
+    const createCartStore = ({ items = [] } = {}) => {
+      const listeners = new Set();
+      const store = {
+        items: items.map((item) => ({ ...item })),
+        getItems: jasmine
+          .createSpy('getItems')
+          .and.callFake(() => store.items.map((item) => ({ ...item }))),
+        getSubtotal: jasmine.createSpy('getSubtotal').and.returnValue(0),
+        getShipping: jasmine.createSpy('getShipping').and.returnValue(0),
+        getTotal: jasmine.createSpy('getTotal').and.returnValue(0),
+        getCount: jasmine.createSpy('getCount').and.returnValue(0),
+        clear: jasmine.createSpy('clear').and.callFake(() => {
+          store.items = [];
+          store._notify();
+        }),
+        getItem: jasmine
+          .createSpy('getItem')
+          .and.callFake(
+            (id) => store.items.find((item) => item.id === id || item.productId === id) ?? null
+          ),
+        subscribe: (listener) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        _notify: () => [...listeners].forEach((listener) => listener()),
+      };
+      return store;
+    };
+
+    const createCartService = (status = 'loaded') => ({
+      loadCart: jasmine.createSpy('loadCart').and.resolveTo({ status }),
+    });
+
+    const createOrdersApi = () => ({
+      createOrder: jasmine
+        .createSpy('createOrder')
+        .and.resolveTo({ data: { id: 'ord-1', order_number: 'ORD-1' } }),
+    });
+
+    const createAuthStore = ({
+      withProfile = true,
+      profile = { full_name: 'Aaron Florez' },
+    } = {}) => {
+      const listeners = new Set();
+      const store = {
+        isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(true),
+        subscribe: (listener) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        _notify: () => [...listeners].forEach((listener) => listener()),
+      };
+      if (withProfile) store.getProfile = jasmine.createSpy('getProfile').and.returnValue(profile);
+      return store;
+    };
+
+    describe('CheckoutViewModel additional branches (recovered 1)', () => {
+      let viewModels;
+
+      beforeEach(() => {
+        viewModels = [];
+      });
+
+      afterEach(() => {
+        viewModels.forEach((vm) => vm.destroy());
+        viewModels = [];
+      });
+
+      const createViewModel = ({ cartStore, cartService, ordersApi, authStore } = {}) => {
+        const vm = new CheckoutViewModel({
+          cartStore: cartStore ?? createCartStore(),
+          cartService: cartService ?? createCartService(),
+          ordersApi: ordersApi ?? createOrdersApi(),
+          authStore: authStore ?? createAuthStore(),
+        });
+        viewModels.push(vm);
+        return vm;
+      };
+
+      const fillValidForm = (vm) => {
+        vm.setField('fullName', 'Aaron Florez');
+        vm.setField('phone', '71234567');
+        vm.setField('street', 'Av. Arce #123');
+        vm.setField('city', 'La Paz');
+        vm.setField('country', 'BO');
+      };
+
+      it('destroy() cancels both the cart and auth subscriptions', async () => {
+        const cartStore = createCartStore({ items: [createItem()] });
+        const authStore = createAuthStore();
+        const cartService = createCartService('auth-required');
+        const vm = createViewModel({ cartStore, cartService, authStore });
+        vm.requiresAuth = true;
+        const refreshSpy = spyOn(vm, 'refresh').and.callThrough();
+        const loadSpy = spyOn(vm, 'load').and.resolveTo();
+
+        vm.destroy();
+        cartStore.items.push(createItem({ id: 'p-2' }));
+        cartStore._notify();
+        authStore.isAuthenticated.and.returnValue(true);
+        authStore._notify();
+        await Promise.resolve();
+
+        expect(vm._storeUnsubscribe).toBeNull();
+        expect(vm._authUnsubscribe).toBeNull();
+        expect(refreshSpy).not.toHaveBeenCalled();
+        expect(loadSpy).not.toHaveBeenCalled();
+      });
+
+      it('maps the postal_code alias to postalCode and clears errors from both names', () => {
+        const vm = createViewModel();
+        vm.errors = { postalCode: 'inválido', postal_code: 'inválido' };
+
+        vm.setField('postal_code', '1234');
+
+        expect(vm.form.postalCode).toBe('1234');
+        expect(vm.form.postal_code).toBeUndefined();
+        expect(vm.errors).toEqual({});
+      });
+
+      it('maps postalCode back to postal_code when the form uses the legacy name', () => {
+        const vm = createViewModel();
+        vm.form.postal_code = '';
+        delete vm.form.postalCode;
+        vm.errors = { postal_code: 'inválido' };
+
+        vm.setField('postalCode', '9876');
+
+        expect(vm.form.postal_code).toBe('9876');
+        expect(vm.errors).toEqual({});
+        expect(() => vm.setField(null, 'x')).not.toThrow();
+        expect(vm.form.null).toBeUndefined();
+      });
+
+      it('notifies loading true and false around load()', async () => {
+        const vm = createViewModel();
+        const states = [];
+        vm.subscribe((instance) => states.push(instance.isLoading));
+
+        await vm.load();
+
+        expect(states).toEqual([true, false]);
+      });
+
+      it('uses USD labels for an empty cart', () => {
+        const vm = createViewModel({ cartStore: createCartStore() });
+
+        expect(vm.getCurrency()).toBe('USD');
+        expect(vm.getSubtotalLabel()).toBe('US$ 0.00');
+        expect(vm.getShippingLabel()).toBe('Gratis');
+        expect(vm.getTotalLabel()).toBe('US$ 0.00');
+      });
+
+      it('tolerates an auth store without getProfile', () => {
+        const vm = createViewModel({ authStore: createAuthStore({ withProfile: false }) });
+
+        expect(vm._profileName()).toBe('');
+        expect(vm.form.fullName).toBe('');
+      });
+
+      it('maps a 400 with no usable details to the generic message', async () => {
+        const vm = createViewModel();
+
+        const empty = vm._handleFailure(apiError('VALIDATION_ERROR', 400, 'Invalid', []));
+        expect(empty).toEqual({ status: 'error' });
+        expect(vm.submitError).toBe(GENERIC_ERROR);
+
+        const unmappable = vm._handleFailure(
+          apiError('VALIDATION_ERROR', 400, 'Invalid', [
+            { field: 'unknown.field', message: 'nope' },
+          ])
+        );
+        expect(unmappable).toEqual({ status: 'error' });
+        expect(vm.submitError).toBe(GENERIC_ERROR);
+      });
+
+      it('keeps the first message for a duplicated 400 field error', () => {
+        const vm = createViewModel();
+
+        const result = vm._handleFailure(
+          apiError('VALIDATION_ERROR', 400, 'Invalid', [
+            { field: 'shipping_address.city', message: 'primero' },
+            { field: 'shipping_address.city', message: 'segundo' },
+          ])
+        );
+
+        expect(result).toEqual({ status: 'invalid' });
+        expect(vm.errors).toEqual({ city: 'primero' });
+        expect(vm.focusField).toBe('city');
+      });
+
+      it('extracts the insufficient-stock product name from the API message', async () => {
+        const vm = createViewModel({ cartStore: createCartStore({ items: [createItem()] }) });
+        fillValidForm(vm);
+        vm.ordersApi.createOrder.and.rejectWith(
+          apiError('INSUFFICIENT_STOCK', 422, 'Insufficient stock for Café Cusco', [
+            { field: 'other', message: 'n/a' },
+          ])
+        );
+
+        const result = await vm.submit();
+
+        expect(result.status).toBe('error');
+        expect(vm.submitError).toBe(
+          'No hay stock suficiente de "Café Cusco". Revisa tu carrito para ajustar la cantidad o quitarlo.'
+        );
+        expect(vm.problemProductId).toBeNull();
+        expect(vm.errorAction).toBe('cart');
+      });
+
+      it('falls back to "un producto de tu carrito" when no name can be resolved', async () => {
+        const vm = createViewModel({
+          cartStore: createCartStore({ items: [createItem({ id: 'p-2', productId: 'p-2' })] }),
+        });
+        fillValidForm(vm);
+        vm.ordersApi.createOrder.and.rejectWith(
+          apiError('INSUFFICIENT_STOCK', 409, 'conflict', [
+            { field: 'items.p-1', message: 'conflict' },
+          ])
+        );
+
+        await vm.submit();
+
+        expect(vm.problemProductId).toBe('p-1');
+        expect(vm.submitError).toBe(
+          'No hay stock suficiente de "un producto de tu carrito". Revisa tu carrito para ajustar la cantidad o quitarlo.'
+        );
+      });
+
+      it('shows the generic message for a 401 failure', async () => {
+        const cartStore = createCartStore({ items: [createItem()] });
+        const vm = createViewModel({ cartStore });
+        fillValidForm(vm);
+        vm.ordersApi.createOrder.and.rejectWith(apiError('UNAUTHORIZED', 401, 'Unauthorized'));
+
+        const result = await vm.submit();
+
+        expect(result).toEqual({ status: 'error' });
+        expect(vm.submitError).toBe(GENERIC_ERROR);
+        expect(vm.errorAction).toBeNull();
+        expect(cartStore.getCount).toHaveBeenCalled();
+        expect(cartStore.items.length).toBe(1);
+      });
+
+      it('characterizes that a successful submit clears errors but leaves focusField stale', async () => {
+        const vm = createViewModel({ cartStore: createCartStore({ items: [createItem()] }) });
+        fillValidForm(vm);
+        vm.errors = { street: 'error viejo' };
+        vm.focusField = 'street';
+
+        const result = await vm.submit();
+
+        expect(result.status).toBe('success');
+        // submit() always assigns the fresh validation result, so errors are cleared;
+        // focusField is only set on the invalid path and therefore remains stale.
+        expect(vm.errors).toEqual({});
+        expect(vm.focusField).toBe('street');
+      });
+
+      it('characterizes success with a null response body as not placed', async () => {
+        const cartStore = createCartStore({ items: [createItem()] });
+        const vm = createViewModel({ cartStore });
+        fillValidForm(vm);
+        vm.ordersApi.createOrder.and.resolveTo({ data: null });
+
+        const result = await vm.submit();
+
+        expect(result).toEqual({ status: 'success', order: null });
+        expect(vm.order).toBeNull();
+        expect(vm.isPlaced).toBe(false);
+        expect(cartStore.clear).toHaveBeenCalled();
+        expect(vm.isEmpty).toBe(true);
+      });
+    });
+  })();
+})();

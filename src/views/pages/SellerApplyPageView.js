@@ -9,6 +9,12 @@ import {
   SellerApplyViewModel,
 } from '../../viewmodels/pages/SellerApplyViewModel.js';
 
+const STATUS_LABELS_ES = Object.freeze({
+  pending: 'Pendiente',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+});
+
 export class SellerApplyPageView {
   /**
    * @param {Object} [options]
@@ -29,6 +35,11 @@ export class SellerApplyPageView {
 
     if (!authStore.isAuthenticated()) {
       this._renderUnauthenticatedGate();
+      return this.element;
+    }
+
+    if (authStore.isAdmin()) {
+      this._renderAdminGate();
       return this.element;
     }
 
@@ -507,7 +518,7 @@ export class SellerApplyPageView {
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
-    title.textContent = 'You are already a seller';
+    title.textContent = 'Ya eres vendedor';
 
     const desc = document.createElement('p');
     desc.className = 'q-seller-apply-status-text';
@@ -536,11 +547,11 @@ export class SellerApplyPageView {
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--pending';
-    badge.textContent = 'Estado: pending';
+    badge.textContent = `Estado: ${STATUS_LABELS_ES[application.status] || STATUS_LABELS_ES.pending}`;
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
-    title.textContent = 'You already have a pending application';
+    title.textContent = 'Ya tienes una solicitud pendiente';
 
     const business = document.createElement('p');
     business.className = 'q-seller-apply-status-business';
@@ -561,7 +572,7 @@ export class SellerApplyPageView {
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--approved';
-    badge.textContent = 'Estado: approved';
+    badge.textContent = `Estado: ${STATUS_LABELS_ES[application.status] || STATUS_LABELS_ES.approved}`;
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
@@ -627,6 +638,41 @@ export class SellerApplyPageView {
     });
 
     card.append(p, btn);
+    statusRegion.appendChild(card);
+  }
+
+  _renderAdminGate() {
+    const statusRegion = this.element?.querySelector('[data-role="status-region"]');
+    const formCard = this.element?.querySelector('[data-role="form-card"]');
+    if (formCard) formCard.setAttribute('hidden', '');
+    if (!statusRegion) return;
+
+    statusRegion.replaceChildren();
+    const card = document.createElement('div');
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
+
+    const title = document.createElement('h2');
+    title.className = 'q-seller-apply-status-title';
+    title.textContent = 'Ya eres administrador';
+
+    const description = document.createElement('p');
+    description.className = 'q-seller-apply-status-text';
+    description.textContent =
+      'Como administrador del marketplace no necesitas postularte como vendedor. Desde tu panel puedes revisar las solicitudes de otros vendedores.';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'q-btn q-btn--primary';
+    button.textContent = 'Ir a solicitudes de vendedores';
+    button.addEventListener('click', () => {
+      if (typeof this.onNavigate === 'function') {
+        this.onNavigate('/admin/seller-applications');
+      } else {
+        window.location.assign('/admin/seller-applications');
+      }
+    });
+
+    card.append(title, description, button);
     statusRegion.appendChild(card);
   }
 }

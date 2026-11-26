@@ -1,5 +1,8 @@
+import { ConversationsApi } from '../../models/api/ConversationsApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { cartService as defaultCartService } from '../../services/CartService.js';
+import { authRedirectStore as defaultAuthRedirectStore } from '../../store/authRedirectStore.js';
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 
 const TABS = [
@@ -25,10 +28,25 @@ export class ProductDetailViewModel {
    * @param {Object} [options]
    * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    * @param {import('../../services/CartService.js').CartService} [options.cartService]
+   * @param {import('../../models/api/ConversationsApi.js').ConversationsApi} [options.conversationsApi]
+   * @param {Object} [options.authStore]
+   * @param {Object} [options.authRedirectStore]
+   * @param {Object} [options.router]
    */
-  constructor({ productsApi = new ProductsApi(), cartService = defaultCartService } = {}) {
+  constructor({
+    productsApi = new ProductsApi(),
+    cartService = defaultCartService,
+    conversationsApi = new ConversationsApi(),
+    authStore = defaultAuthStore,
+    authRedirectStore = defaultAuthRedirectStore,
+    router = null,
+  } = {}) {
     this.productsApi = productsApi;
     this.cartService = cartService;
+    this.conversationsApi = conversationsApi;
+    this.authStore = authStore;
+    this.authRedirectStore = authRedirectStore;
+    this.router = router;
 
     this.productSlug = null;
     /** @type {Object|null} */
@@ -51,6 +69,10 @@ export class ProductDetailViewModel {
 
     this.tabs = TABS;
     this._listeners = new Set();
+  }
+
+  get canPurchase() {
+    return typeof this.authStore.isAdmin !== 'function' || !this.authStore.isAdmin();
   }
 
   /**
@@ -132,9 +154,12 @@ export class ProductDetailViewModel {
    * Adds the current product/quantity to the cart through `CartService`.
    * Returns the service union; `auth-required` lets the caller decide how to
    * prompt the guest (the shell redirects to `/login`).
-   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
    */
   async addToCart() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
     if (!this.product || this.isOutOfStock() || this.isAdding) {
       return { status: 'error', error: new Error('Producto no disponible') };
     }
@@ -164,6 +189,17 @@ export class ProductDetailViewModel {
       this.isAdding = false;
       this._notify();
     }
+  }
+
+  /**
+   * Adds the current product to the cart for immediate checkout.
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
+   */
+  async buyNow() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
+    return this.addToCart();
   }
 
   /**
@@ -217,6 +253,28 @@ export class ProductDetailViewModel {
       this.isDeleting = false;
       this._notify();
     }
+  }
+
+  /**
+   * Starts or reuses a conversation with the product's seller.
+   * @returns {Promise<{ redirected: true }|{ conversationId: string, created: boolean }>}
+   */
+  async contactSeller() {
+    if (!this.authStore.isAuthenticated()) {
+      this.authRedirectStore.setReturnTo(window.location.pathname + window.location.search);
+      this.router?.navigate('/login');
+      return { redirected: true };
+    }
+
+    const sellerId = this.product?.seller_id || this.product?.seller?.id;
+    if (!sellerId) throw new Error('Vendedor no disponible');
+
+    const { data, created } = await this.conversationsApi.createOrGetConversation({
+      sellerId,
+      productId: this.product.id,
+    });
+
+    return { conversationId: data.id, created };
   }
 
   /** @returns {boolean} */

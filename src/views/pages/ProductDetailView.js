@@ -21,6 +21,7 @@ export class ProductDetailView {
    * @param {Function} [options.onEditProduct] Opens the existing edit modal.
    * @param {Function} [options.onDeleteProduct] Opens the existing delete confirmation.
    * @param {Function} [options.onAddToCart] Adds a similar product to the cart.
+   * @param {Function} [options.onNavigate] Navigates to another SPA route.
    * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
@@ -31,6 +32,7 @@ export class ProductDetailView {
     onEditProduct = null,
     onDeleteProduct = null,
     onAddToCart = null,
+    onNavigate = null,
     authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
@@ -40,7 +42,9 @@ export class ProductDetailView {
     this.onEditProduct = onEditProduct;
     this.onDeleteProduct = onDeleteProduct;
     this.onAddToCart = onAddToCart;
+    this.onNavigate = onNavigate;
     this.authStore = authStore;
+    this.contactSellerError = '';
     this.element = null;
     this._unsubscribe = null;
     this._authUnsubscribe = null;
@@ -354,80 +358,88 @@ export class ProductDetailView {
     description.textContent = product.description;
     info.appendChild(description);
 
-    const purchase = document.createElement('div');
-    purchase.className = 'q-product-detail__purchase';
-
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
     const user = this.authStore.getUser();
-    const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
+    const isOwn =
+      !isAdmin && Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
 
-    if (isOwn) {
-      purchase.appendChild(this._renderOwnerActions(product));
-    } else {
-      const quantityRow = document.createElement('div');
-      quantityRow.className = 'q-product-detail__quantity-row';
+    if (!isAdmin) {
+      const purchase = document.createElement('div');
+      purchase.className = 'q-product-detail__purchase';
 
-      const quantityLabel = document.createElement('span');
-      quantityLabel.className = 'q-product-detail__quantity-label';
-      quantityLabel.textContent = 'Cantidad';
+      if (isOwn) {
+        purchase.appendChild(this._renderOwnerActions(product));
+      } else {
+        const quantityRow = document.createElement('div');
+        quantityRow.className = 'q-product-detail__quantity-row';
 
-      const quantitySelector = new QuantitySelectorView({
-        value: vm.quantity,
-        min: 1,
-        max: vm.getMaxQuantity(),
-        disabled: vm.isOutOfStock(),
-        onChange: (value) => vm.setQuantity(value),
-        label: 'Cantidad del producto',
-      });
+        const quantityLabel = document.createElement('span');
+        quantityLabel.className = 'q-product-detail__quantity-label';
+        quantityLabel.textContent = 'Cantidad';
 
-      quantityRow.appendChild(quantityLabel);
-      quantityRow.appendChild(quantitySelector.render());
-      purchase.appendChild(quantityRow);
+        const quantitySelector = new QuantitySelectorView({
+          value: vm.quantity,
+          min: 1,
+          max: vm.getMaxQuantity(),
+          disabled: vm.isOutOfStock(),
+          onChange: (value) => vm.setQuantity(value),
+          label: 'Cantidad del producto',
+        });
 
-      const actions = document.createElement('div');
-      actions.className = 'q-product-detail__actions';
+        quantityRow.appendChild(quantityLabel);
+        quantityRow.appendChild(quantitySelector.render());
+        purchase.appendChild(quantityRow);
 
-      const addButton = document.createElement('button');
-      addButton.type = 'button';
-      addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
-      addButton.textContent = vm.isOutOfStock()
-        ? 'Agotado'
-        : vm.isAdding
-          ? 'Añadiendo…'
-          : 'Agregar al carrito';
-      addButton.disabled = vm.isOutOfStock() || vm.isAdding;
-      addButton.addEventListener('click', () =>
-        vm.addToCart().then((result) => {
-          if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+        const actions = document.createElement('div');
+        actions.className = 'q-product-detail__actions';
+
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
+        addButton.textContent = vm.isOutOfStock()
+          ? 'Agotado'
+          : vm.isAdding
+            ? 'Añadiendo…'
+            : 'Agregar al carrito';
+        addButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        addButton.addEventListener('click', () =>
+          vm.addToCart().then((result) => {
+            if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+              this.onAuthRequired();
+            }
+          })
+        );
+        actions.appendChild(addButton);
+
+        const buyButton = document.createElement('button');
+        buyButton.type = 'button';
+        buyButton.className =
+          'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
+        buyButton.textContent = 'Comprar ahora';
+        buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        buyButton.addEventListener('click', async () => {
+          const result = await (typeof vm.buyNow === 'function' ? vm.buyNow() : vm.addToCart());
+          if (result.status === 'added' && typeof this.onBuyNow === 'function') {
+            this.onBuyNow();
+          } else if (
+            result.status === 'auth-required' &&
+            typeof this.onAuthRequired === 'function'
+          ) {
             this.onAuthRequired();
           }
-        })
-      );
-      actions.appendChild(addButton);
+        });
+        actions.appendChild(buyButton);
 
-      const buyButton = document.createElement('button');
-      buyButton.type = 'button';
-      buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
-      buyButton.textContent = 'Comprar ahora';
-      buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
-      buyButton.addEventListener('click', async () => {
-        const result = await vm.addToCart();
-        if (result.status === 'added' && typeof this.onBuyNow === 'function') {
-          this.onBuyNow();
-        } else if (result.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
-          this.onAuthRequired();
-        }
-      });
-      actions.appendChild(buyButton);
+        purchase.appendChild(actions);
 
-      purchase.appendChild(actions);
+        const shipping = document.createElement('p');
+        shipping.className = 'q-product-detail__shipping';
+        shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
+        purchase.appendChild(shipping);
+      }
 
-      const shipping = document.createElement('p');
-      shipping.className = 'q-product-detail__shipping';
-      shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
-      purchase.appendChild(shipping);
+      info.appendChild(purchase);
     }
-
-    info.appendChild(purchase);
 
     if (!isOwn && vm.feedback) {
       const feedback = document.createElement('p');
@@ -685,6 +697,7 @@ export class ProductDetailView {
    */
   _renderSellerCard() {
     const vm = this.viewModel;
+    const product = vm.product;
     const section = document.createElement('section');
     section.className = 'q-product-detail__seller-card';
     section.setAttribute('aria-label', `Sobre ${vm.getSellerLine()}`);
@@ -717,15 +730,54 @@ export class ProductDetailView {
 
     info.appendChild(stats);
 
+    const actions = document.createElement('div');
+    actions.className = 'q-product-detail__seller-actions';
+
+    const user = this.authStore.getUser();
+    const sellerId = product?.seller_id || product?.seller?.id;
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
+    const isOwn = !isAdmin && Boolean(user && user.id && sellerId && user.id === sellerId);
+
+    if (!isOwn && sellerId) {
+      const contactBtn = document.createElement('button');
+      contactBtn.type = 'button';
+      contactBtn.className = 'q-btn q-btn--primary q-product-detail__contact-seller';
+      contactBtn.textContent = 'Contactar vendedor';
+      contactBtn.addEventListener('click', async () => {
+        this.contactSellerError = '';
+        try {
+          const result = await vm.contactSeller();
+          if (result?.redirected) return;
+          if (result?.conversationId) {
+            this.onNavigate?.(`/conversations?active=${encodeURIComponent(result.conversationId)}`);
+          }
+        } catch (error) {
+          this.contactSellerError =
+            error instanceof Error ? error.message : 'No se pudo contactar al vendedor.';
+          this._renderContent();
+        }
+      });
+      actions.appendChild(contactBtn);
+    }
+
+    if (this.contactSellerError) {
+      const error = document.createElement('p');
+      error.className = 'q-product-detail__contact-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = this.contactSellerError;
+      actions.appendChild(error);
+    }
+
     const link = document.createElement('a');
-    link.className = 'q-product-detail__seller-link';
+    link.className = 'q-btn q-btn--outline q-product-detail__seller-link';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Ver tienda';
+    actions.appendChild(link);
 
     section.appendChild(avatar);
     section.appendChild(info);
-    section.appendChild(link);
+    section.appendChild(actions);
     return section;
   }
 
@@ -785,6 +837,7 @@ export class ProductDetailView {
         product.category_name ||
         '';
       const user = this.authStore.getUser();
+      const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
       const isOwn = Boolean(user?.id && product.seller_id && user.id === product.seller_id);
       const card = new ProductCardView(
         {
@@ -807,7 +860,7 @@ export class ProductDetailView {
           variant: 'default',
           onAddToCart: () => this.onAddToCart?.(product, 1),
           detailHref: `/products/${encodeURIComponent(product.slug || product.id)}`,
-          hideCartButton: isOwn,
+          hideCartButton: isAdmin || isOwn,
         }
       );
       grid.appendChild(card.render());

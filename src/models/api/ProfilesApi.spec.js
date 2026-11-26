@@ -235,3 +235,140 @@ describe('ProfilesApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('ProfilesApi (recovered 1)', () => {
+    let api;
+
+    beforeEach(() => {
+      api = new ProfilesApi();
+    });
+
+    describe('getById (recovered 2)', () => {
+      it('should throw mapped 404 error ("Perfil no encontrado") when profile is not found', async () => {
+        const errorPayload = {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Profile not found',
+          },
+        };
+
+        spyOn(window, 'fetch').and.resolveTo({
+          ok: false,
+          status: 404,
+          json: async () => errorPayload,
+        });
+
+        try {
+          await api.getById('00000000-0000-4000-8000-000000000000');
+          fail('Expected api.getById to throw');
+        } catch (err) {
+          expect(err.message).toBe('Perfil no encontrado');
+          expect(err.status).toBe(404);
+          expect(err.data).toEqual(errorPayload);
+        }
+      });
+    });
+  });
+
+  (() => {
+    const response = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('ProfilesApi additional branches (recovered 3)', () => {
+      let api;
+      let fetchSpy;
+
+      beforeEach(() => {
+        api = new ProfilesApi();
+        fetchSpy = spyOn(window, 'fetch');
+      });
+
+      it('encodes the profile id and returns parsed data on success', async () => {
+        const body = { data: { id: 'u 1' }, meta: {} };
+        fetchSpy.and.resolveTo(response(body));
+
+        await expectAsync(api.getById('u 1')).toBeResolvedTo(body);
+        expect(fetchSpy.calls.first().args[0]).toEqual(
+          jasmine.stringMatching(/\/profiles\/u%201$/)
+        );
+      });
+
+      it('returns an empty object when the success body is not JSON', async () => {
+        fetchSpy.and.resolveTo(new Response('not-json', { status: 200 }));
+        await expectAsync(api.getById('u1')).toBeResolvedTo({});
+      });
+
+      it('maps generic 403, 404 and 500 errors with status and code', async () => {
+        fetchSpy.and.resolveTo(response({ error: { code: 'FORBIDDEN' } }, 403));
+        let error;
+        try {
+          await api.getById('u1');
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('No tienes permiso para modificar este perfil');
+        expect(error.status).toBe(403);
+        expect(error.code).toBe('FORBIDDEN');
+
+        fetchSpy.and.resolveTo(response({}, 404));
+        await expectAsync(api.updateMe({ bio: 'x' })).toBeRejectedWithError('Perfil no encontrado');
+
+        fetchSpy.and.resolveTo(response({}, 500));
+        await expectAsync(api.uploadAvatar(new Blob(['x']))).toBeRejectedWithError(
+          'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+        );
+      });
+
+      it('uses details, error.message, data.message and the fallback in that order', async () => {
+        fetchSpy.and.resolveTo(
+          response(
+            { error: { details: [{ message: 'Campo inválido' }], message: 'Genérico' } },
+            400
+          )
+        );
+        await expectAsync(api.updateMe({})).toBeRejectedWithError('Campo inválido');
+
+        fetchSpy.and.resolveTo(response({ error: { message: 'Genérico' } }, 400));
+        await expectAsync(api.updateMe({})).toBeRejectedWithError('Genérico');
+
+        fetchSpy.and.resolveTo(response({ message: 'Mensaje raíz' }, 400));
+        await expectAsync(api.updateMe({})).toBeRejectedWithError('Mensaje raíz');
+
+        fetchSpy.and.resolveTo(response({}, 400));
+        await expectAsync(api.updateMe({})).toBeRejectedWithError(
+          'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+        );
+      });
+
+      it('maps non-JSON errors and network rejections', async () => {
+        fetchSpy.and.resolveTo(new Response('', { status: 404 }));
+        await expectAsync(api.getById('u1')).toBeRejectedWithError('Perfil no encontrado');
+
+        fetchSpy.and.rejectWith(new Error('offline'));
+        await expectAsync(api.getById('u1')).toBeRejectedWithError('offline');
+        await expectAsync(api.updateMe({})).toBeRejectedWithError('offline');
+        await expectAsync(api.uploadAvatar(new Blob(['x']))).toBeRejectedWithError('offline');
+      });
+
+      it('maps 422 avatar codes and falls through for unrelated codes', async () => {
+        fetchSpy.and.resolveTo(response({ error: { code: 'OTHER' } }, 422));
+        await expectAsync(api.uploadAvatar(new Blob(['x']))).toBeRejectedWithError(
+          'Error al guardar los cambios. Inténtalo de nuevo más tarde'
+        );
+      });
+
+      it('keeps the error envelope fields from _createApiError', () => {
+        const error = api._createApiError(403, null, 'fallback');
+        expect(error.status).toBe(403);
+        expect(error.code).toBe('');
+        expect(error.data).toBeNull();
+        expect(error.message).toBe('No tienes permiso para modificar este perfil');
+      });
+    });
+  })();
+})();

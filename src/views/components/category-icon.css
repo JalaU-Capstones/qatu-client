@@ -1,0 +1,13 @@
+.q-category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--q-fg-secondary);
+  flex: 0 0 auto;
+}
+
+.q-category-icon svg {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}

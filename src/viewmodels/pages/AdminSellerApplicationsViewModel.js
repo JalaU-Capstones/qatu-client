@@ -1,5 +1,4 @@
 import { SellerApplicationsApi } from '../../models/api/SellerApplicationsApi.js';
-import { validateRejectionReason } from '../../models/validation/sellerApplicationValidation.js';
 
 export class AdminSellerApplicationsViewModel {
   /**
@@ -20,10 +19,6 @@ export class AdminSellerApplicationsViewModel {
     this.isLoading = false;
     this.isForbidden = false;
     this.reviewingIds = new Set();
-
-    this.rejectingId = null;
-    this.rejectionReason = '';
-    this.rejectionError = '';
 
     this.noticeMessage = '';
     this.errorMessage = '';
@@ -90,7 +85,6 @@ export class AdminSellerApplicationsViewModel {
    */
   async setStatusFilter(status) {
     this.statusFilter = status || '';
-    this.cancelRejectForm();
     await this.loadApplications(1);
   }
 
@@ -106,11 +100,6 @@ export class AdminSellerApplicationsViewModel {
     this.reviewingIds.add(applicationId);
     this.errorMessage = '';
     this.noticeMessage = '';
-    if (this.rejectingId === applicationId) {
-      this.rejectingId = null;
-      this.rejectionReason = '';
-      this.rejectionError = '';
-    }
     this._notify();
 
     try {
@@ -134,76 +123,37 @@ export class AdminSellerApplicationsViewModel {
     }
   }
 
-  openRejectForm(applicationId) {
-    this.rejectingId = applicationId;
-    this.rejectionReason = '';
-    this.rejectionError = '';
-    this.errorMessage = '';
-    this._notify();
-  }
-
-  cancelRejectForm() {
-    if (this.rejectingId !== null || this.rejectionReason || this.rejectionError) {
-      this.rejectingId = null;
-      this.rejectionReason = '';
-      this.rejectionError = '';
-      this._notify();
+  async rejectApplication(applicationId, reason) {
+    const trimmed = typeof reason === 'string' ? reason.trim() : '';
+    if (!trimmed) return { success: false, error: 'El motivo es obligatorio.' };
+    if (trimmed.length > 500) {
+      return { success: false, error: 'El motivo no puede superar 500 caracteres.' };
     }
-  }
-
-  setRejectionReason(value) {
-    this.rejectionReason = value;
-    if (this.rejectionError) {
-      this.rejectionError = '';
+    if (!applicationId) {
+      return { success: false, error: 'No se pudo rechazar la solicitud.' };
     }
-    this._notify();
-  }
-
-  /**
-   * Validates the rejection reason and rejects the application.
-   *
-   * @param {string} applicationId
-   * @returns {Promise<boolean>}
-   */
-  async submitRejection(applicationId) {
-    if (!applicationId || this.reviewingIds.has(applicationId)) return false;
-
-    const validation = validateRejectionReason(this.rejectionReason);
-    if (!validation.valid) {
-      this.rejectionError = validation.error;
-      this._notify();
-      return false;
+    if (this.reviewingIds.has(applicationId)) {
+      return { success: false, error: 'Operación en curso.' };
     }
 
     this.reviewingIds.add(applicationId);
-    this.rejectionError = '';
     this.errorMessage = '';
     this.noticeMessage = '';
     this._notify();
 
     try {
-      const response = await this.api.reviewApplication(applicationId, {
+      await this.api.reviewApplication(applicationId, {
         status: 'rejected',
-        rejectionReason: validation.value,
+        rejectionReason: trimmed,
       });
-      const updated = response?.data || {
-        id: applicationId,
-        status: 'rejected',
-        rejection_reason: validation.value,
-      };
-      this._replaceApplication(applicationId, updated);
-      this.rejectingId = null;
-      this.rejectionReason = '';
       this.noticeMessage = 'Solicitud rechazada. El solicitante fue notificado.';
-      return true;
+      await this.loadApplications(this.meta.page || 1);
+      return { success: true };
     } catch (err) {
-      if (err?.statusCode === 403 || err?.code === 'FORBIDDEN') {
-        this.isForbidden = true;
-        this.errorMessage = '403 Forbidden: No tienes permisos de administrador.';
-      } else {
-        this.errorMessage = err?.message || 'No se pudo rechazar la solicitud.';
-      }
-      return false;
+      return {
+        success: false,
+        error: err?.message || 'No se pudo rechazar la solicitud.',
+      };
     } finally {
       this.reviewingIds.delete(applicationId);
       this._notify();

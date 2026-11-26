@@ -189,13 +189,14 @@ export class FeaturedProductsView {
    */
   _renderCard(product) {
     const user = this.authStore.getUser();
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
     const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
     return new ProductCard({
       product,
       variant: 'featured',
       onAddToCart: (item, quantity) => this.viewModel.addToCart(item.id, quantity),
       onView: () => {},
-      hideAddToCart: isOwn,
+      hideAddToCart: isAdmin || isOwn,
     }).render();
   }
 }

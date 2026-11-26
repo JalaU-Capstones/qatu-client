@@ -1,6 +1,7 @@
 import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { AdminSellerApplicationsViewModel } from '../../viewmodels/pages/AdminSellerApplicationsViewModel.js';
+import { RejectSellerApplicationModal } from '../components/RejectSellerApplicationModal.js';
 
 const STATUS_LABELS = Object.freeze({
   pending: 'Pendiente',
@@ -160,6 +161,26 @@ export class AdminSellerApplicationsPageView {
       error.appendChild(err);
     }
 
+    const active = document.activeElement;
+    const focusedId = active?.id || null;
+    const selectionStart = active?.selectionStart ?? null;
+    const selectionEnd = active?.selectionEnd ?? null;
+    const shouldRestoreFocus = this.element.contains(active) && active !== this.element;
+    const restoreFocus = () => {
+      if (!focusedId || !shouldRestoreFocus) return;
+      const next = this.element.querySelector(`#${CSS.escape(focusedId)}`);
+      if (next && next !== active) {
+        next.focus();
+        if (typeof selectionStart === 'number' && next.setSelectionRange) {
+          try {
+            next.setSelectionRange(selectionStart, selectionEnd);
+          } catch {
+            // Some input implementations do not support selection ranges.
+          }
+        }
+      }
+    };
+
     content.replaceChildren();
     if (!vm.applications.length) {
       const empty = document.createElement('p');
@@ -168,6 +189,7 @@ export class AdminSellerApplicationsPageView {
         ? 'Cargando solicitudes…'
         : 'No hay solicitudes de vendedores para mostrar.';
       content.appendChild(empty);
+      restoreFocus();
       return;
     }
 
@@ -176,6 +198,7 @@ export class AdminSellerApplicationsPageView {
     if (vm.meta.totalPages > 1) {
       content.appendChild(this._buildPager());
     }
+    restoreFocus();
   }
 
   _buildTable() {
@@ -283,63 +306,6 @@ export class AdminSellerApplicationsPageView {
     const container = document.createElement('div');
     container.className = 'q-admin-app-actions';
 
-    if (vm.rejectingId === application.id) {
-      const rejectForm = document.createElement('div');
-      rejectForm.className = 'q-admin-app-reject-box';
-
-      const label = document.createElement('label');
-      label.className = 'q-admin-app-reject-label';
-      label.htmlFor = `reject-reason-${application.id}`;
-      label.textContent = 'Motivo de rechazo *';
-
-      const textarea = document.createElement('textarea');
-      textarea.id = `reject-reason-${application.id}`;
-      textarea.className = 'q-admin-app-reject-input';
-      textarea.rows = 2;
-      textarea.maxLength = 500;
-      textarea.placeholder = 'Explica brevemente el motivo del rechazo…';
-      textarea.value = vm.rejectionReason;
-      textarea.disabled = busy;
-      textarea.addEventListener('input', (e) => {
-        vm.setRejectionReason(e.target.value);
-      });
-
-      rejectForm.append(label, textarea);
-
-      if (vm.rejectionError) {
-        const err = document.createElement('p');
-        err.className = 'q-seller-apply-field-error';
-        err.textContent = vm.rejectionError;
-        rejectForm.appendChild(err);
-      }
-
-      const btnRow = document.createElement('div');
-      btnRow.className = 'q-admin-app-reject-buttons';
-
-      const confirmRejectBtn = document.createElement('button');
-      confirmRejectBtn.type = 'button';
-      confirmRejectBtn.className = 'q-btn q-btn--sm q-admin-app-confirm-reject-btn';
-      confirmRejectBtn.textContent = busy ? 'Rechazando…' : 'Confirmar rechazo';
-      confirmRejectBtn.disabled = busy;
-      confirmRejectBtn.addEventListener('click', () => {
-        void vm.submitRejection(application.id);
-      });
-
-      const cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.className = 'q-btn q-btn--neutral q-btn--sm q-admin-app-cancel-reject-btn';
-      cancelBtn.textContent = 'Cancelar';
-      cancelBtn.disabled = busy;
-      cancelBtn.addEventListener('click', () => {
-        vm.cancelRejectForm();
-      });
-
-      btnRow.append(confirmRejectBtn, cancelBtn);
-      rejectForm.appendChild(btnRow);
-      container.appendChild(rejectForm);
-      return container;
-    }
-
     const approveBtn = document.createElement('button');
     approveBtn.type = 'button';
     approveBtn.className = 'q-btn q-btn--primary q-btn--sm q-admin-app-approve-btn';
@@ -355,7 +321,11 @@ export class AdminSellerApplicationsPageView {
     rejectBtn.textContent = 'Rechazar';
     rejectBtn.disabled = busy;
     rejectBtn.addEventListener('click', () => {
-      vm.openRejectForm(application.id);
+      const modal = new RejectSellerApplicationModal({
+        businessName: application.business_name || 'esta solicitud',
+        onConfirm: (reason) => vm.rejectApplication(application.id, reason),
+      });
+      void modal.open();
     });
 
     container.append(approveBtn, rejectBtn);

@@ -1,5 +1,5 @@
 import { AuthStore } from '../store/authStore.js';
-import { getSellerRouteAccess } from './guards.js';
+import { getAdminRouteAccess, getSellerRouteAccess } from './guards.js';
 
 describe('getSellerRouteAccess', () => {
   let store;
@@ -55,3 +55,48 @@ describe('getSellerRouteAccess', () => {
     expect(getSellerRouteAccess(store)).toBe('login');
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('getAdminRouteAccess (recovered 1)', () => {
+      it('sends anonymous users to login', () => {
+        expect(
+          getAdminRouteAccess({
+            isAuthenticated: () => false,
+            isAdmin: () => true,
+          })
+        ).toBe('login');
+      });
+
+      it('forbids authenticated users without the admin role', () => {
+        for (const isAdmin of [false, undefined]) {
+          expect(
+            getAdminRouteAccess({
+              isAuthenticated: () => true,
+              isAdmin: () => isAdmin,
+            })
+          ).toBe('forbidden');
+        }
+      });
+
+      it('allows authenticated admins and revokes access after logout', () => {
+        let authenticated = true;
+        expect(
+          getAdminRouteAccess({
+            isAuthenticated: () => authenticated,
+            isAdmin: () => true,
+          })
+        ).toBe('allow');
+
+        authenticated = false;
+        expect(
+          getAdminRouteAccess({
+            isAuthenticated: () => authenticated,
+            isAdmin: () => true,
+          })
+        ).toBe('login');
+      });
+    });
+  })();
+})();

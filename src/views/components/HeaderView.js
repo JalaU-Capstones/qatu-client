@@ -6,6 +6,7 @@ const DROPDOWN_ICONS = {
   user: '<circle cx="12" cy="8" r="4"></circle><path d="M5 21a7 7 0 0 1 14 0"></path>',
   orders:
     '<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-5-5z"></path><path d="M16 3v5h5M8 13h8M8 17h8"></path>',
+  messages: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>',
   products:
     '<path d="m12 3 9 5-9 5-9-5 9-5z"></path><path d="m3 8 9 5 9-5M3 13l9 5 9-5M3 8v8l9 5 9-5V8"></path>',
   sales: '<path d="M3 3v18h18"></path><path d="m7 14 4-4 4 3 6-7"></path>',
@@ -15,6 +16,8 @@ const DROPDOWN_ICONS = {
     '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="10" cy="7" r="4"></circle><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
   logout:
     '<path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path>',
+  categories:
+    '<rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect>',
 };
 
 /**
@@ -31,6 +34,36 @@ export class HeaderView {
     this.element = null;
     this._unsubscribe = null;
     this._handleDocumentClick = this._handleDocumentClick.bind(this);
+  }
+
+  _createCartButton() {
+    const cartBtn = document.createElement('button');
+    cartBtn.type = 'button';
+    cartBtn.className = 'q-header-icon-btn q-header-cart-btn';
+    cartBtn.setAttribute('aria-label', 'Carrito de compras');
+    cartBtn.setAttribute('title', 'Carrito de compras');
+    cartBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    `;
+
+    if (this.viewModel.cartCount > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'q-header-cart-badge';
+      badge.textContent = String(this.viewModel.cartCount);
+      cartBtn.appendChild(badge);
+    }
+
+    cartBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerCart();
+    });
+
+    return cartBtn;
   }
 
   /**
@@ -81,34 +114,9 @@ export class HeaderView {
     const actionsWrapper = document.createElement('div');
     actionsWrapper.className = 'q-header-actions';
 
-    // Cart Button with SVG icon
-    const cartBtn = document.createElement('button');
-    cartBtn.type = 'button';
-    cartBtn.className = 'q-header-icon-btn q-header-cart-btn';
-    cartBtn.setAttribute('aria-label', 'Carrito de compras');
-    cartBtn.setAttribute('title', 'Carrito de compras');
-    cartBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <path d="M16 10a4 4 0 0 1-8 0"></path>
-      </svg>
-    `;
-
-    if (this.viewModel.cartCount > 0) {
-      const badge = document.createElement('span');
-      badge.className = 'q-header-cart-badge';
-      badge.textContent = String(this.viewModel.cartCount);
-      cartBtn.appendChild(badge);
+    if (!this.viewModel.isAdmin) {
+      actionsWrapper.appendChild(this._createCartButton());
     }
-
-    cartBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.viewModel.triggerCart();
-    });
-
-    actionsWrapper.appendChild(cartBtn);
 
     // Theme toggle button
     const themeBtn = document.createElement('button');
@@ -321,6 +329,20 @@ export class HeaderView {
     return salesBtn;
   }
 
+  _createConversationsLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-conversations-btn';
+    link.href = '/conversations';
+    link.dataset.route = '';
+    this._setDropdownItemContent(link, 'Mensajes', 'messages');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerConversations();
+    });
+    return link;
+  }
+
   /**
    * Creates the "Mis Productos" dropdown link (seller dashboard).
    * @returns {HTMLElement}
@@ -382,6 +404,20 @@ export class HeaderView {
     return link;
   }
 
+  _createAdminCategoriesLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-admin-categories-btn';
+    link.href = '/admin/categories';
+    link.dataset.route = '';
+    this._setDropdownItemContent(link, 'Categorías', 'categories');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerAdminCategories();
+    });
+    return link;
+  }
+
   _setDropdownItemContent(item, label, icon) {
     const iconElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     iconElement.setAttribute('class', 'q-header-dropdown-icon');
@@ -405,47 +441,68 @@ export class HeaderView {
     return vm.isSeller ? 'Vendedor' : 'Comprador';
   }
 
-  _syncSellerLink(vm) {
+  _syncRoleBasedDropdownItems(vm) {
     const dropdown = this.element?.querySelector('.q-header-dropdown');
     if (!dropdown) return;
+
+    const isAdmin = Boolean(vm.isAdmin);
+    const effectiveIsSeller = !isAdmin && Boolean(vm.isSeller);
+    const existingOrdersLink = dropdown.querySelector('.q-header-orders-btn');
     const existingApply = dropdown.querySelector('.q-header-seller-apply-btn');
     const existingProducts = dropdown.querySelector('.q-header-seller-products-btn');
-    const existingOrders = dropdown.querySelector('.q-header-seller-orders-btn');
+    const existingSellerOrders = dropdown.querySelector('.q-header-seller-orders-btn');
     const existingAdminReports = dropdown.querySelector('.q-header-admin-reports-btn');
     const existingAdminApps = dropdown.querySelector('.q-header-admin-applications-btn');
+    const existingAdminCategories = dropdown.querySelector('.q-header-admin-categories-btn');
+    const conversations = dropdown.querySelector('.q-header-conversations-btn');
     const logoutBtn = dropdown.querySelector('.q-header-logout-btn');
     const separator = dropdown.querySelector('.q-header-dropdown-separator');
-    const adminAnchor = existingAdminReports || existingAdminApps || separator || logoutBtn;
+    const roleAnchor = existingAdminReports || separator || logoutBtn;
 
-    if (vm.isSeller) {
-      if (existingApply) existingApply.remove();
+    if (isAdmin) {
+      existingOrdersLink?.remove();
+    } else if (!existingOrdersLink) {
+      dropdown.insertBefore(this._createOrdersLink(), conversations || roleAnchor);
+    }
+
+    if (effectiveIsSeller) {
+      existingApply?.remove();
       if (!existingProducts) {
-        dropdown.insertBefore(this._createSellerProductsLink(), existingOrders || adminAnchor);
+        dropdown.insertBefore(this._createSellerProductsLink(), roleAnchor);
       }
-      if (!existingOrders) {
-        dropdown.insertBefore(this._createSellerOrdersLink(), adminAnchor);
+      if (!existingSellerOrders) {
+        dropdown.insertBefore(this._createSellerOrdersLink(), roleAnchor);
       }
     } else {
-      if (existingProducts) existingProducts.remove();
-      if (existingOrders) existingOrders.remove();
-      if (!existingApply) {
-        dropdown.insertBefore(this._createSellerApplyLink(), adminAnchor);
+      existingProducts?.remove();
+      existingSellerOrders?.remove();
+      if (isAdmin) {
+        existingApply?.remove();
+      } else if (!existingApply) {
+        dropdown.insertBefore(this._createSellerApplyLink(), roleAnchor);
       }
     }
 
-    if (vm.isAdmin) {
+    if (isAdmin) {
       if (!existingAdminReports) {
         dropdown.insertBefore(
           this._createAdminReportsLink(),
-          existingAdminApps || separator || logoutBtn
+          existingAdminApps || existingAdminCategories || separator || logoutBtn
         );
       }
       if (!existingAdminApps) {
-        dropdown.insertBefore(this._createAdminSellerApplicationsLink(), separator || logoutBtn);
+        dropdown.insertBefore(
+          this._createAdminSellerApplicationsLink(),
+          existingAdminCategories || separator || logoutBtn
+        );
+      }
+      if (!existingAdminCategories) {
+        dropdown.insertBefore(this._createAdminCategoriesLink(), separator || logoutBtn);
       }
     } else {
       if (existingAdminReports) existingAdminReports.remove();
       if (existingAdminApps) existingAdminApps.remove();
+      if (existingAdminCategories) existingAdminCategories.remove();
     }
   }
 
@@ -474,6 +531,20 @@ export class HeaderView {
     );
   }
 
+  _createOrdersLink() {
+    const ordersBtn = document.createElement('a');
+    ordersBtn.className = 'q-header-dropdown-item q-header-orders-btn';
+    ordersBtn.href = '/orders';
+    ordersBtn.dataset.route = '';
+    this._setDropdownItemContent(ordersBtn, 'Mis Órdenes', 'orders');
+    ordersBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerOrders();
+    });
+    return ordersBtn;
+  }
+
   /**
    * Creates a circular user profile avatar element wrapped in a dropdown container.
    * @param {Object} user
@@ -481,6 +552,8 @@ export class HeaderView {
    * @private
    */
   _createUserAvatar(user) {
+    const isAdmin = Boolean(this.viewModel.isAdmin);
+    const effectiveIsSeller = !isAdmin && Boolean(this.viewModel.isSeller);
     const wrapper = document.createElement('div');
     wrapper.className = 'q-header-avatar-wrapper';
 
@@ -548,31 +621,24 @@ export class HeaderView {
       this.viewModel.triggerProfile();
     });
 
-    const ordersBtn = document.createElement('a');
-    ordersBtn.className = 'q-header-dropdown-item q-header-orders-btn';
-    ordersBtn.href = '/orders';
-    ordersBtn.dataset.route = '';
-    this._setDropdownItemContent(ordersBtn, 'Mis Órdenes', 'orders');
-    ordersBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.viewModel.triggerOrders();
-    });
-
     dropdown.appendChild(dropdownHeader);
     dropdown.appendChild(profileBtn);
-    dropdown.appendChild(ordersBtn);
+    if (!isAdmin) {
+      dropdown.appendChild(this._createOrdersLink());
+    }
+    dropdown.appendChild(this._createConversationsLink());
 
-    if (this.viewModel.isSeller) {
+    if (effectiveIsSeller) {
       dropdown.appendChild(this._createSellerProductsLink());
       dropdown.appendChild(this._createSellerOrdersLink());
-    } else {
+    } else if (!isAdmin) {
       dropdown.appendChild(this._createSellerApplyLink());
     }
 
-    if (this.viewModel.isAdmin) {
+    if (isAdmin) {
       dropdown.appendChild(this._createAdminReportsLink());
       dropdown.appendChild(this._createAdminSellerApplicationsLink());
+      dropdown.appendChild(this._createAdminCategoriesLink());
     }
 
     const logoutBtn = document.createElement('button');
@@ -615,7 +681,21 @@ export class HeaderView {
   _update(vm) {
     if (!this.element) return;
 
-    const cartBtn = this.element.querySelector('.q-header-cart-btn');
+    const actionsWrapper = this.element.querySelector('.q-header-actions');
+    let cartBtn = this.element.querySelector('.q-header-cart-btn');
+    if (vm.isAdmin) {
+      cartBtn?.remove();
+      cartBtn = null;
+    } else if (!cartBtn && actionsWrapper) {
+      cartBtn = this._createCartButton();
+      const themeButton = actionsWrapper.querySelector('.q-header-theme-btn');
+      if (themeButton) {
+        actionsWrapper.insertBefore(cartBtn, themeButton);
+      } else {
+        actionsWrapper.appendChild(cartBtn);
+      }
+    }
+
     if (cartBtn) {
       let badge = cartBtn.querySelector('.q-header-cart-badge');
       if (vm.cartCount > 0) {
@@ -635,7 +715,6 @@ export class HeaderView {
       themeBtn.innerHTML = this._getThemeIconSvg(vm.theme);
     }
 
-    const actionsWrapper = this.element.querySelector('.q-header-actions');
     if (actionsWrapper) {
       const existingLogin = actionsWrapper.querySelector('.q-header-login-btn');
       const existingAvatarWrapper = actionsWrapper.querySelector('.q-header-avatar-wrapper');
@@ -699,7 +778,7 @@ export class HeaderView {
       }
     }
 
-    this._syncSellerLink(vm);
+    this._syncRoleBasedDropdownItems(vm);
 
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');

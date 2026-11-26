@@ -1,3 +1,4 @@
+import { ORDER_STATUSES } from '../entities/orderStatus.js';
 import { apiFetch } from './client.js';
 import { OrdersApi } from './OrdersApi.js';
 
@@ -397,3 +398,129 @@ describe('OrdersApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const jsonResponse = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('OrdersApi additional branches (recovered 1)', () => {
+      let fetchFn;
+      let api;
+
+      beforeEach(() => {
+        fetchFn = jasmine.createSpy('apiFetchFn');
+        api = new OrdersApi({ apiFetchFn: fetchFn });
+      });
+
+      it('uses default pagination when listOrders is called with no arguments', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+
+        await api.listOrders();
+
+        expect(fetchFn).toHaveBeenCalledWith('/orders?page=1&limit=10', { method: 'GET' });
+      });
+
+      it('omits falsy filter values from the query string', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+
+        await api.listOrders({ page: 0, limit: 0, status: '', view: '' });
+        expect(fetchFn.calls.first().args[0]).toBe('/orders');
+      });
+
+      it('accepts every documented status in updateOrderStatus', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+        for (const status of ORDER_STATUSES) {
+          await expectAsync(api.updateOrderStatus('order-1', status)).toBeResolved();
+        }
+        expect(fetchFn).toHaveBeenCalledTimes(ORDER_STATUSES.length);
+      });
+
+      it('validates missing and non-string ids/statuses with exact errors', async () => {
+        for (const orderId of [undefined, null, 12, {}]) {
+          await expectAsync(api.getOrderById(orderId)).toBeRejectedWithError('orderId is required');
+          await expectAsync(api.updateOrderStatus(orderId, 'shipped')).toBeRejectedWithError(
+            'orderId is required'
+          );
+        }
+        for (const status of [undefined, null, 12, {}]) {
+          await expectAsync(api.updateOrderStatus('order-1', status)).toBeRejectedWithError(
+            'status is required'
+          );
+        }
+
+        let error;
+        try {
+          await api.getOrderById('');
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.code).toBe('INVALID_REQUEST');
+        expect(error.statusCode).toBe(400);
+        expect(fetchFn).not.toHaveBeenCalled();
+      });
+
+      it('encodes order ids in detail and status URLs', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+
+        await api.getOrderById('order/1 ?');
+        expect(fetchFn.calls.first().args[0]).toBe('/orders/order%2F1%20%3F');
+
+        await api.updateOrderStatus('order/1', 'shipped');
+        expect(fetchFn.calls.mostRecent().args[0]).toBe('/orders/order%2F1/status');
+      });
+
+      it('uses generic messages, UNKNOWN_ERROR and status-derived codes', async () => {
+        fetchFn.and.resolveTo(new Response('not-json', { status: 500 }));
+        await expectAsync(api.getOrderById('o1')).toBeRejectedWithError(
+          'Failed to fetch order details (500)'
+        );
+
+        fetchFn.and.resolveTo(new Response('', { status: 401 }));
+        let error;
+        try {
+          await api.updateOrderStatus('o1', 'shipped');
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.code).toBe('UNAUTHORIZED');
+        expect(error.statusCode).toBe(401);
+
+        fetchFn.and.resolveTo(jsonResponse({ error: { code: 'CUSTOM', details: ['d'] } }, 422));
+        try {
+          await api.listOrders();
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('Failed to fetch orders (422)');
+        expect(error.code).toBe('CUSTOM');
+        expect(error.details).toEqual(['d']);
+      });
+
+      it('omits falsy createOrder fields and accepts an empty payload', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+
+        await api.createOrder({ shippingAddress: { city: 'LP' }, paymentMethod: '', notes: null });
+        expect(JSON.parse(fetchFn.calls.first().args[1].body)).toEqual({
+          shipping_address: { city: 'LP' },
+        });
+
+        await api.createOrder();
+        expect(JSON.parse(fetchFn.calls.mostRecent().args[1].body)).toEqual({});
+      });
+
+      it('propagates network rejections from every endpoint', async () => {
+        fetchFn.and.rejectWith(new Error('offline'));
+
+        await expectAsync(api.listOrders()).toBeRejectedWithError('offline');
+        await expectAsync(api.createOrder({})).toBeRejectedWithError('offline');
+        await expectAsync(api.getOrderById('o1')).toBeRejectedWithError('offline');
+        await expectAsync(api.updateOrderStatus('o1', 'shipped')).toBeRejectedWithError('offline');
+      });
+    });
+  })();
+})();

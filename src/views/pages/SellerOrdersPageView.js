@@ -29,6 +29,10 @@ export class SellerOrdersPageView {
       this._renderGate('Debes iniciar sesión para ver tus ventas.', true);
       return;
     }
+    if (authStore.isAdmin()) {
+      this._renderAdminForbidden();
+      return this.element;
+    }
     if (!authStore.isSeller()) {
       this._renderGate('Solo los vendedores pueden acceder a este panel.', false);
       return;
@@ -408,6 +412,43 @@ export class SellerOrdersPageView {
       });
       box.appendChild(btn);
     }
+    content.appendChild(box);
+  }
+
+  _renderAdminForbidden() {
+    const content = this.element?.querySelector('[data-role="content"]');
+    if (!content) return;
+    content.replaceChildren();
+
+    const box = document.createElement('div');
+    box.className = 'q-admin-applications-forbidden';
+    box.setAttribute('role', 'alert');
+
+    const code = document.createElement('p');
+    code.className = 'q-admin-applications-forbidden__code';
+    code.textContent = 'No disponible';
+
+    const title = document.createElement('h2');
+    title.className = 'q-admin-applications-forbidden__title';
+    title.textContent = 'Esta sección no está disponible para administradores';
+
+    const description = document.createElement('p');
+    description.textContent =
+      'La gestión de ventas es exclusiva de vendedores. Como administrador, revisa las operaciones del marketplace desde el panel de administración.';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'q-btn q-btn--primary';
+    button.textContent = 'Ir a reportes';
+    button.addEventListener('click', () => {
+      if (typeof this.onNavigate === 'function') {
+        this.onNavigate('/admin/reports');
+      } else {
+        window.location.assign('/admin/reports');
+      }
+    });
+
+    box.append(code, title, description, button);
     content.appendChild(box);
   }
 }

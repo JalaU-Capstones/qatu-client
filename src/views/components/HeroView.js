@@ -1,4 +1,5 @@
 import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
+import { CategoryIcon } from './CategoryIcon.js';
 import { createImageWithFallback } from './ImageWithFallback.js';
 
 /**
@@ -132,25 +133,8 @@ export class HeroView {
     quickLinksLabel.textContent = this.viewModel.quickLinksLabel;
     quickLinksContainer.appendChild(quickLinksLabel);
 
-    this.viewModel.quickLinks.forEach((link, index) => {
-      const a = document.createElement('a');
-      a.className = 'q-hero__quick-link';
-      a.href = link.href;
-      a.textContent = link.label;
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-      });
-
-      quickLinksContainer.appendChild(a);
-
-      if (index < this.viewModel.quickLinks.length - 1) {
-        const sep = document.createElement('span');
-        sep.className = 'q-hero__quick-link-sep';
-        sep.setAttribute('aria-hidden', 'true');
-        sep.textContent = '·';
-        quickLinksContainer.appendChild(sep);
-      }
-    });
+    this._quickLinksContainer = quickLinksContainer;
+    this._renderQuickLinks();
 
     content.appendChild(eyebrow);
     content.appendChild(title);
@@ -252,6 +236,47 @@ export class HeroView {
     if (this._renderedVisualImages !== this.viewModel.visualImages) {
       this._renderCollage();
     }
+    this._renderQuickLinks();
+  }
+
+  _renderQuickLinks() {
+    if (!this._quickLinksContainer) return;
+    this._quickLinksContainer.replaceChildren();
+
+    const label = document.createElement('span');
+    label.className = 'q-hero__quick-links-label';
+    label.textContent = this.viewModel.quickLinksLabel;
+    this._quickLinksContainer.appendChild(label);
+
+    if (this.viewModel.isCategoriesLoading) {
+      for (let index = 0; index < 5; index += 1) {
+        const skeleton = document.createElement('span');
+        skeleton.className = 'q-hero__quick-link q-hero__quick-link--loading';
+        skeleton.setAttribute('aria-hidden', 'true');
+        this._quickLinksContainer.appendChild(skeleton);
+      }
+      return;
+    }
+
+    this.viewModel.quickLinks.forEach((link, index) => {
+      const a = document.createElement('a');
+      a.className = 'q-hero__quick-link';
+      a.href = link.href;
+      a.dataset.route = '';
+      a.appendChild(new CategoryIcon({ name: link.label, size: 16 }).render());
+      const text = document.createElement('span');
+      text.textContent = link.label;
+      a.appendChild(text);
+      this._quickLinksContainer.appendChild(a);
+
+      if (index < this.viewModel.quickLinks.length - 1) {
+        const sep = document.createElement('span');
+        sep.className = 'q-hero__quick-link-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '·';
+        this._quickLinksContainer.appendChild(sep);
+      }
+    });
   }
 
   _renderCollage() {

@@ -39,6 +39,14 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
+  { name: 'stores', path: '/stores' },
+  { name: 'categories', path: '/categories' },
+  {
+    name: 'admin-categories',
+    path: '/admin/categories',
+    authenticated: true,
+    roles: ['admin'],
+  },
   { name: 'product-detail', path: '/products/stainless-steel-kitchen-knife-set' },
   { name: 'cart', path: '/cart', authenticated: true },
   { name: 'checkout', path: '/checkout', authenticated: true },
@@ -51,6 +59,7 @@ const ROUTES = [
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'order-detail', path: '/orders/ORD-00100001', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
+  { name: 'conversations', path: '/conversations', authenticated: true },
   { name: 'apply-seller', path: '/apply-seller', authenticated: true },
   // Seller dashboard: needs the seller role (the route guard redirects everyone else).
   { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
@@ -244,12 +253,150 @@ const ORDER_DETAIL_SAMPLE = {
 
 /** Categories for `GET /v1/categories` (header dropdown + wizard step 1). */
 const SAMPLE_CATEGORIES = [
-  { id: 'cat-electronics', name: 'Electrónica', slug: 'electronics' },
-  { id: 'cat-clothing', name: 'Ropa y Moda', slug: 'clothing' },
-  { id: 'cat-home', name: 'Hogar y Jardín', slug: 'home-and-garden' },
-  { id: 'cat-sports', name: 'Deportes', slug: 'sports' },
-  { id: 'cat-books', name: 'Libros', slug: 'books' },
+  {
+    id: 'cat-electronics',
+    name: 'Electrónica',
+    slug: 'electronics',
+    description: 'Gadgets y dispositivos electrónicos.',
+    product_count: 9,
+  },
+  {
+    id: 'cat-clothing',
+    name: 'Ropa y Moda',
+    slug: 'clothing',
+    description: 'Prendas y accesorios de moda.',
+    product_count: 4,
+  },
+  {
+    id: 'cat-home',
+    name: 'Hogar y Jardín',
+    slug: 'home-and-garden',
+    product_count: 7,
+  },
+  { id: 'cat-sports', name: 'Deportes', slug: 'sports', product_count: 3 },
+  { id: 'cat-books', name: 'Libros', slug: 'books', product_count: 5 },
 ];
+
+const SAMPLE_STORES = [
+  {
+    id: 'seller-1',
+    username: 'taller_illimani',
+    full_name: 'Taller Illimani',
+    bio: 'Textiles andinos hechos a mano por artesanas de El Alto.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-2',
+    username: 'cafe_altura',
+    full_name: 'Café Altura',
+    bio: 'Café de especialidad cultivado en las alturas de los Yungas.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-3',
+    username: 'ceramica_valle',
+    full_name: 'Cerámica del Valle',
+    bio: 'Piezas utilitarias y decorativas de cerámica cochabambina.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-4',
+    username: 'maderas_aymara',
+    full_name: 'Maderas Aymara',
+    bio: 'Muebles y objetos tallados en madera nativa.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-5',
+    username: 'tejidos_sucre',
+    full_name: 'Tejidos Sucre',
+    bio: 'Aguayos y chumpis del sur de Bolivia.',
+    avatar_path: null,
+  },
+];
+
+const SAMPLE_STORE_PRODUCTS = Array.from({ length: 30 }, (_, index) => ({
+  id: `matrix-store-product-${index}`,
+  name: `Producto ${index + 1}`,
+  seller_id: SAMPLE_STORES[index % SAMPLE_STORES.length].id,
+  slug: `producto-${index + 1}`,
+  price: 20 + index,
+  currency: 'BOB',
+  state: 'published',
+  primary_image_path: null,
+  category_id: null,
+  created_at: '2026-11-18T12:00:00.000Z',
+}));
+
+const SAMPLE_CONVERSATIONS = [
+  {
+    id: 'conv-1',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    seller_id: 'seller-1',
+    product_id: 'p-published',
+    product: {
+      id: 'p-published',
+      slug: 'publicado',
+      name: 'Publicado',
+      price: 99.99,
+      currency: 'USD',
+      primary_image_path: null,
+      state: 'published',
+    },
+    last_message_at: '2026-11-18T11:30:00.000Z',
+  },
+  {
+    id: 'conv-2',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    seller_id: 'seller-2',
+    product_id: null,
+    product: null,
+    last_message_at: '2026-11-17T09:00:00.000Z',
+  },
+];
+
+const SAMPLE_MESSAGES = {
+  'conv-1': [
+    {
+      id: 'm1',
+      conversation_id: 'conv-1',
+      sender_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      content: 'Hola, ¿tiene stock disponible?',
+      created_at: '2026-11-18T11:00:00.000Z',
+    },
+    {
+      id: 'm2',
+      conversation_id: 'conv-1',
+      sender_id: 'seller-1',
+      content: '¡Hola! Sí, tenemos 3 unidades. ¿Quieres que te lo reserve?',
+      created_at: '2026-11-18T11:05:00.000Z',
+    },
+  ],
+  'conv-2': [
+    {
+      id: 'm3',
+      conversation_id: 'conv-2',
+      sender_id: 'seller-2',
+      content: 'El pedido está en camino.',
+      created_at: '2026-11-17T09:00:00.000Z',
+    },
+  ],
+};
+
+const SAMPLE_PROFILES = {
+  'seller-1': {
+    id: 'seller-1',
+    username: 'taller_illimani',
+    full_name: 'Taller Illimani',
+    avatar_path: null,
+  },
+  'seller-2': {
+    id: 'seller-2',
+    username: 'cafe_altura',
+    full_name: 'Café Altura',
+    avatar_path: null,
+  },
+};
 
 const CART_SAMPLE_ITEMS = [
   {
@@ -486,6 +633,39 @@ for (const route of activeRoutes) {
           'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Authorization',
         };
 
+        if (
+          ['stores', 'home'].includes(route.name) &&
+          req.method() === 'GET' &&
+          new URL(url).pathname === '/v1/products'
+        ) {
+          return req.respond({
+            status: 200,
+            contentType: 'application/json',
+            headers: corsHeaders,
+            body: JSON.stringify({
+              data: SAMPLE_STORE_PRODUCTS,
+              meta: { page: 1, per_page: 100, total: 30, total_pages: 1 },
+            }),
+          });
+        }
+
+        if (
+          ['stores', 'home'].includes(route.name) &&
+          req.method() === 'GET' &&
+          new URL(url).pathname.startsWith('/v1/profiles/')
+        ) {
+          const profileId = new URL(url).pathname.split('/').pop();
+          const store = SAMPLE_STORES.find((item) => item.id === profileId);
+          if (store) {
+            return req.respond({
+              status: 200,
+              contentType: 'application/json',
+              headers: corsHeaders,
+              body: JSON.stringify({ data: store, meta: {} }),
+            });
+          }
+        }
+
         if (url.includes('/product-images/') || url.includes('picsum.photos')) {
           if (req.method() === 'OPTIONS') {
             return req.respond({ status: 204, headers: corsHeaders });
@@ -533,6 +713,7 @@ for (const route of activeRoutes) {
           route.authenticated &&
           (url.includes('/v1/auth/me') ||
             url.includes('/v1/profiles/') ||
+            url.includes('/v1/conversations') ||
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
             url.includes('/v1/admin/seller-applications') ||
@@ -588,6 +769,44 @@ for (const route of activeRoutes) {
                 timestamp: '2026-11-18T12:00:00.000Z',
               },
             };
+          } else if (url.includes('/v1/conversations')) {
+            const pathname = new URL(url).pathname;
+            const segments = pathname.split('/').filter(Boolean);
+            const conversationId = segments[2];
+            if (pathname.endsWith('/messages') && req.method() === 'GET') {
+              const messages = SAMPLE_MESSAGES[conversationId] || [];
+              body = {
+                data: messages,
+                meta: { page: 1, limit: 50, total: messages.length },
+              };
+            } else if (pathname.endsWith('/messages') && req.method() === 'POST') {
+              const payload = JSON.parse(req.postData() || '{}');
+              body = {
+                data: {
+                  id: `m-${Date.now()}`,
+                  conversation_id: conversationId,
+                  sender_id: sampleProfile.id,
+                  content: payload.content,
+                  created_at: new Date().toISOString(),
+                },
+                meta: {},
+              };
+            } else if (req.method() === 'POST') {
+              body = { data: SAMPLE_CONVERSATIONS[0], meta: {} };
+            } else {
+              body = {
+                data: SAMPLE_CONVERSATIONS,
+                meta: {
+                  page: 1,
+                  limit: 30,
+                  total: SAMPLE_CONVERSATIONS.length,
+                  total_pages: 1,
+                },
+              };
+            }
+          } else if (url.includes('/v1/profiles/')) {
+            const profileId = new URL(url).pathname.split('/').pop();
+            body = { data: SAMPLE_PROFILES[profileId] || sampleProfile, meta: {} };
           } else if (url.includes('/v1/products/') && url.includes('/images')) {
             body = {
               data: [
@@ -673,7 +892,10 @@ for (const route of activeRoutes) {
           categoriesData,
           editProductData,
           reportData,
-          sellerApplicationsData
+          sellerApplicationsData,
+          conversationsData,
+          messagesData,
+          profilesData
         ) => {
           try {
             const getReportBody = (url) => {
@@ -720,6 +942,7 @@ for (const route of activeRoutes) {
                 if (
                   url.includes('/v1/auth/me') ||
                   url.includes('/v1/profiles/') ||
+                  url.includes('/v1/conversations') ||
                   url.includes('/v1/cart') ||
                   url.includes('/v1/seller/products') ||
                   url.includes('/v1/products/') ||
@@ -759,6 +982,53 @@ for (const route of activeRoutes) {
                         totalPages: 1,
                         timestamp: '2026-11-18T12:00:00.000Z',
                       },
+                    };
+                  } else if (url.includes('/v1/conversations')) {
+                    const pathname = new URL(url, window.location.origin).pathname;
+                    const segments = pathname.split('/').filter(Boolean);
+                    const conversationId = segments[2];
+                    const method = (init?.method || 'GET').toUpperCase();
+                    if (pathname.endsWith('/messages') && method === 'GET') {
+                      const messages = messagesData[conversationId] || [];
+                      body = {
+                        data: messages,
+                        meta: { page: 1, limit: 50, total: messages.length },
+                      };
+                    } else if (pathname.endsWith('/messages') && method === 'POST') {
+                      const payload = JSON.parse(init?.body || '{}');
+                      body = {
+                        data: {
+                          id: `m-${Date.now()}`,
+                          conversation_id: conversationId,
+                          sender_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                          content: payload.content,
+                          created_at: new Date().toISOString(),
+                        },
+                        meta: {},
+                      };
+                    } else if (method === 'POST') {
+                      body = {
+                        data: conversationsData[0],
+                        meta: {},
+                      };
+                    } else {
+                      body = {
+                        data: conversationsData,
+                        meta: {
+                          page: 1,
+                          limit: 30,
+                          total: conversationsData.length,
+                          total_pages: 1,
+                        },
+                      };
+                    }
+                  } else if (url.includes('/v1/profiles/')) {
+                    const profileId = new URL(url, window.location.origin).pathname
+                      .split('/')
+                      .pop();
+                    body = {
+                      data: profilesData[profileId] || profile,
+                      meta: {},
                     };
                   } else if (url.includes('/v1/products/') && url.includes('/images')) {
                     body = {
@@ -867,7 +1137,10 @@ for (const route of activeRoutes) {
         SAMPLE_CATEGORIES,
         SELLER_PRODUCT_TEMPLATES[0],
         ADMIN_REPORTS,
-        ADMIN_SELLER_APPLICATIONS
+        ADMIN_SELLER_APPLICATIONS,
+        SAMPLE_CONVERSATIONS,
+        SAMPLE_MESSAGES,
+        SAMPLE_PROFILES
       );
 
       try {
@@ -924,6 +1197,24 @@ for (const route of activeRoutes) {
                 header: check('.q-header'),
                 catalogSection: check('.q-catalog'),
                 grid: check('.q-catalog__grid'),
+                footer: check('.q-footer'),
+              };
+            case 'categories':
+              return {
+                header: check('.q-header'),
+                categoriesPage: check('.q-categories-page'),
+                grid: check('.q-categories-page__grid'),
+                cards: document.querySelectorAll('.q-categories-page__card').length >= 5,
+                footer: check('.q-footer'),
+              };
+            case 'admin-categories':
+              return {
+                header: check('.q-header'),
+                categoriesPage: check('.q-admin-categories-page'),
+                title: check('.q-admin-categories-title'),
+                table: check('.q-admin-categories-table'),
+                nameLink: check('.q-admin-categories-name-link'),
+                createForm: check('.q-admin-categories-form'),
                 footer: check('.q-footer'),
               };
             case 'search':

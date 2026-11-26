@@ -40,3 +40,69 @@ describe('ShippingBannerViewModel', () => {
     expect(notified).toBe(1);
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('ShippingBannerViewModel additional branches (recovered 1)', () => {
+      let unsubscribes;
+
+      const track = (unsubscribe) => {
+        unsubscribes.push(unsubscribe);
+        return unsubscribe;
+      };
+
+      beforeEach(() => {
+        unsubscribes = [];
+      });
+
+      afterEach(() => {
+        unsubscribes.forEach((unsubscribe) => unsubscribe());
+      });
+
+      it('falls back to the default copy for empty-string and null overrides', () => {
+        const vm = new ShippingBannerViewModel({
+          title: '',
+          subtitle: null,
+          ctaLabel: '',
+          ctaLink: null,
+          ctaHref: '',
+        });
+
+        expect(vm.title).toBe('Envío gratis');
+        expect(vm.subtitle).toBe('en compras desde US$ 50');
+        expect(vm.ctaLabel).toBe('A toda Latinoamérica');
+        expect(vm.ctaLink).toBe('Compra segura');
+        expect(vm.ctaHref).toBe('/products');
+      });
+
+      it('passes the view model to every subscriber when _notify is called', () => {
+        const vm = new ShippingBannerViewModel();
+        const first = jasmine.createSpy('first');
+        const second = jasmine.createSpy('second');
+        track(vm.subscribe(first));
+        track(vm.subscribe(second));
+
+        vm._notify();
+
+        expect(first.calls.count()).toBe(1);
+        expect(second.calls.count()).toBe(1);
+        expect(first).toHaveBeenCalledWith(vm);
+        expect(second).toHaveBeenCalledWith(vm);
+      });
+
+      it('stops notifying after unsubscribe', () => {
+        const vm = new ShippingBannerViewModel();
+        const listener = jasmine.createSpy('listener');
+        const unsubscribe = track(vm.subscribe(listener));
+
+        vm._notify();
+        expect(listener.calls.count()).toBe(1);
+
+        expect(unsubscribe()).toBe(true);
+        vm._notify();
+        expect(listener.calls.count()).toBe(1);
+      });
+    });
+  })();
+})();

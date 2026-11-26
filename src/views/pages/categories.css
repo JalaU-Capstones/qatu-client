@@ -1,0 +1,179 @@
+.q-categories-page {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  margin-top: calc(0px - var(--q-header-overlay-height, 72px));
+  padding: 0 0 3rem;
+}
+
+.q-categories-page::before,
+.q-categories-page::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.q-categories-page::before {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 660px;
+  background: radial-gradient(
+    ellipse 520px 430px at 5% 2%,
+    color-mix(in srgb, var(--q-ambient-pink) 72%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.q-categories-page::after {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 980px;
+  background: radial-gradient(
+    ellipse 480px 560px at 100% 28%,
+    color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.q-categories-page > .q-section-container {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  padding: calc(var(--q-header-overlay-height, 72px) + 32px) 24px 64px;
+}
+
+[data-theme='dark'] .q-categories-page::before {
+  background: radial-gradient(
+    ellipse 520px 430px at 5% 2%,
+    color-mix(in srgb, var(--q-ambient-pink) 82%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+[data-theme='dark'] .q-categories-page::after {
+  background: radial-gradient(
+    ellipse 480px 560px at 100% 28%,
+    color-mix(in srgb, var(--q-ambient-cyan) 78%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+.q-categories-page__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--q-geist-space-4x);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.q-categories-page__item {
+  min-width: 0;
+}
+
+.q-categories-page__card {
+  min-height: 150px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding: 1.25rem;
+  color: var(--q-fg-primary);
+  text-decoration: none;
+  background: var(--q-bg-elevated);
+  border: 1px solid var(--q-border-default);
+  border-radius: var(--q-radius-lg);
+}
+
+.q-categories-page__card:hover {
+  border-color: var(--q-accent);
+}
+
+.q-categories-page__name {
+  margin: 0.75rem 0 0.25rem;
+  font-size: var(--q-text-base);
+  line-height: var(--q-leading-snug);
+}
+
+.q-categories-page__count {
+  margin: 0;
+  color: var(--q-fg-muted);
+  font-size: var(--q-text-xs);
+}
+
+.q-categories-page__card--loading {
+  min-height: 150px;
+  background: color-mix(in srgb, var(--q-bg-elevated) 70%, var(--q-border-default));
+}
+
+.q-categories-page__message {
+  grid-column: 1 / -1;
+  color: var(--q-fg-muted);
+  text-align: center;
+  padding: 2rem;
+}
+
+@media (max-width: 1023px) {
+  .q-categories-page__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .q-categories-page {
+    padding: 0 0 2rem;
+  }
+
+  .q-categories-page > .q-section-container {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .q-categories-page::before {
+    height: 520px;
+    background-image: radial-gradient(
+      ellipse 380px 320px at 2% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 72%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  .q-categories-page::after {
+    height: 800px;
+    background-image: radial-gradient(
+      ellipse 360px 440px at 100% 36%,
+      color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  [data-theme='dark'] .q-categories-page::before {
+    background-image: radial-gradient(
+      ellipse 380px 320px at 2% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 82%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  [data-theme='dark'] .q-categories-page::after {
+    background-image: radial-gradient(
+      ellipse 360px 440px at 100% 36%,
+      color-mix(in srgb, var(--q-ambient-cyan) 78%, transparent) 0%,
+      transparent 72%
+    );
+  }
+
+  .q-categories-page__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 359px) {
+  .q-categories-page__grid {
+    grid-template-columns: 1fr;
+  }
+}

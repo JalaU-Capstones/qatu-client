@@ -1172,3 +1172,253 @@ describe('ProductsApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const jsonResponse = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('ProductsApi additional branches (recovered 1)', () => {
+      let fetchFn;
+      let api;
+
+      beforeEach(() => {
+        fetchFn = jasmine.createSpy('apiFetchFn');
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+        api = new ProductsApi({ apiFetchFn: fetchFn });
+      });
+
+      it('rejects an explicitly falsy fetch function', () => {
+        for (const apiFetchFn of [null, '', 0, false]) {
+          expect(() => new ProductsApi({ apiFetchFn })).toThrowError('apiFetchFn is required');
+        }
+      });
+
+      it('normalizes non-array list data and missing meta in _parseListResponse', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: 'bad', meta: null }));
+        await expectAsync(api.getProducts()).toBeResolvedTo({ data: [], meta: {} });
+
+        fetchFn.and.resolveTo(new Response('not-json', { status: 200 }));
+        await expectAsync(api.getSellerProducts()).toBeResolvedTo({ data: [], meta: {} });
+      });
+
+      it('maps list errors with fallback message, code and details', async () => {
+        fetchFn.and.resolveTo(
+          jsonResponse({ error: { code: 'RATE_LIMITED', details: ['retry'] } }, 429)
+        );
+
+        let error;
+        try {
+          await api.getProducts();
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('Failed to fetch products (429)');
+        expect(error.code).toBe('RATE_LIMITED');
+        expect(error.statusCode).toBe(429);
+        expect(error.details).toEqual(['retry']);
+
+        fetchFn.and.resolveTo(new Response('', { status: 500 }));
+        await expectAsync(api.getProducts()).toBeRejectedWithError(
+          'Failed to fetch products (500)'
+        );
+      });
+
+      it('returns a neutral envelope on 204 in _handleJson and propagates network errors', async () => {
+        fetchFn.and.resolveTo(new Response(null, { status: 204 }));
+        await expectAsync(api._handleJson(new Response(null, { status: 204 }))).toBeResolvedTo({
+          data: null,
+          meta: {},
+        });
+
+        fetchFn.and.rejectWith(new Error('offline'));
+        await expectAsync(api.createProduct({ name: 'x' })).toBeRejectedWithError('offline');
+      });
+
+      it('reads every weekly metric alias and keeps the maximum', () => {
+        expect(api._getProductWeeklyCount(null)).toBe(0);
+        expect(
+          api._getProductWeeklyCount({
+            weeklyOrdersCount: 1,
+            weekly_orders_count: 2,
+            weeklyPurchaseCount: 3,
+            weekly_purchase_count: 4,
+            weeklyPurchases: 5,
+            weekly_purchases: 6,
+            weeklySalesCount: 7,
+            weekly_sales_count: 8,
+            weeklySales: 9,
+            weekly_sales: 'nope',
+          })
+        ).toBe(9);
+        expect(api._getProductWeeklyCount({ weeklySales: -2, weeklySalesCount: NaN })).toBe(0);
+      });
+
+      it('counts unique purchases, ignoring non-array orders and cancelled/future entries', () => {
+        const now = Date.now();
+        const withinWeek = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+        const future = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+        const counts = api._countWeeklyPurchases([
+          null,
+          { status: 'canceled', created_at: withinWeek, items: [{ product_id: 'p1' }] },
+          { status: 'cancelled', createdAt: withinWeek, items: [{ productId: 'p1' }] },
+          {
+            status: 'confirmed',
+            createdAt: withinWeek,
+            items: [{ productId: 'p1' }, { productId: 'p1' }, null],
+          },
+          { status: 'confirmed', created_at: future, items: [{ product_id: 'p2' }] },
+          { status: 'confirmed', created_at: withinWeek },
+        ]);
+
+        expect([...counts.entries()]).toEqual([['p1', 1]]);
+        expect(api._countWeeklyPurchases(null).size).toBe(0);
+      });
+
+      it('treats a non-array featured response as an empty catalog', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: null }));
+        await expectAsync(api.getFeaturedProducts()).toBeResolvedTo([]);
+      });
+
+      it('does not warn for 401/403 order errors but warns for other failures', async () => {
+        const warnSpy = spyOn(console, 'warn');
+        const ordersApi = { listOrders: jasmine.createSpy('listOrders') };
+        const authStore = { isAuthenticated: () => true };
+
+        ordersApi.listOrders.and.rejectWith({ status: 401 });
+        await new ProductsApi({
+          apiFetchFn: fetchFn,
+          ordersApi,
+          authStore,
+        }).getFeaturedProducts();
+        expect(warnSpy).not.toHaveBeenCalled();
+
+        ordersApi.listOrders.and.rejectWith({ statusCode: 403 });
+        await new ProductsApi({
+          apiFetchFn: fetchFn,
+          ordersApi,
+          authStore,
+        }).getFeaturedProducts();
+        expect(warnSpy).not.toHaveBeenCalled();
+
+        ordersApi.listOrders.and.rejectWith(new Error('boom'));
+        await new ProductsApi({
+          apiFetchFn: fetchFn,
+          ordersApi,
+          authStore,
+        }).getFeaturedProducts();
+        expect(warnSpy).toHaveBeenCalledWith(
+          '[ProductsApi] failed to fetch weekly purchases:',
+          'boom'
+        );
+      });
+
+      it('sorts by weekly count, then updated_at, then created_at, then original order', async () => {
+        fetchFn.and.resolveTo(
+          jsonResponse({
+            data: [
+              { id: 'a', weeklySales: 2, updated_at: 'nope', created_at: '2026-01-01' },
+              { id: 'b', weeklySales: 2, updated_at: '2026-02-01' },
+              { id: 'c', weeklySales: 3, updated_at: 'invalid' },
+            ],
+          })
+        );
+
+        const result = await api.getFeaturedProducts(2);
+        expect(result.map((product) => product.id)).toEqual(['c', 'b']);
+      });
+
+      it('rejects non-string slugs and trims a valid one before resolution', async () => {
+        for (const slug of [null, undefined, 123, '   ']) {
+          await expectAsync(api.getProductBySlug(slug)).toBeResolvedTo(null);
+        }
+        expect(fetchFn).not.toHaveBeenCalled();
+
+        fetchFn.and.returnValues(
+          Promise.resolve(jsonResponse({ data: [{ id: 'p1', slug: 'mi-producto' }] })),
+          Promise.resolve(jsonResponse({ data: { id: 'p1', slug: 'mi-producto' } }))
+        );
+        await expectAsync(api.getProductBySlug('  mi-producto  ')).toBeResolvedTo({
+          id: 'p1',
+          slug: 'mi-producto',
+        });
+        expect(fetchFn.calls.first().args[0]).toContain('search=mi-producto');
+      });
+
+      it('requests limit + 1 products for recommendations', async () => {
+        fetchFn.and.resolveTo(
+          jsonResponse({ data: [{ id: 'current' }, { id: 'other' }, { id: 'third' }] })
+        );
+
+        await expectAsync(api.getSimilarProducts('current', 2)).toBeResolvedTo([
+          { id: 'other' },
+          { id: 'third' },
+        ]);
+        expect(fetchFn.calls.first().args[0]).toContain('limit=3');
+      });
+
+      it('omits falsy seller query params and encodes ids in image endpoints', async () => {
+        await api.getSellerProducts({ page: 0, limit: 0, status: '' });
+        expect(fetchFn.calls.first().args[0]).toBe('/seller/products');
+
+        await api.listProductImages('p/1');
+        expect(fetchFn.calls.mostRecent().args[0]).toBe('/products/p%2F1/images');
+      });
+
+      it('validates the upload file and optional form fields', async () => {
+        await expectAsync(api.uploadProductImage('p1', null)).toBeRejectedWithError(
+          'File is required'
+        );
+
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+        await api.uploadProductImage('p/1', new Blob(['x']), {
+          alt_text: '  ',
+          position: null,
+        });
+        const [path, init] = fetchFn.calls.first().args;
+        expect(path).toBe('/products/p%2F1/images');
+        expect(init.body instanceof FormData).toBe(true);
+        expect(init.body.get('image').name).toBe('upload');
+        expect(init.body.has('alt_text')).toBe(false);
+        expect(init.body.has('position')).toBe(false);
+      });
+
+      it('validates updateProduct fields and encodes ids on publish', async () => {
+        for (const fields of [undefined, null, '', 42, []]) {
+          let error;
+          try {
+            await api.updateProduct('p1', fields);
+          } catch (caught) {
+            error = caught;
+          }
+          expect(error.message).toBe('At least one field is required');
+          expect(error.code).toBe('VALIDATION_ERROR');
+          expect(error.statusCode).toBe(400);
+        }
+
+        await api.publishProduct('p/1');
+        expect(fetchFn.calls.first().args[0]).toBe('/products/p%2F1/publish');
+      });
+
+      it('maps _handleJson errors and accepts any 2xx delete status', async () => {
+        let error;
+        try {
+          await api._handleJson(new Response('', { status: 503 }));
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('Request failed (503)');
+        expect(error.code).toBe('REQUEST_FAILED');
+        expect(error.details).toBeUndefined();
+
+        fetchFn.and.resolveTo(new Response(null, { status: 200 }));
+        await expectAsync(api.deleteProduct('p1')).toBeResolved();
+        await expectAsync(api.deleteProductImage('p1', 'i1')).toBeResolved();
+      });
+    });
+  })();
+})();

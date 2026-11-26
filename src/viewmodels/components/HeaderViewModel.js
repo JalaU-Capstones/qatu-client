@@ -37,6 +37,7 @@ export class HeaderViewModel {
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
+    this.onConversations = options.onConversations || null;
     this.onSellerOrdersClick = options.onSellerOrdersClick || null;
     this.onSellerProductsClick = options.onSellerProductsClick || null;
     this.onSellerApplyClick = options.onSellerApplyClick || null;
@@ -48,8 +49,13 @@ export class HeaderViewModel {
     this.searchValue = '';
     this.onSearch = options.onSearch || null;
     this.onCategoryClick = options.onCategoryClick || null;
+    this.onAdminCategoriesClick = options.onAdminCategoriesClick || null;
     this.isDropdownOpen = false;
     this._listeners = new Set();
+  }
+
+  get canPurchase() {
+    return !this.isAdmin;
   }
 
   /**
@@ -168,6 +174,14 @@ export class HeaderViewModel {
     this._notify();
   }
 
+  triggerConversations() {
+    this.isDropdownOpen = false;
+    if (typeof this.onConversations === 'function') {
+      this.onConversations();
+    }
+    this._notify();
+  }
+
   /** Navigate to seller orders dashboard. */
   triggerSellerOrders() {
     this.isDropdownOpen = false;
@@ -230,6 +244,14 @@ export class HeaderViewModel {
 
   triggerCategory(categoryId) {
     if (typeof this.onCategoryClick === 'function') this.onCategoryClick(categoryId);
+  }
+
+  triggerAdminCategories() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminCategoriesClick === 'function') {
+      this.onAdminCategoriesClick();
+    }
+    this._notify();
   }
 
   /**
