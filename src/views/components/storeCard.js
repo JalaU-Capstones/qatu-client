@@ -28,23 +28,22 @@ export function renderStoreCard(seller, { onClick = null } = {}) {
 
   const header = document.createElement('div');
   header.className = 'q-store-card__header';
+  let avatar;
   if (seller.avatarPath) {
-    const avatar = document.createElement('img');
+    avatar = document.createElement('img');
     avatar.className = 'q-store-card__avatar-img';
     avatar.src = seller.avatarPath;
     avatar.alt = '';
     avatar.width = 58;
     avatar.height = 58;
-    header.appendChild(avatar);
   } else {
-    const avatar = document.createElement('div');
+    avatar = document.createElement('div');
     avatar.className = 'q-store-card__avatar q-store-card__avatar--initials';
     avatar.setAttribute('aria-hidden', 'true');
     const initials = document.createElement('span');
     initials.className = 'q-store-card__initials';
     initials.textContent = getInitials(seller) || '?';
     avatar.appendChild(initials);
-    header.appendChild(avatar);
   }
 
   const name = document.createElement('h3');
@@ -59,7 +58,7 @@ export function renderStoreCard(seller, { onClick = null } = {}) {
   count.className = 'q-store-card__count';
   count.textContent = `${seller.productCount} productos`;
 
-  card.append(header, name, bio, count);
+  card.append(header, avatar, name, bio, count);
   item.appendChild(card);
   return item;
 }

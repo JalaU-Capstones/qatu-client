@@ -99,18 +99,26 @@ export class CategoriesPageView {
       card.href = `/products?category=${encodeURIComponent(category.slug || category.id)}`;
       card.dataset.route = '';
 
-      const icon = new CategoryIcon({ name: category.name, size: 32 }).render();
+      const icon = new CategoryIcon({
+        name: category.name,
+        key: category.slug || category.id,
+        size: 32,
+      }).render();
       const name = document.createElement('h2');
       name.className = 'q-categories-page__name';
       name.textContent = category.name;
-      card.append(icon, name);
 
-      if (category.product_count !== null && category.product_count !== undefined) {
-        const count = document.createElement('p');
-        count.className = 'q-categories-page__count';
-        count.textContent = `${category.product_count} productos`;
-        card.appendChild(count);
-      }
+      const description = document.createElement('p');
+      description.className = 'q-categories-page__description';
+      description.textContent =
+        (typeof category.description === 'string' && category.description.trim()) ||
+        'Explora esta categoría';
+
+      const count = document.createElement('p');
+      count.className = 'q-categories-page__count';
+      count.textContent = `${category.product_count} productos`;
+
+      card.append(icon, name, description, count);
 
       item.appendChild(card);
       this._grid.appendChild(item);

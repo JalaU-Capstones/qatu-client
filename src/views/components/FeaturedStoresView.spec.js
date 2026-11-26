@@ -55,6 +55,9 @@ describe('FeaturedStoresView', () => {
       'Productos hechos a mano.'
     );
     expect(cards[0].querySelector('.q-store-card__count').textContent).toBe('1 productos');
+    expect(cards[0].querySelector('.q-store-card__header').nextElementSibling).toBe(
+      cards[0].querySelector('.q-store-card__avatar')
+    );
     expect(cards[0].getAttribute('aria-disabled')).toBe('true');
     expect(cards[0].querySelector('.q-store-card__rating')).toBeNull();
     expect(cards[0].querySelector('.q-store-card__cta')).toBeNull();

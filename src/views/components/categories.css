@@ -66,7 +66,7 @@ a.q-categories__see-all:hover {
 
 .q-categories__grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: calc(var(--q-geist-space-3x, 12) * 1px);
   list-style: none;
   margin: 0;

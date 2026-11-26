@@ -64,7 +64,7 @@
 .q-categories-page__grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--q-geist-space-4x);
+  gap: calc(var(--q-geist-space-6x) * 1px);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -97,6 +97,16 @@
   margin: 0.75rem 0 0.25rem;
   font-size: var(--q-text-base);
   line-height: var(--q-leading-snug);
+}
+
+.q-categories-page__description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 4px 0 8px;
+  color: var(--q-fg-muted);
+  font-size: calc(var(--q-text-sm) * 1px);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 .q-categories-page__count {

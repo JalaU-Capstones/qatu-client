@@ -130,22 +130,20 @@ export class CategoriesView {
       const iconWrapper = document.createElement('span');
       iconWrapper.className = 'q-category-card__icon';
       iconWrapper.setAttribute('aria-hidden', 'true');
-      iconWrapper.appendChild(new CategoryIcon({ name: category.name, size: 22 }).render());
+      iconWrapper.appendChild(
+        new CategoryIcon({
+          name: category.name,
+          key: category.iconSlug || category.slug || category.id,
+          size: 22,
+        }).render()
+      );
 
       const name = document.createElement('h3');
       name.className = 'q-category-card__name';
       name.textContent = category.name;
 
-      const count = document.createElement('p');
-      count.className = 'q-category-card__count';
-      count.textContent =
-        category.product_count !== null && category.product_count !== undefined
-          ? `${category.product_count} productos`
-          : '';
-
       card.appendChild(iconWrapper);
       card.appendChild(name);
-      card.appendChild(count);
 
       item.appendChild(card);
       grid.appendChild(item);

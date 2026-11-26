@@ -80,8 +80,8 @@ a.q-featured-stores__see-all:hover {
   box-sizing: border-box;
   border: 1px solid var(--q-border-default);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);
-  padding: 0 calc(var(--q-geist-space-5x, 20) * 1px) calc(var(--q-geist-space-4x, 16) * 1px);
-  background: color-mix(in srgb, var(--q-bg-elevated) 88%, transparent);
+  padding: 0 calc(var(--q-geist-space-4x, 16) * 1px) calc(var(--q-geist-space-3x, 12) * 1px);
+  background: var(--q-bg-surface);
   transition:
     border-color var(--q-default-transition-duration, 150ms) ease,
     box-shadow var(--q-default-transition-duration, 150ms) ease;
@@ -90,12 +90,11 @@ a.q-featured-stores__see-all:hover {
 .q-store-card__header {
   position: relative;
   display: flex;
-  height: 72px;
-  flex: 0 0 72px;
+  height: 64px;
+  flex: 0 0 64px;
   align-items: center;
-  overflow: hidden;
-  margin: 0 calc(var(--q-geist-space-5x, 20) * -1) 0;
-  padding: 0 calc(var(--q-geist-space-5x, 20) * 1px);
+  margin: 0 calc(var(--q-geist-space-4x, 16) * -1);
+  padding: 0 calc(var(--q-geist-space-4x, 16) * 1px);
   background: var(--q-bg-elevated);
 }
 
@@ -143,7 +142,7 @@ a.q-featured-stores__see-all:hover {
   height: 58px;
   align-items: center;
   justify-content: center;
-  margin-top: 44px;
+  margin-top: -29px;
   border: 3px solid var(--q-bg-elevated);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);
   color: var(--q-fg-primary);
@@ -175,18 +174,19 @@ a.q-featured-stores__see-all:hover {
 }
 
 .q-store-card__avatar-img {
+  position: relative;
   z-index: 1;
   width: 58px;
   height: 58px;
   flex: 0 0 58px;
-  margin-top: 44px;
+  margin-top: -29px;
   border: 3px solid var(--q-bg-elevated);
   border-radius: calc(var(--q-radius-lg, 8) * 1px);
   object-fit: cover;
 }
 
 .q-store-card__name {
-  margin: calc(var(--q-geist-space-4x, 16) * 1px) 0 calc(var(--q-geist-space, 4) * 1px);
+  margin: calc(var(--q-geist-space-3x, 12) * 1px) 0 calc(var(--q-geist-space, 4) * 1px);
   color: var(--q-fg-primary);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
   font-size: calc(var(--q-text-lg, 18) * 1px);
@@ -197,7 +197,7 @@ a.q-featured-stores__see-all:hover {
 .q-store-card__bio {
   display: -webkit-box;
   overflow: hidden;
-  margin: 0 0 calc(var(--q-geist-space-2x, 8) * 1px);
+  margin: 0 0 calc(var(--q-geist-space-3x, 12) * 1px);
   color: var(--q-fg-muted);
   font-size: calc(var(--q-text-sm, 14) * 1px);
   line-height: var(--q-leading-normal, 1.5);
