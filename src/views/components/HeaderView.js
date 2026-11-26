@@ -6,6 +6,7 @@ const DROPDOWN_ICONS = {
   user: '<circle cx="12" cy="8" r="4"></circle><path d="M5 21a7 7 0 0 1 14 0"></path>',
   orders:
     '<path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8l-5-5z"></path><path d="M16 3v5h5M8 13h8M8 17h8"></path>',
+  messages: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>',
   products:
     '<path d="m12 3 9 5-9 5-9-5 9-5z"></path><path d="m3 8 9 5 9-5M3 13l9 5 9-5M3 8v8l9 5 9-5V8"></path>',
   sales: '<path d="M3 3v18h18"></path><path d="m7 14 4-4 4 3 6-7"></path>',
@@ -323,6 +324,20 @@ export class HeaderView {
     return salesBtn;
   }
 
+  _createConversationsLink() {
+    const link = document.createElement('a');
+    link.className = 'q-header-dropdown-item q-header-conversations-btn';
+    link.href = '/conversations';
+    link.dataset.route = '';
+    this._setDropdownItemContent(link, 'Mensajes', 'messages');
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.viewModel.triggerConversations();
+    });
+    return link;
+  }
+
   /**
    * Creates the "Mis Productos" dropdown link (seller dashboard).
    * @returns {HTMLElement}
@@ -591,6 +606,7 @@ export class HeaderView {
     dropdown.appendChild(dropdownHeader);
     dropdown.appendChild(profileBtn);
     dropdown.appendChild(ordersBtn);
+    dropdown.appendChild(this._createConversationsLink());
 
     if (this.viewModel.isSeller) {
       dropdown.appendChild(this._createSellerProductsLink());

@@ -37,6 +37,7 @@ export class HeaderViewModel {
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
+    this.onConversations = options.onConversations || null;
     this.onSellerOrdersClick = options.onSellerOrdersClick || null;
     this.onSellerProductsClick = options.onSellerProductsClick || null;
     this.onSellerApplyClick = options.onSellerApplyClick || null;
@@ -165,6 +166,14 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onOrdersClick === 'function') {
       this.onOrdersClick();
+    }
+    this._notify();
+  }
+
+  triggerConversations() {
+    this.isDropdownOpen = false;
+    if (typeof this.onConversations === 'function') {
+      this.onConversations();
     }
     this._notify();
   }

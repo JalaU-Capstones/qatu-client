@@ -34,9 +34,11 @@ import './views/styles/modal.css';
 import './views/pages/edit-product-modal.css';
 import './views/pages/admin-categories.css';
 import './views/pages/categories.css';
+import './views/pages/conversations.css';
 
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
+import { ConversationsApi } from './models/api/ConversationsApi.js';
 import { ProductsApi } from './models/api/ProductsApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { getAdminRouteAccess, getSellerRouteAccess } from './router/guards.js';
@@ -67,6 +69,7 @@ import { CartView } from './views/pages/CartView.js';
 import { CatalogView } from './views/pages/CatalogView.js';
 import { CategoriesPageView } from './views/pages/CategoriesView.js';
 import { CheckoutView } from './views/pages/CheckoutView.js';
+import { ConversationsPageView } from './views/pages/ConversationsPageView.js';
 import { EditProductView } from './views/pages/EditProductView.js';
 import { HomeView } from './views/pages/HomeView.js';
 import { OrderConfirmationView } from './views/pages/OrderConfirmationView.js';
@@ -86,6 +89,7 @@ if (app) {
 
   const authApi = new AuthApi();
   const profilesApi = new ProfilesApi();
+  const conversationsApi = new ConversationsApi();
 
   const buildHeaderUser = (store) => {
     const user = store.getUser();
@@ -187,6 +191,9 @@ if (app) {
     clearCurrentView();
     const productDetailViewModel = new ProductDetailViewModel({
       cartService,
+      authStore,
+      authRedirectStore,
+      router,
     });
     currentPageView = new ProductDetailView({
       viewModel: productDetailViewModel,
@@ -209,6 +216,7 @@ if (app) {
         router.navigate('/login');
       },
       onAddToCart: onAddToCartHandler,
+      onNavigate: (path) => router.navigate(path),
     });
     currentPageView.mount(mainEl);
   };
@@ -417,6 +425,27 @@ if (app) {
     currentPageView.mount(mainEl);
   };
 
+  const renderConversations = async () => {
+    clearCurrentView();
+    await sessionReady;
+    if (currentPageView || router.currentPath !== '/conversations') return;
+
+    if (!authStore.isAuthenticated()) {
+      authRedirectStore.setReturnTo(window.location.pathname + window.location.search);
+      router.navigate('/login', { replace: true });
+      return;
+    }
+
+    currentPageView = new ConversationsPageView({
+      conversationsApi,
+      profilesApi,
+      productsApi,
+      authStore,
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  };
+
   const renderAuth = (mode) => {
     document.body.dataset.route = 'auth';
     // ADR-012 / Discovery D1: authenticated users must not reach the auth
@@ -606,6 +635,7 @@ if (app) {
     renderSellerProductEdit(params.productId)
   );
   router.addRoute('/profile', () => renderProfile());
+  router.addRoute('/conversations', () => renderConversations());
   router.addRoute('/register', () => renderAuth('register'));
   router.addRoute('/login', () => renderAuth('login'));
   router.addRoute('/seller/apply', () => renderSellerApply());
@@ -636,6 +666,7 @@ if (app) {
   header.viewModel.onLogoClick = () => router.navigate('/');
   header.viewModel.onCartClick = () => router.navigate('/cart');
   header.viewModel.onOrdersClick = () => router.navigate('/orders');
+  header.viewModel.onConversations = () => router.navigate('/conversations');
   header.viewModel.onSellerOrdersClick = () => router.navigate('/seller/orders');
   header.viewModel.onSellerProductsClick = () => router.navigate('/seller/products');
   header.viewModel.onProfileClick = () => router.navigate('/profile');

@@ -1,6 +1,8 @@
 import { ConversationsApi } from '../../models/api/ConversationsApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { cartService as defaultCartService } from '../../services/CartService.js';
+import { authRedirectStore as defaultAuthRedirectStore } from '../../store/authRedirectStore.js';
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 
 const TABS = [
@@ -27,15 +29,24 @@ export class ProductDetailViewModel {
    * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    * @param {import('../../services/CartService.js').CartService} [options.cartService]
    * @param {import('../../models/api/ConversationsApi.js').ConversationsApi} [options.conversationsApi]
+   * @param {Object} [options.authStore]
+   * @param {Object} [options.authRedirectStore]
+   * @param {Object} [options.router]
    */
   constructor({
     productsApi = new ProductsApi(),
     cartService = defaultCartService,
     conversationsApi = new ConversationsApi(),
+    authStore = defaultAuthStore,
+    authRedirectStore = defaultAuthRedirectStore,
+    router = null,
   } = {}) {
     this.productsApi = productsApi;
     this.cartService = cartService;
     this.conversationsApi = conversationsApi;
+    this.authStore = authStore;
+    this.authRedirectStore = authRedirectStore;
+    this.router = router;
 
     this.productSlug = null;
     /** @type {Object|null} */
@@ -227,37 +238,25 @@ export class ProductDetailViewModel {
   }
 
   /**
-   * Starts (or reuses) a conversation with the product's seller and sends a message.
-   *
-   * @param {string} content
-   * @returns {Promise<{ conversation: Object, message: Object }>}
+   * Starts or reuses a conversation with the product's seller.
+   * @returns {Promise<{ redirected: true }|{ conversationId: string, created: boolean }>}
    */
-  async contactSeller(content) {
-    if (!this.product?.seller_id) {
-      throw new Error('No se encontró información del vendedor.');
+  async contactSeller() {
+    if (!this.authStore.isAuthenticated()) {
+      this.authRedirectStore.setReturnTo(window.location.pathname + window.location.search);
+      this.router?.navigate('/login');
+      return { redirected: true };
     }
 
-    const trimmed = typeof content === 'string' ? content.trim() : '';
-    if (!trimmed) {
-      throw new Error('El mensaje no puede estar vacío.');
-    }
+    const sellerId = this.product?.seller_id || this.product?.seller?.id;
+    if (!sellerId) throw new Error('Vendedor no disponible');
 
-    const conversationRes = await this.conversationsApi.createOrGetConversation({
-      sellerId: this.product.seller_id,
+    const { data, created } = await this.conversationsApi.createOrGetConversation({
+      sellerId,
       productId: this.product.id,
     });
 
-    const messageRes = await this.conversationsApi.sendMessage(conversationRes.data.id, {
-      content: trimmed,
-    });
-
-    this.feedback = 'Mensaje enviado al vendedor.';
-    this._notify();
-
-    return {
-      conversation: conversationRes.data,
-      message: messageRes.data,
-    };
+    return { conversationId: data.id, created };
   }
 
   /** @returns {boolean} */

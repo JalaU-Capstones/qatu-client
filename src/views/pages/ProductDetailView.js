@@ -2,7 +2,6 @@ import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
-import { ContactSellerModal } from '../components/ContactSellerModal.js';
 import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
@@ -22,6 +21,7 @@ export class ProductDetailView {
    * @param {Function} [options.onEditProduct] Opens the existing edit modal.
    * @param {Function} [options.onDeleteProduct] Opens the existing delete confirmation.
    * @param {Function} [options.onAddToCart] Adds a similar product to the cart.
+   * @param {Function} [options.onNavigate] Navigates to another SPA route.
    * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
@@ -32,6 +32,7 @@ export class ProductDetailView {
     onEditProduct = null,
     onDeleteProduct = null,
     onAddToCart = null,
+    onNavigate = null,
     authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
@@ -41,7 +42,9 @@ export class ProductDetailView {
     this.onEditProduct = onEditProduct;
     this.onDeleteProduct = onDeleteProduct;
     this.onAddToCart = onAddToCart;
+    this.onNavigate = onNavigate;
     this.authStore = authStore;
+    this.contactSellerError = '';
     this.element = null;
     this._unsubscribe = null;
     this._authUnsubscribe = null;
@@ -723,33 +726,41 @@ export class ProductDetailView {
     actions.className = 'q-product-detail__seller-actions';
 
     const user = this.authStore.getUser();
-    const isOwn = Boolean(user && user.id && product?.seller_id && user.id === product.seller_id);
+    const sellerId = product?.seller_id || product?.seller?.id;
+    const isOwn = Boolean(user && user.id && sellerId && user.id === sellerId);
 
-    if (!isOwn && product?.seller_id) {
+    if (!isOwn && sellerId) {
       const contactBtn = document.createElement('button');
       contactBtn.type = 'button';
       contactBtn.className = 'q-btn q-btn--primary q-product-detail__contact-seller';
       contactBtn.textContent = 'Contactar vendedor';
-      contactBtn.addEventListener('click', () => {
-        if (!this.authStore.isAuthenticated()) {
-          if (typeof this.onAuthRequired === 'function') {
-            this.onAuthRequired();
+      contactBtn.addEventListener('click', async () => {
+        this.contactSellerError = '';
+        try {
+          const result = await vm.contactSeller();
+          if (result?.redirected) return;
+          if (result?.conversationId) {
+            this.onNavigate?.(`/conversations?active=${encodeURIComponent(result.conversationId)}`);
           }
-          return;
+        } catch (error) {
+          this.contactSellerError =
+            error instanceof Error ? error.message : 'No se pudo contactar al vendedor.';
+          this._renderContent();
         }
-
-        const modal = new ContactSellerModal({
-          sellerName: vm.getSellerLine(),
-          productName: product.name,
-          onSend: (content) => vm.contactSeller(content),
-        });
-        void modal.open();
       });
       actions.appendChild(contactBtn);
     }
 
+    if (this.contactSellerError) {
+      const error = document.createElement('p');
+      error.className = 'q-product-detail__contact-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = this.contactSellerError;
+      actions.appendChild(error);
+    }
+
     const link = document.createElement('a');
-    link.className = 'q-product-detail__seller-link';
+    link.className = 'q-btn q-btn--outline q-product-detail__seller-link';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Ver tienda';

@@ -448,10 +448,26 @@ describe('HeaderView', () => {
       expect(ordersLink).not.toBeNull();
       expect(salesLink).not.toBeNull();
       expect(productsLink).not.toBeNull();
+      const conversationsLink = dropdown.querySelector('.q-header-conversations-btn');
 
       expect(ordersLink.textContent).toBe('Mis Órdenes');
+      expect(conversationsLink.textContent).toBe('Mensajes');
+      expect(conversationsLink.getAttribute('href')).toBe('/conversations');
       expect(salesLink.textContent).toBe('Mis Ventas');
       expect(productsLink.textContent).toBe('Mis Productos');
+    });
+
+    it('clicking Mensajes calls triggerConversations without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerConversations');
+      const el = view.render();
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      el.querySelector('.q-header-conversations-btn').dispatchEvent(event);
+
+      expect(viewModel.triggerConversations).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
     });
 
     it('is not rendered for anonymous visitors, even if the flag is set', () => {
@@ -788,7 +804,12 @@ describe('HeaderView', () => {
 
       viewModel.setIsAdmin(true);
       const link = el.querySelector('.q-header-admin-reports-btn');
+
       expect(link).not.toBeNull();
+      expect(el.querySelector('.q-header-conversations-btn').textContent).toBe('Mensajes');
+      expect(el.querySelector('.q-header-conversations-btn').getAttribute('href')).toBe(
+        '/conversations'
+      );
       expect(link.textContent).toBe('Reportes');
       expect(link.getAttribute('href')).toBe('/admin/reports');
       expect(el.querySelectorAll('.q-header-admin-reports-btn').length).toBe(1);

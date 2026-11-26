@@ -2,141 +2,83 @@ import { ProductDetailViewModel } from './ProductDetailViewModel.js';
 
 const createProduct = (overrides = {}) => ({
   id: 'p1',
-  name: 'Aguayo tradicional',
-  slug: 'aguayo-tradicional',
   seller_id: 'seller-10',
-  seller: { full_name: 'Tejidos Illimani' },
-  price: 40,
-  currency: 'USD',
-  stock: 10,
-  state: 'published',
-  category: { name: 'Textiles' },
-  description: 'Pieza tejida a mano.',
+  seller: { id: 'seller-10' },
   ...overrides,
 });
 
-const createApi = () => ({
-  createOrGetConversation: jasmine
-    .createSpy('createOrGetConversation')
-    .and.resolveTo({ data: { id: 'conv-1', seller_id: 'seller-10' }, meta: {}, created: true }),
-  sendMessage: jasmine
-    .createSpy('sendMessage')
-    .and.resolveTo({ data: { id: 'msg-1', content: 'Hola' }, meta: {} }),
-});
-
-const createViewModel = ({ product = createProduct(), conversationsApi = createApi() } = {}) => {
+const createViewModel = ({
+  authenticated = true,
+  product = createProduct(),
+  conversationsApi = {
+    createOrGetConversation: jasmine
+      .createSpy('createOrGetConversation')
+      .and.resolveTo({ data: { id: 'conv-1' }, meta: {}, created: true }),
+  },
+} = {}) => {
+  const router = { navigate: jasmine.createSpy('navigate') };
+  const authRedirectStore = { setReturnTo: jasmine.createSpy('setReturnTo') };
   const vm = new ProductDetailViewModel({
-    productsApi: {
-      getProductBySlug: jasmine.createSpy('getProductBySlug'),
-      getSimilarProducts: jasmine.createSpy('getSimilarProducts'),
-    },
-    cartService: { addToCart: jasmine.createSpy('addToCart') },
+    productsApi: {},
+    cartService: {},
     conversationsApi,
+    authStore: { isAuthenticated: () => authenticated },
+    authRedirectStore,
+    router,
   });
   vm.product = product;
-  return { vm, conversationsApi };
+  return { vm, conversationsApi, authRedirectStore, router };
 };
 
 describe('ProductDetailViewModel contactSeller', () => {
-  it('creates/reuses the conversation first, then sends the trimmed message', async () => {
+  it('redirects unauthenticated users to login and stores the current location', async () => {
+    const { vm, conversationsApi, authRedirectStore, router } = createViewModel({
+      authenticated: false,
+    });
+
+    await expectAsync(vm.contactSeller()).toBeResolvedTo({ redirected: true });
+
+    expect(authRedirectStore.setReturnTo).toHaveBeenCalledWith(
+      window.location.pathname + window.location.search
+    );
+    expect(router.navigate).toHaveBeenCalledWith('/login');
+    expect(conversationsApi.createOrGetConversation).not.toHaveBeenCalled();
+  });
+
+  it('creates or reuses a conversation for the product seller', async () => {
     const { vm, conversationsApi } = createViewModel();
-    const callOrder = [];
 
-    conversationsApi.createOrGetConversation.and.callFake(async () => {
-      callOrder.push('createOrGetConversation');
-      return { data: { id: 'conv-1', seller_id: 'seller-10' }, meta: {}, created: true };
-    });
-    conversationsApi.sendMessage.and.callFake(async () => {
-      callOrder.push('sendMessage');
-      return { data: { id: 'msg-1', content: 'Hola, ¿está disponible?' }, meta: {} };
-    });
+    const result = await vm.contactSeller();
 
-    const result = await vm.contactSeller('   Hola, ¿está disponible?   ');
-
-    expect(callOrder).toEqual(['createOrGetConversation', 'sendMessage']);
     expect(conversationsApi.createOrGetConversation).toHaveBeenCalledWith({
       sellerId: 'seller-10',
       productId: 'p1',
     });
-    expect(conversationsApi.sendMessage).toHaveBeenCalledWith('conv-1', {
-      content: 'Hola, ¿está disponible?',
-    });
-    expect(result).toEqual({
-      conversation: { id: 'conv-1', seller_id: 'seller-10' },
-      message: { id: 'msg-1', content: 'Hola, ¿está disponible?' },
-    });
+    expect(result).toEqual({ conversationId: 'conv-1', created: true });
   });
 
-  it('sets the success feedback and notifies subscribers', async () => {
-    const { vm } = createViewModel();
-    const listener = jasmine.createSpy('listener');
-    vm.subscribe(listener);
+  it('uses the nested seller id and rejects when no seller is available', async () => {
+    const product = createProduct({ seller_id: null, seller: { id: 'nested-seller' } });
+    const { vm, conversationsApi } = createViewModel({ product });
 
-    await vm.contactSeller('Hola');
-
-    expect(vm.feedback).toBe('Mensaje enviado al vendedor.');
-    expect(listener).toHaveBeenCalled();
-    expect(listener).toHaveBeenCalledWith(vm);
-  });
-
-  it('rejects when no product is loaded and does not call the API', async () => {
-    const { vm, conversationsApi } = createViewModel({ product: null });
-    const listener = jasmine.createSpy('listener');
-    vm.subscribe(listener);
-
-    await expectAsync(vm.contactSeller('Hola')).toBeRejectedWithError(
-      'No se encontró información del vendedor.'
-    );
-
-    expect(conversationsApi.createOrGetConversation).not.toHaveBeenCalled();
-    expect(conversationsApi.sendMessage).not.toHaveBeenCalled();
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('rejects when the product has no seller_id', async () => {
-    const { vm, conversationsApi } = createViewModel({
-      product: createProduct({ seller_id: null }),
+    await vm.contactSeller();
+    expect(conversationsApi.createOrGetConversation).toHaveBeenCalledWith({
+      sellerId: 'nested-seller',
+      productId: 'p1',
     });
 
-    await expectAsync(vm.contactSeller('Hola')).toBeRejectedWithError(
-      'No se encontró información del vendedor.'
-    );
-
-    expect(conversationsApi.createOrGetConversation).not.toHaveBeenCalled();
+    vm.product = createProduct({ seller_id: null, seller: { id: null } });
+    await expectAsync(vm.contactSeller()).toBeRejectedWithError('Vendedor no disponible');
   });
 
-  it('rejects an empty message without creating a conversation', async () => {
-    const { vm, conversationsApi } = createViewModel();
+  it('propagates conversation API failures', async () => {
+    const conversationsApi = {
+      createOrGetConversation: jasmine
+        .createSpy('createOrGetConversation')
+        .and.rejectWith(new Error('No se pudo crear la conversación')),
+    };
+    const { vm } = createViewModel({ conversationsApi });
 
-    await expectAsync(vm.contactSeller('')).toBeRejectedWithError(
-      'El mensaje no puede estar vacío.'
-    );
-
-    expect(conversationsApi.createOrGetConversation).not.toHaveBeenCalled();
-    expect(conversationsApi.sendMessage).not.toHaveBeenCalled();
-    expect(vm.feedback).toBe('');
-  });
-
-  it('rejects a whitespace-only message without calling the API', async () => {
-    const { vm, conversationsApi } = createViewModel();
-
-    await expectAsync(vm.contactSeller('    \n\t ')).toBeRejectedWithError(
-      'El mensaje no puede estar vacío.'
-    );
-
-    expect(conversationsApi.createOrGetConversation).not.toHaveBeenCalled();
-    expect(conversationsApi.sendMessage).not.toHaveBeenCalled();
-  });
-
-  it('propagates API failures and leaves the success feedback unset', async () => {
-    const { vm, conversationsApi } = createViewModel();
-    conversationsApi.sendMessage.and.rejectWith(new Error('No se pudo enviar el mensaje (403)'));
-
-    await expectAsync(vm.contactSeller('Hola')).toBeRejectedWithError(
-      'No se pudo enviar el mensaje (403)'
-    );
-
-    expect(conversationsApi.createOrGetConversation).toHaveBeenCalledTimes(1);
-    expect(vm.feedback).toBe('');
+    await expectAsync(vm.contactSeller()).toBeRejectedWithError('No se pudo crear la conversación');
   });
 });

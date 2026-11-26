@@ -772,7 +772,7 @@ describe('ProductDetailView', () => {
           .and.resolveTo({ status: 'success' }),
         contactSeller: jasmine
           .createSpy('contactSeller')
-          .and.resolveTo({ conversation: { id: 'conv-1' }, message: { id: 'msg-1' } }),
+          .and.resolveTo({ conversationId: 'conv-1', created: true }),
         isOutOfStock: () => false,
         getMaxQuantity: () => 10,
         getPriceLabel: () => 'US$ 40.00',
@@ -825,12 +825,8 @@ describe('ProductDetailView', () => {
         view = new ProductDetailView({ viewModel, authStore });
       });
 
-      afterEach(async () => {
-        document.querySelector('.q-contact-seller-modal__cancel')?.click();
-        await tick(10);
+      afterEach(() => {
         view?.destroy();
-        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
-        document.body.style.overflow = '';
         container.remove();
       });
 
@@ -842,6 +838,7 @@ describe('ProductDetailView', () => {
         expect(defaultView.onEditProduct).toBeNull();
         expect(defaultView.onDeleteProduct).toBeNull();
         expect(defaultView.onAddToCart).toBeNull();
+        expect(defaultView.onNavigate).toBeNull();
         expect(defaultView.element).toBeNull();
         expect(defaultView._unsubscribe).toBeNull();
         expect(defaultView._authUnsubscribe).toBeNull();
@@ -1464,125 +1461,42 @@ describe('ProductDetailView', () => {
         expect(container.querySelector('.q-product-detail')).toBeNull();
       });
 
-      it('does not open a modal for a guest when onAuthRequired is missing', async () => {
+      it('delegates guest handling to the view model without opening a modal', async () => {
         mountView({ authStore: createAuthStore({ authenticated: false }) });
 
-        expect(() =>
-          container.querySelector('.q-product-detail__contact-seller').click()
-        ).not.toThrow();
-        await tick();
-        expect(document.querySelector('.q-modal')).toBeNull();
-        expect(viewModel.contactSeller).not.toHaveBeenCalled();
-      });
-
-      it('respects isAuthenticated() === false even when a user is cached', async () => {
-        const onAuthRequired = jasmine.createSpy('onAuthRequired');
-        mountView({
-          authStore: createAuthStore({ user: { id: 'buyer-1' }, authenticated: false }),
-          onAuthRequired,
-        });
-
         container.querySelector('.q-product-detail__contact-seller').click();
         await tick();
-        expect(onAuthRequired).toHaveBeenCalledTimes(1);
-        expect(document.querySelector('.q-modal')).toBeNull();
-        expect(viewModel.contactSeller).not.toHaveBeenCalled();
+        expect(viewModel.contactSeller).toHaveBeenCalled();
+        expect(container.querySelector('.q-modal')).toBeNull();
       });
 
-      it('removes the contact modal on cancel without contacting the seller', async () => {
+      it('navigates to the active conversation after successful creation', async () => {
+        const onNavigate = jasmine.createSpy('onNavigate');
         mountView({
           authStore: createAuthStore({ user: { id: 'buyer-1' }, authenticated: true }),
+          onNavigate,
         });
 
         container.querySelector('.q-product-detail__contact-seller').click();
         await tick();
-        expect(document.querySelector('.q-modal')).not.toBeNull();
-
-        document.querySelector('.q-contact-seller-modal__cancel').click();
-        await tick();
-        expect(document.querySelector('.q-modal')).toBeNull();
-        expect(viewModel.contactSeller).not.toHaveBeenCalled();
+        expect(viewModel.contactSeller).toHaveBeenCalledWith();
+        expect(onNavigate).toHaveBeenCalledWith('/conversations?active=conv-1');
+        expect(container.querySelector('.q-modal')).toBeNull();
       });
 
-      it('keeps the modal, shows the error and re-enables send after a rejection', async () => {
+      it('shows an inline error when creating the conversation fails', async () => {
         viewModel.contactSeller = jasmine
           .createSpy('contactSeller')
-          .and.callFake(() => Promise.reject(new Error('No se pudo enviar el mensaje.')));
+          .and.rejectWith(new Error('No se pudo iniciar la conversación.'));
         mountView({
           authStore: createAuthStore({ user: { id: 'buyer-1' }, authenticated: true }),
         });
 
         container.querySelector('.q-product-detail__contact-seller').click();
-        await tick();
-        const field = document.querySelector('#q-contact-seller-message');
-        field.value = 'Hola';
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('.q-contact-seller-modal__send').click();
         await tick(10);
 
-        expect(document.querySelector('.q-modal')).not.toBeNull();
-        const errorEl = document.querySelector('.q-contact-seller-modal__error');
-        expect(errorEl.hidden).toBe(false);
-        expect(errorEl.textContent).toBe('No se pudo enviar el mensaje.');
-        const sendBtn = document.querySelector('.q-contact-seller-modal__send');
-        expect(sendBtn.disabled).toBe(false);
-        expect(sendBtn.textContent).toBe('Enviar');
-        expect(field.disabled).toBe(false);
-      });
-
-      it('renders the modal context, counter, maxLength and sending state', async () => {
-        let resolveSend;
-        viewModel.contactSeller = jasmine.createSpy('contactSeller').and.callFake(
-          () =>
-            new Promise((resolve) => {
-              resolveSend = resolve;
-            })
-        );
-        mountView({
-          authStore: createAuthStore({ user: { id: 'buyer-1' }, authenticated: true }),
-        });
-
-        container.querySelector('.q-product-detail__contact-seller').click();
-        await tick();
-        expect(document.querySelector('.q-contact-seller-modal__context').textContent).toBe(
-          'Consulta sobre: Aguayo tradicional'
-        );
-        expect(document.querySelector('.q-contact-seller-modal__counter').textContent).toBe(
-          '0 / 2000'
-        );
-        const field = document.querySelector('#q-contact-seller-message');
-        expect(field.maxLength).toBe(2000);
-
-        field.value = 'Hola';
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        document.querySelector('.q-contact-seller-modal__send').click();
-        await tick();
-        const sendBtn = document.querySelector('.q-contact-seller-modal__send');
-        expect(sendBtn.textContent).toBe('Enviando…');
-        expect(sendBtn.disabled).toBe(true);
-        expect(field.disabled).toBe(true);
-        expect(document.querySelector('.q-contact-seller-modal__cancel').disabled).toBe(true);
-
-        resolveSend({ conversation: {}, message: {} });
-        await tick(10);
-        expect(document.querySelector('.q-modal')).toBeNull();
-      });
-
-      it('characterizes the modal leak when the view is destroyed while the modal is open', async () => {
-        mountView({
-          authStore: createAuthStore({ user: { id: 'buyer-1' }, authenticated: true }),
-        });
-
-        container.querySelector('.q-product-detail__contact-seller').click();
-        await tick();
-        expect(document.querySelector('.q-modal')).not.toBeNull();
-
-        view.destroy();
-        expect(document.querySelector('.q-modal')).not.toBeNull();
-
-        document.querySelector('.q-contact-seller-modal__cancel').click();
-        await tick();
-        expect(document.querySelector('.q-modal')).toBeNull();
+        const errorEl = container.querySelector('.q-product-detail__contact-error[role="alert"]');
+        expect(errorEl.textContent).toBe('No se pudo iniciar la conversación.');
       });
 
       it('characterizes non-idempotent mount: repeated mount re-subscribes and reloads', () => {
@@ -1667,7 +1581,7 @@ describe('ProductDetailView', () => {
         deleteProduct: jasmine.createSpy('deleteProduct').and.resolveTo({ status: 'success' }),
         contactSeller: jasmine
           .createSpy('contactSeller')
-          .and.resolveTo({ conversation: { id: 'conv-1' }, message: { id: 'msg-1' } }),
+          .and.resolveTo({ conversationId: 'conv-1', created: true }),
         isOutOfStock: () => false,
         getMaxQuantity: () => 10,
         getPriceLabel: () => 'US$ 40.00',
@@ -1701,9 +1615,9 @@ describe('ProductDetailView', () => {
       let viewModel;
       let view;
 
-      const mountView = ({ user = null, authenticated = false, onAuthRequired = null } = {}) => {
+      const mountView = ({ user = null, authenticated = false, onNavigate = null } = {}) => {
         const authStore = createAuthStore({ user, authenticated });
-        view = new ProductDetailView({ viewModel, authStore, onAuthRequired });
+        view = new ProductDetailView({ viewModel, authStore, onNavigate });
         view.mount(container);
         return authStore;
       };
@@ -1715,8 +1629,6 @@ describe('ProductDetailView', () => {
       });
 
       afterEach(() => {
-        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
-        document.body.style.overflow = '';
         if (view) {
           view.destroy();
           view = null;
@@ -1732,6 +1644,10 @@ describe('ProductDetailView', () => {
         const button = container.querySelector('.q-product-detail__contact-seller');
         expect(button).not.toBeNull();
         expect(button.textContent).toBe('Contactar vendedor');
+        expect(button.classList.contains('q-btn')).toBe(true);
+        expect(
+          container.querySelector('.q-product-detail__seller-link').classList.contains('q-btn')
+        ).toBe(true);
       });
 
       it('renders the contact button for an authenticated buyer', () => {
@@ -1748,52 +1664,28 @@ describe('ProductDetailView', () => {
         expect(container.querySelector('.q-product-detail__contact-seller')).toBeNull();
       });
 
-      it('asks a guest to authenticate and does not open the modal', async () => {
-        const onAuthRequired = jasmine.createSpy('onAuthRequired');
-        mountView({ onAuthRequired });
+      it('delegates guest redirection to the view model and does not open a modal', async () => {
+        viewModel.contactSeller.and.resolveTo({ redirected: true });
+        const onNavigate = jasmine.createSpy('onNavigate');
+        mountView({ onNavigate });
 
         container.querySelector('.q-product-detail__contact-seller').click();
         await tick();
 
-        expect(onAuthRequired).toHaveBeenCalledTimes(1);
-        expect(document.querySelector('.q-modal')).toBeNull();
-        expect(document.body.querySelector('.q-contact-seller-modal__textarea')).toBeNull();
+        expect(viewModel.contactSeller).toHaveBeenCalled();
+        expect(onNavigate).not.toHaveBeenCalled();
+        expect(container.querySelector('.q-modal')).toBeNull();
       });
 
-      it('opens the contact modal for an authenticated buyer', async () => {
-        const onAuthRequired = jasmine.createSpy('onAuthRequired');
-        mountView({ user: { id: 'buyer-1' }, authenticated: true, onAuthRequired });
+      it('navigates to the created conversation without opening a modal', async () => {
+        const onNavigate = jasmine.createSpy('onNavigate');
+        mountView({ user: { id: 'buyer-1' }, authenticated: true, onNavigate });
 
         container.querySelector('.q-product-detail__contact-seller').click();
         await tick();
 
-        expect(onAuthRequired).not.toHaveBeenCalled();
-
-        const modalTextarea = document.body.querySelector('.q-contact-seller-modal__textarea');
-        expect(modalTextarea).not.toBeNull();
-        expect(modalTextarea.id).toBe('q-contact-seller-message');
-        expect(document.querySelector('.q-modal__title').textContent).toBe(
-          'Contactar a Tejidos Illimani'
-        );
-
-        document.querySelector('.q-contact-seller-modal__cancel').click();
-        await tick();
-      });
-
-      it('delegates the modal submission to viewModel.contactSeller', async () => {
-        mountView({ user: { id: 'buyer-1' }, authenticated: true });
-
-        container.querySelector('.q-product-detail__contact-seller').click();
-        await tick();
-
-        const field = document.body.querySelector('#q-contact-seller-message');
-        field.value = '  Hola, ¿está disponible?  ';
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-
-        document.querySelector('.q-contact-seller-modal__send').click();
-        await tick(10);
-
-        expect(viewModel.contactSeller).toHaveBeenCalledWith('Hola, ¿está disponible?');
+        expect(viewModel.contactSeller).toHaveBeenCalledWith();
+        expect(onNavigate).toHaveBeenCalledWith('/conversations?active=conv-1');
         expect(document.querySelector('.q-modal')).toBeNull();
       });
     });

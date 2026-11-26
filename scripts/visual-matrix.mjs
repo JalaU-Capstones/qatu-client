@@ -58,6 +58,7 @@ const ROUTES = [
   { name: 'orders', path: '/orders', authenticated: true },
   { name: 'order-detail', path: '/orders/ORD-00100001', authenticated: true },
   { name: 'profile', path: '/profile', authenticated: true },
+  { name: 'conversations', path: '/conversations', authenticated: true },
   { name: 'apply-seller', path: '/apply-seller', authenticated: true },
   // Seller dashboard: needs the seller role (the route guard redirects everyone else).
   { name: 'seller-orders', path: '/seller/orders', authenticated: true, roles: ['seller'] },
@@ -274,6 +275,76 @@ const SAMPLE_CATEGORIES = [
   { id: 'cat-sports', name: 'Deportes', slug: 'sports', product_count: 3 },
   { id: 'cat-books', name: 'Libros', slug: 'books', product_count: 5 },
 ];
+
+const SAMPLE_CONVERSATIONS = [
+  {
+    id: 'conv-1',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    seller_id: 'seller-1',
+    product_id: 'p-published',
+    product: {
+      id: 'p-published',
+      slug: 'publicado',
+      name: 'Publicado',
+      price: 99.99,
+      currency: 'USD',
+      primary_image_path: null,
+      state: 'published',
+    },
+    last_message_at: '2026-11-18T11:30:00.000Z',
+  },
+  {
+    id: 'conv-2',
+    buyer_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    seller_id: 'seller-2',
+    product_id: null,
+    product: null,
+    last_message_at: '2026-11-17T09:00:00.000Z',
+  },
+];
+
+const SAMPLE_MESSAGES = {
+  'conv-1': [
+    {
+      id: 'm1',
+      conversation_id: 'conv-1',
+      sender_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+      content: 'Hola, ¿tiene stock disponible?',
+      created_at: '2026-11-18T11:00:00.000Z',
+    },
+    {
+      id: 'm2',
+      conversation_id: 'conv-1',
+      sender_id: 'seller-1',
+      content: '¡Hola! Sí, tenemos 3 unidades. ¿Quieres que te lo reserve?',
+      created_at: '2026-11-18T11:05:00.000Z',
+    },
+  ],
+  'conv-2': [
+    {
+      id: 'm3',
+      conversation_id: 'conv-2',
+      sender_id: 'seller-2',
+      content: 'El pedido está en camino.',
+      created_at: '2026-11-17T09:00:00.000Z',
+    },
+  ],
+};
+
+const SAMPLE_PROFILES = {
+  'seller-1': {
+    id: 'seller-1',
+    username: 'taller_illimani',
+    full_name: 'Taller Illimani',
+    avatar_path: null,
+  },
+  'seller-2': {
+    id: 'seller-2',
+    username: 'cafe_altura',
+    full_name: 'Café Altura',
+    avatar_path: null,
+  },
+};
 
 const CART_SAMPLE_ITEMS = [
   {
@@ -557,6 +628,7 @@ for (const route of activeRoutes) {
           route.authenticated &&
           (url.includes('/v1/auth/me') ||
             url.includes('/v1/profiles/') ||
+            url.includes('/v1/conversations') ||
             url.includes('/v1/cart') ||
             url.includes('/v1/orders') ||
             url.includes('/v1/admin/seller-applications') ||
@@ -612,6 +684,44 @@ for (const route of activeRoutes) {
                 timestamp: '2026-11-18T12:00:00.000Z',
               },
             };
+          } else if (url.includes('/v1/conversations')) {
+            const pathname = new URL(url).pathname;
+            const segments = pathname.split('/').filter(Boolean);
+            const conversationId = segments[2];
+            if (pathname.endsWith('/messages') && req.method() === 'GET') {
+              const messages = SAMPLE_MESSAGES[conversationId] || [];
+              body = {
+                data: messages,
+                meta: { page: 1, limit: 50, total: messages.length },
+              };
+            } else if (pathname.endsWith('/messages') && req.method() === 'POST') {
+              const payload = JSON.parse(req.postData() || '{}');
+              body = {
+                data: {
+                  id: `m-${Date.now()}`,
+                  conversation_id: conversationId,
+                  sender_id: sampleProfile.id,
+                  content: payload.content,
+                  created_at: new Date().toISOString(),
+                },
+                meta: {},
+              };
+            } else if (req.method() === 'POST') {
+              body = { data: SAMPLE_CONVERSATIONS[0], meta: {} };
+            } else {
+              body = {
+                data: SAMPLE_CONVERSATIONS,
+                meta: {
+                  page: 1,
+                  limit: 30,
+                  total: SAMPLE_CONVERSATIONS.length,
+                  total_pages: 1,
+                },
+              };
+            }
+          } else if (url.includes('/v1/profiles/')) {
+            const profileId = new URL(url).pathname.split('/').pop();
+            body = { data: SAMPLE_PROFILES[profileId] || sampleProfile, meta: {} };
           } else if (url.includes('/v1/products/') && url.includes('/images')) {
             body = {
               data: [
@@ -697,7 +807,10 @@ for (const route of activeRoutes) {
           categoriesData,
           editProductData,
           reportData,
-          sellerApplicationsData
+          sellerApplicationsData,
+          conversationsData,
+          messagesData,
+          profilesData
         ) => {
           try {
             const getReportBody = (url) => {
@@ -744,6 +857,7 @@ for (const route of activeRoutes) {
                 if (
                   url.includes('/v1/auth/me') ||
                   url.includes('/v1/profiles/') ||
+                  url.includes('/v1/conversations') ||
                   url.includes('/v1/cart') ||
                   url.includes('/v1/seller/products') ||
                   url.includes('/v1/products/') ||
@@ -783,6 +897,53 @@ for (const route of activeRoutes) {
                         totalPages: 1,
                         timestamp: '2026-11-18T12:00:00.000Z',
                       },
+                    };
+                  } else if (url.includes('/v1/conversations')) {
+                    const pathname = new URL(url, window.location.origin).pathname;
+                    const segments = pathname.split('/').filter(Boolean);
+                    const conversationId = segments[2];
+                    const method = (init?.method || 'GET').toUpperCase();
+                    if (pathname.endsWith('/messages') && method === 'GET') {
+                      const messages = messagesData[conversationId] || [];
+                      body = {
+                        data: messages,
+                        meta: { page: 1, limit: 50, total: messages.length },
+                      };
+                    } else if (pathname.endsWith('/messages') && method === 'POST') {
+                      const payload = JSON.parse(init?.body || '{}');
+                      body = {
+                        data: {
+                          id: `m-${Date.now()}`,
+                          conversation_id: conversationId,
+                          sender_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+                          content: payload.content,
+                          created_at: new Date().toISOString(),
+                        },
+                        meta: {},
+                      };
+                    } else if (method === 'POST') {
+                      body = {
+                        data: conversationsData[0],
+                        meta: {},
+                      };
+                    } else {
+                      body = {
+                        data: conversationsData,
+                        meta: {
+                          page: 1,
+                          limit: 30,
+                          total: conversationsData.length,
+                          total_pages: 1,
+                        },
+                      };
+                    }
+                  } else if (url.includes('/v1/profiles/')) {
+                    const profileId = new URL(url, window.location.origin).pathname
+                      .split('/')
+                      .pop();
+                    body = {
+                      data: profilesData[profileId] || profile,
+                      meta: {},
                     };
                   } else if (url.includes('/v1/products/') && url.includes('/images')) {
                     body = {
@@ -891,7 +1052,10 @@ for (const route of activeRoutes) {
         SAMPLE_CATEGORIES,
         SELLER_PRODUCT_TEMPLATES[0],
         ADMIN_REPORTS,
-        ADMIN_SELLER_APPLICATIONS
+        ADMIN_SELLER_APPLICATIONS,
+        SAMPLE_CONVERSATIONS,
+        SAMPLE_MESSAGES,
+        SAMPLE_PROFILES
       );
 
       try {
