@@ -1078,7 +1078,7 @@ describe('HeaderView', () => {
 
       it('renders without throwing when the navbarViewModel has no categories link', () => {
         const navbarViewModel = new NavbarViewModel({
-          links: [{ id: 'nav-tiendas', label: 'Tiendas', href: '/tiendas' }],
+          links: [{ id: 'nav-tiendas', label: 'Tiendas', href: '/stores' }],
         });
         const vm = new HeaderViewModel({ navbarViewModel });
         const localView = makeView(vm);

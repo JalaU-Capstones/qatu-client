@@ -10,7 +10,7 @@ export class NavbarViewModel {
   constructor(options = {}) {
     this.links = options.links || [
       { id: 'nav-categorias', label: 'Categorías', href: '/categorias' },
-      { id: 'nav-tiendas', label: 'Tiendas', href: '/tiendas' },
+      { id: 'nav-tiendas', label: 'Tiendas', href: '/stores' },
       { id: 'nav-productos', label: 'Productos', href: '/products' },
     ];
     this.activeLinkId = options.activeLinkId || null;

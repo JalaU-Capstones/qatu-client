@@ -11,6 +11,8 @@ describe('NavbarViewModel', () => {
     expect(viewModel.links.length).toBe(3);
     expect(viewModel.links[0].label).toBe('Categorías');
     expect(viewModel.links[1].label).toBe('Tiendas');
+    expect(viewModel.links[1].id).toBe('nav-tiendas');
+    expect(viewModel.links[1].href).toBe('/stores');
     expect(viewModel.links[2].label).toBe('Productos');
   });
 

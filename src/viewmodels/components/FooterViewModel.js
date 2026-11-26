@@ -20,7 +20,7 @@ export class FooterViewModel {
         links: [
           { label: 'Productos', href: '/products' },
           { label: 'Categorías', href: '/categories' },
-          { label: 'Tiendas', href: '/tiendas' },
+          { label: 'Tiendas', href: '/stores' },
         ],
       },
       {

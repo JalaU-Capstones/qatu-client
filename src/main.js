@@ -16,6 +16,7 @@ import './views/components/footer.css';
 import './views/components/recommendation-card.css';
 import './views/components/auth.css';
 import './views/pages/catalog.css';
+import './views/pages/stores.css';
 import './views/pages/orders.css';
 import './views/pages/seller-orders.css';
 import './views/pages/seller-products.css';
@@ -56,6 +57,7 @@ import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewMode
 import { ProfileViewModel } from './viewmodels/pages/ProfileViewModel.js';
 import { SellerProductFormViewModel } from './viewmodels/pages/SellerProductFormViewModel.js';
 import { SellerProductsViewModel } from './viewmodels/pages/SellerProductsViewModel.js';
+import { StoresViewModel } from './viewmodels/pages/StoresViewModel.js';
 import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
@@ -80,6 +82,7 @@ import { SellerApplyPageView } from './views/pages/SellerApplyPageView.js';
 import { SellerOrdersPageView } from './views/pages/SellerOrdersPageView.js';
 import { SellerProductFormView } from './views/pages/SellerProductFormView.js';
 import { SellerProductsPageView } from './views/pages/SellerProductsPageView.js';
+import { StoresView } from './views/pages/StoresView.js';
 
 const app = document.getElementById('app');
 
@@ -619,6 +622,18 @@ if (app) {
   router.addRoute('/', () => renderHome());
   router.addRoute('/about', () => renderAbout());
   router.addRoute('/products', () => renderCatalog());
+  router.addRoute('/stores', () => {
+    clearCurrentView('stores');
+    currentPageView = new StoresView({
+      viewModel: new StoresViewModel({
+        onNavigate: (path) => router.navigate(path),
+        initialQuery: new URLSearchParams(window.location.search).get('q') || '',
+        initialPage: Number(new URLSearchParams(window.location.search).get('page')) || 1,
+      }),
+      onNavigate: (path) => router.navigate(path),
+    });
+    currentPageView.mount(mainEl);
+  });
   router.addRoute('/categories', () => renderCategories());
   router.addRoute('/products/:slug', (_path, params) => renderProductDetail(params.slug));
   router.addRoute('/cart', () => renderCart());

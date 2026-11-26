@@ -39,6 +39,7 @@ const ROUTES = [
   { name: 'login', path: '/login' },
   { name: 'register', path: '/register' },
   { name: 'catalog', path: '/products' },
+  { name: 'stores', path: '/stores' },
   { name: 'categories', path: '/categories' },
   {
     name: 'admin-categories',
@@ -275,6 +276,57 @@ const SAMPLE_CATEGORIES = [
   { id: 'cat-sports', name: 'Deportes', slug: 'sports', product_count: 3 },
   { id: 'cat-books', name: 'Libros', slug: 'books', product_count: 5 },
 ];
+
+const SAMPLE_STORES = [
+  {
+    id: 'seller-1',
+    username: 'taller_illimani',
+    full_name: 'Taller Illimani',
+    bio: 'Textiles andinos hechos a mano por artesanas de El Alto.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-2',
+    username: 'cafe_altura',
+    full_name: 'Café Altura',
+    bio: 'Café de especialidad cultivado en las alturas de los Yungas.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-3',
+    username: 'ceramica_valle',
+    full_name: 'Cerámica del Valle',
+    bio: 'Piezas utilitarias y decorativas de cerámica cochabambina.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-4',
+    username: 'maderas_aymara',
+    full_name: 'Maderas Aymara',
+    bio: 'Muebles y objetos tallados en madera nativa.',
+    avatar_path: null,
+  },
+  {
+    id: 'seller-5',
+    username: 'tejidos_sucre',
+    full_name: 'Tejidos Sucre',
+    bio: 'Aguayos y chumpis del sur de Bolivia.',
+    avatar_path: null,
+  },
+];
+
+const SAMPLE_STORE_PRODUCTS = Array.from({ length: 30 }, (_, index) => ({
+  id: `matrix-store-product-${index}`,
+  name: `Producto ${index + 1}`,
+  seller_id: SAMPLE_STORES[index % SAMPLE_STORES.length].id,
+  slug: `producto-${index + 1}`,
+  price: 20 + index,
+  currency: 'BOB',
+  state: 'published',
+  primary_image_path: null,
+  category_id: null,
+  created_at: '2026-11-18T12:00:00.000Z',
+}));
 
 const SAMPLE_CONVERSATIONS = [
   {
@@ -580,6 +632,39 @@ for (const route of activeRoutes) {
           'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token, Authorization',
         };
+
+        if (
+          ['stores', 'home'].includes(route.name) &&
+          req.method() === 'GET' &&
+          new URL(url).pathname === '/v1/products'
+        ) {
+          return req.respond({
+            status: 200,
+            contentType: 'application/json',
+            headers: corsHeaders,
+            body: JSON.stringify({
+              data: SAMPLE_STORE_PRODUCTS,
+              meta: { page: 1, per_page: 100, total: 30, total_pages: 1 },
+            }),
+          });
+        }
+
+        if (
+          ['stores', 'home'].includes(route.name) &&
+          req.method() === 'GET' &&
+          new URL(url).pathname.startsWith('/v1/profiles/')
+        ) {
+          const profileId = new URL(url).pathname.split('/').pop();
+          const store = SAMPLE_STORES.find((item) => item.id === profileId);
+          if (store) {
+            return req.respond({
+              status: 200,
+              contentType: 'application/json',
+              headers: corsHeaders,
+              body: JSON.stringify({ data: store, meta: {} }),
+            });
+          }
+        }
 
         if (url.includes('/product-images/') || url.includes('picsum.photos')) {
           if (req.method() === 'OPTIONS') {

@@ -108,7 +108,7 @@ describe('FooterViewModel', () => {
         expect(viewModel.sections[0].links).toEqual([
           { label: 'Productos', href: '/products' },
           { label: 'Categorías', href: '/categories' },
-          { label: 'Tiendas', href: '/tiendas' },
+          { label: 'Tiendas', href: '/stores' },
         ]);
         expect(viewModel.sections[1].links).toEqual([
           { label: 'Vende en Q’atu', href: '/vender' },
