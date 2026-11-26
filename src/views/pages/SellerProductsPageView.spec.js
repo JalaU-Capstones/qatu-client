@@ -1,3 +1,4 @@
+import { authStore } from '../../store/authStore.js';
 import { SellerProductsViewModel } from '../../viewmodels/pages/SellerProductsViewModel.js';
 import { SellerProductsPageView } from './SellerProductsPageView.js';
 
@@ -67,6 +68,26 @@ describe('SellerProductsPageView', () => {
     if (container?.parentElement) {
       container.remove();
     }
+  });
+
+  it('renders the admin forbidden state without loading products and navigates to reports', () => {
+    spyOn(authStore, 'isAdmin').and.returnValue(true);
+    const onNavigate = jasmine.createSpy('onNavigate');
+    view = new SellerProductsPageView({ viewModel, onNavigate });
+    spyOn(viewModel, 'load');
+    view.mount(container);
+
+    const forbidden = container.querySelector('.q-admin-applications-forbidden');
+    expect(forbidden).not.toBeNull();
+    expect(forbidden.querySelector('h2').textContent).toContain(
+      'no está disponible para administradores'
+    );
+    expect(viewModel.load).not.toHaveBeenCalled();
+
+    const button = forbidden.querySelector('button.q-btn--primary');
+    expect(button.textContent).toBe('Ir a reportes');
+    button.click();
+    expect(onNavigate).toHaveBeenCalledWith('/admin/reports');
   });
 
   it('1. shows empty state when mounted with 0 products', async () => {

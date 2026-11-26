@@ -71,6 +71,10 @@ export class ProductDetailViewModel {
     this._listeners = new Set();
   }
 
+  get canPurchase() {
+    return typeof this.authStore.isAdmin !== 'function' || !this.authStore.isAdmin();
+  }
+
   /**
    * Loads the product by slug or UUID and up to three related products.
    * @param {string} productSlug
@@ -150,9 +154,12 @@ export class ProductDetailViewModel {
    * Adds the current product/quantity to the cart through `CartService`.
    * Returns the service union; `auth-required` lets the caller decide how to
    * prompt the guest (the shell redirects to `/login`).
-   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
    */
   async addToCart() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
     if (!this.product || this.isOutOfStock() || this.isAdding) {
       return { status: 'error', error: new Error('Producto no disponible') };
     }
@@ -182,6 +189,17 @@ export class ProductDetailViewModel {
       this.isAdding = false;
       this._notify();
     }
+  }
+
+  /**
+   * Adds the current product to the cart for immediate checkout.
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
+   */
+  async buyNow() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
+    return this.addToCart();
   }
 
   /**

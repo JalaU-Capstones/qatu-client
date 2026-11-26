@@ -358,80 +358,88 @@ export class ProductDetailView {
     description.textContent = product.description;
     info.appendChild(description);
 
-    const purchase = document.createElement('div');
-    purchase.className = 'q-product-detail__purchase';
-
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
     const user = this.authStore.getUser();
-    const isOwn = Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
+    const isOwn =
+      !isAdmin && Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
 
-    if (isOwn) {
-      purchase.appendChild(this._renderOwnerActions(product));
-    } else {
-      const quantityRow = document.createElement('div');
-      quantityRow.className = 'q-product-detail__quantity-row';
+    if (!isAdmin) {
+      const purchase = document.createElement('div');
+      purchase.className = 'q-product-detail__purchase';
 
-      const quantityLabel = document.createElement('span');
-      quantityLabel.className = 'q-product-detail__quantity-label';
-      quantityLabel.textContent = 'Cantidad';
+      if (isOwn) {
+        purchase.appendChild(this._renderOwnerActions(product));
+      } else {
+        const quantityRow = document.createElement('div');
+        quantityRow.className = 'q-product-detail__quantity-row';
 
-      const quantitySelector = new QuantitySelectorView({
-        value: vm.quantity,
-        min: 1,
-        max: vm.getMaxQuantity(),
-        disabled: vm.isOutOfStock(),
-        onChange: (value) => vm.setQuantity(value),
-        label: 'Cantidad del producto',
-      });
+        const quantityLabel = document.createElement('span');
+        quantityLabel.className = 'q-product-detail__quantity-label';
+        quantityLabel.textContent = 'Cantidad';
 
-      quantityRow.appendChild(quantityLabel);
-      quantityRow.appendChild(quantitySelector.render());
-      purchase.appendChild(quantityRow);
+        const quantitySelector = new QuantitySelectorView({
+          value: vm.quantity,
+          min: 1,
+          max: vm.getMaxQuantity(),
+          disabled: vm.isOutOfStock(),
+          onChange: (value) => vm.setQuantity(value),
+          label: 'Cantidad del producto',
+        });
 
-      const actions = document.createElement('div');
-      actions.className = 'q-product-detail__actions';
+        quantityRow.appendChild(quantityLabel);
+        quantityRow.appendChild(quantitySelector.render());
+        purchase.appendChild(quantityRow);
 
-      const addButton = document.createElement('button');
-      addButton.type = 'button';
-      addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
-      addButton.textContent = vm.isOutOfStock()
-        ? 'Agotado'
-        : vm.isAdding
-          ? 'Añadiendo…'
-          : 'Agregar al carrito';
-      addButton.disabled = vm.isOutOfStock() || vm.isAdding;
-      addButton.addEventListener('click', () =>
-        vm.addToCart().then((result) => {
-          if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+        const actions = document.createElement('div');
+        actions.className = 'q-product-detail__actions';
+
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
+        addButton.textContent = vm.isOutOfStock()
+          ? 'Agotado'
+          : vm.isAdding
+            ? 'Añadiendo…'
+            : 'Agregar al carrito';
+        addButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        addButton.addEventListener('click', () =>
+          vm.addToCart().then((result) => {
+            if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+              this.onAuthRequired();
+            }
+          })
+        );
+        actions.appendChild(addButton);
+
+        const buyButton = document.createElement('button');
+        buyButton.type = 'button';
+        buyButton.className =
+          'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
+        buyButton.textContent = 'Comprar ahora';
+        buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        buyButton.addEventListener('click', async () => {
+          const result = await (typeof vm.buyNow === 'function' ? vm.buyNow() : vm.addToCart());
+          if (result.status === 'added' && typeof this.onBuyNow === 'function') {
+            this.onBuyNow();
+          } else if (
+            result.status === 'auth-required' &&
+            typeof this.onAuthRequired === 'function'
+          ) {
             this.onAuthRequired();
           }
-        })
-      );
-      actions.appendChild(addButton);
+        });
+        actions.appendChild(buyButton);
 
-      const buyButton = document.createElement('button');
-      buyButton.type = 'button';
-      buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
-      buyButton.textContent = 'Comprar ahora';
-      buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
-      buyButton.addEventListener('click', async () => {
-        const result = await vm.addToCart();
-        if (result.status === 'added' && typeof this.onBuyNow === 'function') {
-          this.onBuyNow();
-        } else if (result.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
-          this.onAuthRequired();
-        }
-      });
-      actions.appendChild(buyButton);
+        purchase.appendChild(actions);
 
-      purchase.appendChild(actions);
+        const shipping = document.createElement('p');
+        shipping.className = 'q-product-detail__shipping';
+        shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
+        purchase.appendChild(shipping);
+      }
 
-      const shipping = document.createElement('p');
-      shipping.className = 'q-product-detail__shipping';
-      shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
-      purchase.appendChild(shipping);
+      info.appendChild(purchase);
     }
-
-    info.appendChild(purchase);
 
     if (!isOwn && vm.feedback) {
       const feedback = document.createElement('p');
@@ -727,7 +735,8 @@ export class ProductDetailView {
 
     const user = this.authStore.getUser();
     const sellerId = product?.seller_id || product?.seller?.id;
-    const isOwn = Boolean(user && user.id && sellerId && user.id === sellerId);
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
+    const isOwn = !isAdmin && Boolean(user && user.id && sellerId && user.id === sellerId);
 
     if (!isOwn && sellerId) {
       const contactBtn = document.createElement('button');
@@ -828,6 +837,7 @@ export class ProductDetailView {
         product.category_name ||
         '';
       const user = this.authStore.getUser();
+      const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
       const isOwn = Boolean(user?.id && product.seller_id && user.id === product.seller_id);
       const card = new ProductCardView(
         {
@@ -850,7 +860,7 @@ export class ProductDetailView {
           variant: 'default',
           onAddToCart: () => this.onAddToCart?.(product, 1),
           detailHref: `/products/${encodeURIComponent(product.slug || product.id)}`,
-          hideCartButton: isOwn,
+          hideCartButton: isAdmin || isOwn,
         }
       );
       grid.appendChild(card.render());

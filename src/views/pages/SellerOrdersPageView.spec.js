@@ -71,6 +71,25 @@ describe('SellerOrdersPageView', () => {
   });
 
   describe('access gate (defense in depth behind the route guard)', () => {
+    it('renders the admin forbidden state without loading orders and navigates to reports', () => {
+      spyOn(authStore, 'isAdmin').and.returnValue(true);
+      build();
+      spyOn(viewModel, 'loadOrders');
+      view.mount(container);
+
+      const forbidden = container.querySelector('.q-admin-applications-forbidden');
+      expect(forbidden).not.toBeNull();
+      expect(forbidden.querySelector('h2').textContent).toContain(
+        'no está disponible para administradores'
+      );
+      expect(viewModel.loadOrders).not.toHaveBeenCalled();
+
+      const button = forbidden.querySelector('button.q-btn--primary');
+      expect(button.textContent).toBe('Ir a reportes');
+      button.click();
+      expect(view.onNavigate).toHaveBeenCalledWith('/admin/reports');
+    });
+
     it('asks anonymous visitors to sign in, remembers the return path and never calls the API', async () => {
       authStore.isAuthenticated.and.returnValue(false);
       authStore.isSeller.and.returnValue(false);

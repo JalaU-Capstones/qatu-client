@@ -417,7 +417,7 @@ describe('HeaderView', () => {
       expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
     });
 
-    it('is shown for a seller or admin, with Mis Productos and Mis Ventas', () => {
+    it('is shown for a seller, with Mis Productos and Mis Ventas', () => {
       viewModel.setIsSeller(true);
       viewModel.setUser({ username: 'sam' });
       const el = view.render();
@@ -849,6 +849,123 @@ describe('HeaderView', () => {
       expect(event.defaultPrevented).toBe(true);
       expect(viewModel.onAdminCategoriesClick).toHaveBeenCalledTimes(1);
       expect(link.getAttribute('href')).toBe('/admin/categories');
+    });
+  });
+
+  describe('role-based marketplace actions', () => {
+    const adminOnlyItems = [
+      '.q-header-admin-reports-btn',
+      '.q-header-admin-applications-btn',
+      '.q-header-admin-categories-btn',
+    ];
+    const sellerOnlyItems = [
+      '.q-header-orders-btn',
+      '.q-header-seller-apply-btn',
+      '.q-header-seller-products-btn',
+      '.q-header-seller-orders-btn',
+    ];
+
+    it('keeps only profile, messages, admin links, and logout for an admin', () => {
+      viewModel.setUser({ username: 'ada' });
+      viewModel.setIsAdmin(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      sellerOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).toBeNull());
+      [
+        '.q-header-profile-btn',
+        '.q-header-conversations-btn',
+        ...adminOnlyItems,
+        '.q-header-logout-btn',
+      ].forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+      expect(
+        Array.from(dropdown.children)
+          .slice(1)
+          .map((item) =>
+            item.classList.contains('q-header-dropdown-separator')
+              ? 'separator'
+              : item.classList.contains('q-header-logout-btn')
+                ? 'logout'
+                : item.textContent.trim()
+          )
+      ).toEqual([
+        'Mi Perfil',
+        'Mensajes',
+        'Reportes',
+        'Solicitudes de vendedores',
+        'Categorías',
+        'separator',
+        'logout',
+      ]);
+    });
+
+    it('admin overrides seller when both role flags are true', () => {
+      viewModel.setUser({ username: 'ada' });
+      viewModel.setIsSeller(true);
+      viewModel.setIsAdmin(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      sellerOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).toBeNull());
+      adminOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+    });
+
+    it('shows buyer actions and no admin actions for a buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      ['.q-header-orders-btn', '.q-header-conversations-btn', '.q-header-seller-apply-btn'].forEach(
+        (selector) => expect(dropdown.querySelector(selector)).not.toBeNull()
+      );
+      ['.q-header-seller-products-btn', '.q-header-seller-orders-btn', ...adminOnlyItems].forEach(
+        (selector) => expect(dropdown.querySelector(selector)).toBeNull()
+      );
+    });
+
+    it('shows seller actions and no buyer-apply or admin actions for a seller', () => {
+      viewModel.setUser({ username: 'sam' });
+      viewModel.setIsSeller(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      [
+        '.q-header-orders-btn',
+        '.q-header-conversations-btn',
+        '.q-header-seller-products-btn',
+        '.q-header-seller-orders-btn',
+      ].forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+      ['.q-header-seller-apply-btn', ...adminOnlyItems].forEach((selector) =>
+        expect(dropdown.querySelector(selector)).toBeNull()
+      );
+    });
+
+    it('removes cart and orders when a buyer becomes an admin, then restores them as a buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).not.toBeNull();
+
+      viewModel.setIsAdmin(true);
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).toBeNull();
+
+      viewModel.setIsAdmin(false);
+      viewModel.setIsSeller(false);
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).not.toBeNull();
+    });
+
+    it('updates canPurchase from the admin role', () => {
+      expect(viewModel.canPurchase).toBe(true);
+      viewModel.setIsAdmin(true);
+      expect(viewModel.canPurchase).toBe(false);
+      viewModel.setIsAdmin(false);
+      expect(viewModel.canPurchase).toBe(true);
     });
   });
 });

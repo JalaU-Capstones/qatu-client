@@ -1,3 +1,4 @@
+import { authStore } from '../../store/authStore.js';
 import { SellerProductsViewModel } from '../../viewmodels/pages/SellerProductsViewModel.js';
 import { ProductCard } from '../components/ProductCard.js';
 
@@ -100,6 +101,10 @@ export class SellerProductsPageView {
     this.element = this._buildShell();
     container.appendChild(this.element);
     this._unsubscribe = this.viewModel.subscribe(() => this._render());
+    if (authStore.isAdmin()) {
+      this._renderAdminForbidden();
+      return this.element;
+    }
     this._render();
     this.viewModel.load();
   }
@@ -232,6 +237,42 @@ export class SellerProductsPageView {
     separator.setAttribute('aria-hidden', 'true');
     separator.textContent = '/';
     return separator;
+  }
+
+  _renderAdminForbidden() {
+    if (!this._contentContainer) return;
+    this._contentContainer.replaceChildren();
+
+    const box = document.createElement('div');
+    box.className = 'q-admin-applications-forbidden';
+    box.setAttribute('role', 'alert');
+
+    const code = document.createElement('p');
+    code.className = 'q-admin-applications-forbidden__code';
+    code.textContent = 'No disponible';
+
+    const title = document.createElement('h2');
+    title.className = 'q-admin-applications-forbidden__title';
+    title.textContent = 'Esta sección no está disponible para administradores';
+
+    const description = document.createElement('p');
+    description.textContent =
+      'La gestión de productos es exclusiva de vendedores. Como administrador, revisa las categorías y las solicitudes de vendedores desde el panel de administración.';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'q-btn q-btn--primary';
+    button.textContent = 'Ir a reportes';
+    button.addEventListener('click', () => {
+      if (typeof this.onNavigate === 'function') {
+        this.onNavigate('/admin/reports');
+      } else {
+        window.location.assign('/admin/reports');
+      }
+    });
+
+    box.append(code, title, description, button);
+    this._contentContainer.appendChild(box);
   }
 
   _render() {

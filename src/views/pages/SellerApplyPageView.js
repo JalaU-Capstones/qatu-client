@@ -32,6 +32,11 @@ export class SellerApplyPageView {
       return this.element;
     }
 
+    if (authStore.isAdmin()) {
+      this._renderAdminGate();
+      return this.element;
+    }
+
     void this.viewModel.loadStatus();
     return this.element;
   }
@@ -627,6 +632,41 @@ export class SellerApplyPageView {
     });
 
     card.append(p, btn);
+    statusRegion.appendChild(card);
+  }
+
+  _renderAdminGate() {
+    const statusRegion = this.element?.querySelector('[data-role="status-region"]');
+    const formCard = this.element?.querySelector('[data-role="form-card"]');
+    if (formCard) formCard.setAttribute('hidden', '');
+    if (!statusRegion) return;
+
+    statusRegion.replaceChildren();
+    const card = document.createElement('div');
+    card.className = 'q-seller-apply-card q-glass-panel q-seller-apply-status-card';
+
+    const title = document.createElement('h2');
+    title.className = 'q-seller-apply-status-title';
+    title.textContent = 'Ya eres administrador';
+
+    const description = document.createElement('p');
+    description.className = 'q-seller-apply-status-text';
+    description.textContent =
+      'Como administrador del marketplace no necesitas postularte como vendedor. Desde tu panel puedes revisar las solicitudes de otros vendedores.';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'q-btn q-btn--primary';
+    button.textContent = 'Ir a solicitudes de vendedores';
+    button.addEventListener('click', () => {
+      if (typeof this.onNavigate === 'function') {
+        this.onNavigate('/admin/seller-applications');
+      } else {
+        window.location.assign('/admin/seller-applications');
+      }
+    });
+
+    card.append(title, description, button);
     statusRegion.appendChild(card);
   }
 }

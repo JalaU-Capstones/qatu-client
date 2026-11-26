@@ -454,6 +454,7 @@ export class CatalogView {
       this._grid.appendChild(empty);
     } else {
       const user = this.authStore.getUser();
+      const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
       vm.products.forEach((product) => {
         const isOwn = Boolean(
           user && user.id && product.seller_id && user.id === product.seller_id
@@ -486,7 +487,7 @@ export class CatalogView {
             showCatalogActions: true,
             onAddToCart: () => this.onAddToCart(product, 1),
             detailHref: `/products/${product.slug || product.id}`,
-            hideCartButton: isOwn,
+            hideCartButton: isAdmin || isOwn,
           }
         );
         this._grid.appendChild(cardView.render());

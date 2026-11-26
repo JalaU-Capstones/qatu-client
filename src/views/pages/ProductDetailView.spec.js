@@ -383,10 +383,11 @@ describe('ProductDetailView', () => {
 
   // ─── authStore / own product (C5) ────────────────────────────────────────
 
-  function makeAuthStore(user = null) {
+  function makeAuthStore(user = null, isAdmin = false) {
     const authListeners = new Set();
     return {
       getUser: () => user,
+      isAdmin: () => isAdmin,
       subscribe: jasmine.createSpy('subscribe').and.callFake((fn) => {
         authListeners.add(fn);
         return () => authListeners.delete(fn);
@@ -420,6 +421,29 @@ describe('ProductDetailView', () => {
     expect(container.querySelector('.q-quantity-selector')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__add')).not.toBeNull();
     expect(container.querySelector('.q-product-detail__buy-now')).not.toBeNull();
+    expect(container.querySelector('.q-product-detail__shipping')).not.toBeNull();
+    v.destroy();
+  });
+
+  it('admin sees no purchase block but can still contact the seller and browse recommendations', () => {
+    viewModel.product = createProduct({ seller_id: 'seller-10' });
+    viewModel.similarProducts = createSimilar().map((product) => ({
+      ...product,
+      seller_id: 'seller-20',
+    }));
+    const authStore = makeAuthStore({ id: 'seller-10', username: 'admin' }, true);
+    const v = new ProductDetailView({ viewModel, authStore });
+    v.mount(container);
+
+    expect(container.querySelector('.q-product-detail__purchase')).toBeNull();
+    expect(container.querySelector('.q-quantity-selector')).toBeNull();
+    expect(container.querySelector('.q-product-detail__add')).toBeNull();
+    expect(container.querySelector('.q-product-detail__buy-now')).toBeNull();
+    expect(container.querySelector('.q-product-detail__shipping')).toBeNull();
+    expect(container.querySelector('.q-product-detail__contact-seller')).not.toBeNull();
+    expect(
+      container.querySelectorAll('.q-product-detail__similar-grid .q-product-card-action').length
+    ).toBe(0);
     v.destroy();
   });
 

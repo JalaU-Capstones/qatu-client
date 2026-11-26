@@ -50,6 +50,25 @@ describe('OrdersPageView', () => {
     }
   });
 
+  it('renders the admin forbidden state without loading orders and navigates to reports', () => {
+    spyOn(authStore, 'isAdmin').and.returnValue(true);
+    const onNavigate = jasmine.createSpy('onNavigate');
+    view = new OrdersPageView({ viewModel, onNavigate });
+    view.mount(container);
+
+    const forbidden = container.querySelector('.q-admin-applications-forbidden');
+    expect(forbidden).not.toBeNull();
+    expect(forbidden.querySelector('h2').textContent).toContain(
+      'no está disponible para administradores'
+    );
+    expect(mockApi.listOrders).not.toHaveBeenCalled();
+
+    const button = forbidden.querySelector('button.q-btn--primary');
+    expect(button.textContent).toBe('Ir a reportes');
+    button.click();
+    expect(onNavigate).toHaveBeenCalledWith('/admin/reports');
+  });
+
   it('Scenario: View own orders - renders paginated list of orders with details', async () => {
     view = new OrdersPageView({ viewModel });
     view.mount(container);

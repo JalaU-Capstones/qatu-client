@@ -275,6 +275,30 @@ describe('ProductDetailViewModel', () => {
     expect(vm.isAdding).toBe(false);
   });
 
+  it('addToCart is forbidden for admins without calling CartService', async () => {
+    vm = new ProductDetailViewModel({
+      productsApi: api,
+      cartService,
+      authStore: { isAdmin: () => true },
+    });
+    vm.product = createProduct();
+
+    expect(await vm.addToCart()).toEqual({ status: 'forbidden' });
+    expect(cartService.addToCart).not.toHaveBeenCalled();
+  });
+
+  it('buyNow is forbidden for admins without calling CartService', async () => {
+    vm = new ProductDetailViewModel({
+      productsApi: api,
+      cartService,
+      authStore: { isAdmin: () => true },
+    });
+    vm.product = createProduct();
+
+    expect(await vm.buyNow()).toEqual({ status: 'forbidden' });
+    expect(cartService.addToCart).not.toHaveBeenCalled();
+  });
+
   it('addToCart surfaces the auth-required union for guests', async () => {
     cartService = createCartService({ result: { status: 'auth-required' } });
     vm = new ProductDetailViewModel({ productsApi: api, cartService });
@@ -430,7 +454,7 @@ describe('ProductDetailViewModel', () => {
       };
       const router = { navigate: jasmine.createSpy('navigate') };
       const authRedirectStore = { setReturnTo: jasmine.createSpy('setReturnTo') };
-      const authStore = { isAuthenticated: () => authenticated };
+      const authStore = { isAuthenticated: () => authenticated, isAdmin: () => false };
       const vm = new ProductDetailViewModel({
         productsApi: api,
         cartService,

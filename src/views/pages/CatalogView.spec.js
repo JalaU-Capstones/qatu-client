@@ -160,6 +160,25 @@ describe('CatalogView', () => {
     view.destroy();
   });
 
+  it('hides add-to-cart on every catalog card for an admin who is also a seller', () => {
+    mockViewModel.products = [
+      { id: 'own', name: 'Producto propio', seller_id: 'admin-1', price: 40 },
+      { id: 'other', name: 'Otro producto', seller_id: 'seller-2', price: 14 },
+    ];
+    const authStore = {
+      getUser: () => ({ id: 'admin-1' }),
+      isAdmin: () => true,
+      subscribe: () => () => {},
+    };
+    const view = new CatalogView(mockViewModel, { authStore });
+    view.mount(container);
+
+    expect(container.querySelectorAll('#q-catalog-grid button[aria-label^="Añadir"]').length).toBe(
+      0
+    );
+    view.destroy();
+  });
+
   it('uses the primary relative image path before gallery images in Catalog cards', () => {
     mockViewModel.products = [
       {

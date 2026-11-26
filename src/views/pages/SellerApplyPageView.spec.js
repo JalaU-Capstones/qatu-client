@@ -175,6 +175,7 @@ describe('SellerApplyPageView', () => {
       container = document.createElement('div');
       document.body.appendChild(container);
       spyOn(authStore, 'isAuthenticated').and.returnValue(true);
+      spyOn(authStore, 'isAdmin').and.returnValue(false);
       vm = createMockVM();
       onNavigate = jasmine.createSpy('onNavigate');
       view = new SellerApplyPageView({ viewModel: vm, onNavigate });
@@ -607,6 +608,20 @@ describe('SellerApplyPageView', () => {
       view.onNavigate = null;
       expect(() => button.click()).not.toThrow();
       expect(onNavigate.calls.count()).toBe(callsAfterLogin);
+    });
+
+    it('shows the admin gate, hides the form and navigates to seller applications', () => {
+      authStore.isAdmin.and.returnValue(true);
+      view.mount(container);
+
+      expect(vm.loadStatus).not.toHaveBeenCalled();
+      expect(el('[data-role="form-card"]').hasAttribute('hidden')).toBe(true);
+      const statusRegion = el('[data-role="status-region"]');
+      expect(statusRegion.querySelector('h2').textContent).toBe('Ya eres administrador');
+      const button = statusRegion.querySelector('button.q-btn--primary');
+      expect(button.textContent).toBe('Ir a solicitudes de vendedores');
+      button.click();
+      expect(onNavigate).toHaveBeenCalledWith('/admin/seller-applications');
     });
 
     it('uses the global authStore for the gate, not the view model authStore', () => {

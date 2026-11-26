@@ -34,10 +34,11 @@ const createFeaturedApi = () => ({
     .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
 });
 
-function makeAuthStore(user = null) {
+function makeAuthStore(user = null, isAdmin = false) {
   const listeners = new Set();
   return {
     getUser: () => user,
+    isAdmin: () => isAdmin,
     subscribe: jasmine.createSpy('subscribe').and.callFake((listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -111,6 +112,17 @@ describe('FeaturedProductsView', () => {
     expect(cards[1].textContent).toContain('Agotado');
     expect(cards[1].querySelector('button[aria-label^="Añadir"]').disabled).toBe(true);
     sellerView.destroy();
+  });
+
+  it('hides add-to-cart on every featured card for an admin who is also a seller', () => {
+    const adminView = new FeaturedProductsView(viewModel, {
+      authStore: makeAuthStore({ id: 'seller-1' }, true),
+    });
+    const cards = adminView.render().querySelectorAll('[role="listitem"]');
+
+    expect(cards.length).toBe(2);
+    cards.forEach((card) => expect(card.querySelector('button[aria-label^="Añadir"]')).toBeNull());
+    adminView.destroy();
   });
 
   it('updates the visible cards when the ViewModel products change', () => {

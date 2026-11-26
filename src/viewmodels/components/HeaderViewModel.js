@@ -54,6 +54,10 @@ export class HeaderViewModel {
     this._listeners = new Set();
   }
 
+  get canPurchase() {
+    return !this.isAdmin;
+  }
+
   /**
    * Sets current logged in user or null to log out.
    * When user becomes null, forces the dropdown closed.
