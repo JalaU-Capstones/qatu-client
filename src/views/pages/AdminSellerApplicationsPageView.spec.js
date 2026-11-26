@@ -100,21 +100,41 @@ describe('AdminSellerApplicationsPageView', () => {
     ).toBe('Aprobada');
   });
 
-  it('keeps the rejection form and filtering controls connected to the view model', async () => {
+  it('opens the reject modal, submits its reason, and refreshes the table', async () => {
     view.mount(container);
     await tick();
 
+    api.reviewApplication.and.callFake(async (id, decision) => {
+      applications = applications.map((item) =>
+        item.id === id
+          ? { ...item, status: decision.status, rejection_reason: decision.rejectionReason }
+          : item
+      );
+      return { data: { id, ...decision } };
+    });
+    const listCallsBeforeReject = api.listApplications.calls.count();
     container.querySelector('.q-admin-app-reject-btn').click();
-    const reason = container.querySelector('#reject-reason-app-pending');
-    expect(reason).not.toBeNull();
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog.querySelector('h2').textContent).toBe('Rechazar solicitud');
+    expect(dialog.querySelector('strong').textContent).toBe('Taller Illimani');
+    const reason = dialog.querySelector('textarea');
     reason.value = 'Información incompleta';
-    reason.dispatchEvent(new Event('input'));
-    container.querySelector('.q-admin-app-confirm-reject-btn').click();
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+    [...dialog.querySelectorAll('button')]
+      .find((button) => button.textContent.trim() === 'Confirmar rechazo')
+      .click();
     await tick();
+
     expect(api.reviewApplication).toHaveBeenCalledWith('app-pending', {
       status: 'rejected',
       rejectionReason: 'Información incompleta',
     });
+    expect(api.listApplications.calls.count()).toBeGreaterThan(listCallsBeforeReject);
+    expect(
+      container.querySelector('tr[data-application-id="app-pending"] .q-seller-app-badge')
+        .textContent
+    ).toBe('Rechazada');
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
 
     const filter = container.querySelector('#admin-seller-app-status-filter');
     filter.value = 'approved';
@@ -123,6 +143,30 @@ describe('AdminSellerApplicationsPageView', () => {
     expect(api.listApplications).toHaveBeenCalledWith(
       jasmine.objectContaining({ page: 1, status: 'approved' })
     );
+  });
+
+  it('keeps the rejection modal open and shows API errors without an inline row textarea', async () => {
+    view.mount(container);
+    await tick();
+
+    container.querySelector('.q-admin-app-reject-btn').click();
+    const dialog = document.querySelector('[role="dialog"]');
+    const textarea = dialog.querySelector('textarea');
+    textarea.value = 'Información incompleta';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    api.reviewApplication.and.rejectWith(new Error('Servicio no disponible'));
+
+    [...dialog.querySelectorAll('button')]
+      .find((button) => button.textContent.trim() === 'Confirmar rechazo')
+      .click();
+    await tick();
+
+    expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+    expect(dialog.querySelector('[role="alert"]').textContent).toBe('Servicio no disponible');
+    expect(container.querySelector('tr[data-application-id="app-pending"] textarea')).toBeNull();
+    [...dialog.querySelectorAll('button')]
+      .find((button) => button.textContent.trim() === 'Cancelar')
+      .click();
   });
 });
 
@@ -152,9 +196,6 @@ describe('AdminSellerApplicationsPageView', () => {
       isLoading: false,
       meta: { limit: 20, page: 1, total: 1, totalPages: 1 },
       noticeMessage: '',
-      rejectionError: '',
-      rejectionReason: '',
-      rejectingId: null,
       reviewingIds: new Set(),
       statusFilter: '',
       subscribe: jasmine.createSpy('subscribe').and.callFake((listener) => {
@@ -165,30 +206,16 @@ describe('AdminSellerApplicationsPageView', () => {
         for (const listener of [...listeners]) listener(vm);
       },
       approveApplication: jasmine.createSpy('approveApplication').and.resolveTo(true),
-      cancelRejectForm: jasmine.createSpy('cancelRejectForm').and.callFake(() => {
-        vm.rejectingId = null;
-        vm._notify();
-      }),
       isReviewing: jasmine.createSpy('isReviewing').and.callFake((id) => vm.reviewingIds.has(id)),
       loadApplications: jasmine.createSpy('loadApplications').and.callFake(() => {
         vm._notify();
         return Promise.resolve();
       }),
-      openRejectForm: jasmine.createSpy('openRejectForm').and.callFake((id) => {
-        vm.rejectingId = id;
-        vm.rejectionReason = '';
-        vm.rejectionError = '';
-        vm._notify();
-      }),
-      setRejectionReason: jasmine.createSpy('setRejectionReason').and.callFake((value) => {
-        vm.rejectionReason = value;
-        vm._notify();
-      }),
+      rejectApplication: jasmine.createSpy('rejectApplication').and.resolveTo({ success: true }),
       setStatusFilter: jasmine.createSpy('setStatusFilter').and.callFake((value) => {
         vm.statusFilter = value || '';
         vm._notify();
       }),
-      submitRejection: jasmine.createSpy('submitRejection').and.resolveTo(true),
       ...overrides,
     };
     return vm;
@@ -401,7 +428,7 @@ describe('AdminSellerApplicationsPageView', () => {
       expect(rejectButton.disabled).toBe(true);
     });
 
-    it('delegates approve and reject clicks to the view model', () => {
+    it('delegates approval and rejects through the modal', async () => {
       view.mount(container);
       const row = rowFor('app-1');
 
@@ -409,78 +436,35 @@ describe('AdminSellerApplicationsPageView', () => {
       expect(viewModel.approveApplication).toHaveBeenCalledWith('app-1');
 
       row.querySelector('.q-admin-app-reject-btn').click();
-      expect(viewModel.openRejectForm).toHaveBeenCalledWith('app-1');
-    });
-
-    it('renders the rejection form with exact field metadata and delegates confirmation', async () => {
-      viewModel.rejectingId = 'app-1';
-      viewModel.rejectionReason = 'Falta de datos';
-      view.mount(container);
-      const row = rowFor('app-1');
-      const box = row.querySelector('.q-admin-app-reject-box');
-      const label = box.querySelector('.q-admin-app-reject-label');
-      const textarea = box.querySelector('.q-admin-app-reject-input');
-
-      expect(label.textContent).toBe('Motivo de rechazo *');
-      expect(label.htmlFor).toBe('reject-reason-app-1');
-      expect(textarea.id).toBe('reject-reason-app-1');
-      expect(textarea.rows).toBe(2);
-      expect(textarea.maxLength).toBe(500);
-      expect(textarea.placeholder).toBe('Explica brevemente el motivo del rechazo…');
-      expect(textarea.value).toBe('Falta de datos');
-      expect(row.querySelector('.q-admin-app-approve-btn')).toBeNull();
-      expect(row.querySelector('.q-admin-app-reject-btn')).toBeNull();
-
-      box.querySelector('.q-admin-app-confirm-reject-btn').click();
-      await tick();
-      expect(viewModel.submitRejection).toHaveBeenCalledWith('app-1');
-    });
-
-    it('delegates rejection cancellation to the view model', () => {
-      viewModel.rejectingId = 'app-1';
-      view.mount(container);
-
-      rowFor('app-1').querySelector('.q-admin-app-cancel-reject-btn').click();
-
-      expect(viewModel.cancelRejectForm).toHaveBeenCalled();
-    });
-
-    it('forwards rejection reason input to the view model', () => {
-      viewModel.rejectingId = 'app-1';
-      view.mount(container);
-      const textarea = rowFor('app-1').querySelector('.q-admin-app-reject-input');
-
+      const dialog = document.querySelector('[role="dialog"]');
+      expect(dialog.querySelector('strong').textContent).toBe('Tejidos Illimani');
+      expect(row.querySelector('textarea')).toBeNull();
+      const textarea = dialog.querySelector('textarea');
       textarea.value = 'Motivo actualizado';
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      [...dialog.querySelectorAll('button')]
+        .find((button) => button.textContent.trim() === 'Confirmar rechazo')
+        .click();
+      await tick();
 
-      expect(viewModel.setRejectionReason).toHaveBeenCalledWith('Motivo actualizado');
+      expect(viewModel.rejectApplication).toHaveBeenCalledWith('app-1', 'Motivo actualizado');
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
     });
 
-    it('renders the exact rejection validation error', () => {
-      viewModel.rejectingId = 'app-1';
-      viewModel.rejectionError =
-        'El motivo de rechazo es obligatorio cuando se rechaza una solicitud.';
+    it('restores focus to a rebuilt table control', () => {
+      const buildTable = view._buildTable.bind(view);
+      spyOn(view, '_buildTable').and.callFake(() => {
+        const table = buildTable();
+        table.querySelector('.q-admin-app-approve-btn').id = 'focused-approve-action';
+        return table;
+      });
       view.mount(container);
+      const approveButton = rowFor('app-1').querySelector('.q-admin-app-approve-btn');
+      approveButton.focus();
 
-      expect(rowFor('app-1').querySelector('.q-seller-apply-field-error').textContent).toBe(
-        'El motivo de rechazo es obligatorio cuando se rechaza una solicitud.'
-      );
-    });
+      viewModel._notify();
 
-    it('disables the rejection form and shows Rechazando… while submitting', () => {
-      viewModel.rejectingId = 'app-1';
-      viewModel.reviewingIds.add('app-1');
-      view.mount(container);
-      const row = rowFor('app-1');
-      const textarea = row.querySelector('.q-admin-app-reject-input');
-      const confirmButton = row.querySelector('.q-admin-app-confirm-reject-btn');
-      const cancelButton = row.querySelector('.q-admin-app-cancel-reject-btn');
-
-      expect(row.getAttribute('aria-busy')).toBe('true');
-      expect(textarea.disabled).toBe(true);
-      expect(confirmButton.textContent).toBe('Rechazando…');
-      expect(confirmButton.disabled).toBe(true);
-      expect(cancelButton.disabled).toBe(true);
+      expect(document.activeElement).toBe(rowFor('app-1').querySelector('#focused-approve-action'));
     });
 
     it('renders and clears success and error alerts from the view model', () => {

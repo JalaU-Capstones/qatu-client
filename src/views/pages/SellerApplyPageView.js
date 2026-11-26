@@ -9,6 +9,12 @@ import {
   SellerApplyViewModel,
 } from '../../viewmodels/pages/SellerApplyViewModel.js';
 
+const STATUS_LABELS_ES = Object.freeze({
+  pending: 'Pendiente',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+});
+
 export class SellerApplyPageView {
   /**
    * @param {Object} [options]
@@ -512,7 +518,7 @@ export class SellerApplyPageView {
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
-    title.textContent = 'You are already a seller';
+    title.textContent = 'Ya eres vendedor';
 
     const desc = document.createElement('p');
     desc.className = 'q-seller-apply-status-text';
@@ -541,11 +547,11 @@ export class SellerApplyPageView {
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--pending';
-    badge.textContent = 'Estado: pending';
+    badge.textContent = `Estado: ${STATUS_LABELS_ES[application.status] || STATUS_LABELS_ES.pending}`;
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';
-    title.textContent = 'You already have a pending application';
+    title.textContent = 'Ya tienes una solicitud pendiente';
 
     const business = document.createElement('p');
     business.className = 'q-seller-apply-status-business';
@@ -566,7 +572,7 @@ export class SellerApplyPageView {
 
     const badge = document.createElement('span');
     badge.className = 'q-seller-app-badge q-seller-app-badge--approved';
-    badge.textContent = 'Estado: approved';
+    badge.textContent = `Estado: ${STATUS_LABELS_ES[application.status] || STATUS_LABELS_ES.approved}`;
 
     const title = document.createElement('h2');
     title.className = 'q-seller-apply-status-title';

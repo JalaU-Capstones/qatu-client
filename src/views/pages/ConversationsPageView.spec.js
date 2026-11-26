@@ -166,6 +166,24 @@ describe('ConversationsPageView', () => {
     expect(conversationsApi.sendMessage).toHaveBeenCalledWith('conv-1', { content: 'Gracias' });
   });
 
+  it('preserves composer focus when sending triggers view-model notifications', async () => {
+    await mountView();
+    await viewModel.selectConversation('conv-1');
+
+    const textarea = container.querySelector('.q-conversations-chat__composer__input');
+    textarea.value = 'hola mundo';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    textarea.focus();
+    textarea.setSelectionRange(2, 6);
+
+    await viewModel.sendMessage();
+
+    const next = container.querySelector('.q-conversations-chat__composer__input');
+    expect(next).not.toBeNull();
+    expect(document.activeElement).toBe(next);
+    expect(next.value).toBe('');
+  });
+
   it('back button clears the selected conversation', async () => {
     await mountView();
     await viewModel.selectConversation('conv-1');

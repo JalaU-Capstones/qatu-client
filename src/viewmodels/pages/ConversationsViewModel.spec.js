@@ -123,9 +123,24 @@ describe('ConversationsViewModel', () => {
     expect(conversationsApi.sendMessage).not.toHaveBeenCalled();
   });
 
+  it('updates composer text without notifying subscribers', () => {
+    createViewModel();
+    const subscriber = jasmine.createSpy('subscriber');
+    vm.subscribe(subscriber);
+    vm.sendError = 'Previous error';
+
+    vm.setInputValue('a');
+
+    expect(vm.inputValue).toBe('a');
+    expect(vm.sendError).toBe('');
+    expect(subscriber).not.toHaveBeenCalled();
+  });
+
   it('appends a sent message, clears the input, and refreshes the list', async () => {
     createViewModel();
     await vm.loadConversations();
+    const subscriber = jasmine.createSpy('subscriber');
+    vm.subscribe(subscriber);
     vm.activeId = 'conv-1';
     vm.activeConversation = vm.conversations[0];
     vm.messages = [message('m-old', BUYER_ID, '2026-11-18T11:00:00.000Z')];
@@ -137,6 +152,7 @@ describe('ConversationsViewModel', () => {
     expect(vm.messages.map((item) => item.id)).toEqual(['m-old', 'm-new']);
     expect(vm.inputValue).toBe('');
     expect(conversationsApi.listConversations.calls.count()).toBe(2);
+    expect(subscriber).toHaveBeenCalledWith(vm);
   });
 
   it('keeps the input and surfaces an API error when sending fails', async () => {

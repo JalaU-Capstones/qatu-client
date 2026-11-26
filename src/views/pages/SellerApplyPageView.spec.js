@@ -381,7 +381,7 @@ describe('SellerApplyPageView', () => {
 
       const card = el('[data-role="status-region"] .q-seller-apply-status-card');
       expect(card.querySelector('.q-seller-apply-status-title').textContent).toBe(
-        'You are already a seller'
+        'Ya eres vendedor'
       );
       expect(card.querySelector('.q-seller-apply-status-text').textContent).toBe(
         'Tu cuenta ya tiene habilitado el rol de vendedor. Puedes gestionar tus productos y ventas desde tu panel.'
@@ -424,9 +424,9 @@ describe('SellerApplyPageView', () => {
       expect(card.querySelector('.q-seller-app-badge').className).toBe(
         'q-seller-app-badge q-seller-app-badge--pending'
       );
-      expect(card.querySelector('.q-seller-app-badge').textContent).toBe('Estado: pending');
+      expect(card.querySelector('.q-seller-app-badge').textContent).toBe('Estado: Pendiente');
       expect(card.querySelector('.q-seller-apply-status-title').textContent).toBe(
-        'You already have a pending application'
+        'Ya tienes una solicitud pendiente'
       );
       expect(card.querySelector('.q-seller-apply-status-business').textContent).toBe(
         'Negocio: Textiles Cusco'
@@ -450,7 +450,7 @@ describe('SellerApplyPageView', () => {
       vm.notify();
 
       const card = el('[data-role="status-region"] .q-seller-apply-status-card');
-      expect(card.querySelector('.q-seller-app-badge').textContent).toBe('Estado: approved');
+      expect(card.querySelector('.q-seller-app-badge').textContent).toBe('Estado: Aprobada');
       expect(card.querySelector('.q-seller-apply-status-title').textContent).toBe(
         '¡Tu solicitud fue aprobada!'
       );

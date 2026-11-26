@@ -229,7 +229,7 @@ export class ConversationsViewModel {
   setInputValue(value) {
     this.inputValue = String(value ?? '');
     this.sendError = '';
-    this._notify();
+    // setInputValue intentionally does not notify — keystroke state must not trigger a re-render that would destroy the focused composer.
   }
 
   async _ensureProfile(userId) {

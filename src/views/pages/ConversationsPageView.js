@@ -35,6 +35,8 @@ export class ConversationsPageView {
     this.element = null;
     this._unsubscribe = null;
     this._lastScrollKey = null;
+    this._composerFocusPending = false;
+    this._composerSelection = null;
   }
 
   render() {
@@ -97,7 +99,48 @@ export class ConversationsPageView {
     if (!listContent || !chatPanel) return;
 
     this._renderConversationList(listContent);
+
+    const active = document.activeElement;
+    const composerTextarea = active?.classList?.contains('q-conversations-chat__composer__input')
+      ? active
+      : null;
+    if (composerTextarea) {
+      this._composerFocusPending = true;
+      this._composerSelection = {
+        start: composerTextarea.selectionStart,
+        end: composerTextarea.selectionEnd,
+      };
+    } else if (this._composerFocusPending && active !== document.body) {
+      this._composerFocusPending = false;
+      this._composerSelection = null;
+    }
+    const hadFocus = Boolean(
+      composerTextarea || (this._composerFocusPending && active === document.body)
+    );
+
     this._renderChat(chatPanel);
+
+    if (hadFocus) {
+      const next = chatPanel.querySelector('.q-conversations-chat__composer__input');
+      if (next && !next.disabled) {
+        next.focus();
+        const { start, end } = this._composerSelection || {};
+        if (typeof start === 'number') {
+          try {
+            next.setSelectionRange(start, end);
+          } catch {
+            // Some input implementations do not support selection ranges.
+          }
+        }
+        this._composerFocusPending = false;
+        this._composerSelection = null;
+      } else if (next) {
+        this._composerFocusPending = true;
+      } else {
+        this._composerFocusPending = false;
+        this._composerSelection = null;
+      }
+    }
 
     const lastMessage = this.viewModel.messages.at(-1);
     const scrollKey = `${this.viewModel.activeId || ''}:${lastMessage?.id || lastMessage?.created_at || ''}`;
@@ -363,6 +406,7 @@ export class ConversationsPageView {
     const row = document.createElement('div');
     row.className = 'q-conversations-chat__composer-row';
     const textarea = document.createElement('textarea');
+    textarea.className = 'q-conversations-chat__composer__input';
     textarea.rows = 1;
     textarea.maxLength = 2000;
     textarea.value = this.viewModel.inputValue;
