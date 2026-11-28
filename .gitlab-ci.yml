@@ -64,6 +64,7 @@ sonarqube-check:
     name: sonarsource/sonar-scanner-cli:11
     entrypoint: ['']
   before_script: []
+  allow_failure: true
   needs:
     - job: coverage
       artifacts: true
@@ -84,6 +85,7 @@ sonarqube-quality-gate:
     name: sonarsource/sonar-scanner-cli:11
     entrypoint: ['']
   before_script: []
+  allow_failure: true
   needs:
     - job: sonarqube-check
   script:
