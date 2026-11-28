@@ -1,4 +1,4 @@
-import { CartStore, cartStore, FLAT_SHIPPING_RATE } from './cartStore.js';
+import { CartStore, cartStore, FLAT_SHIPPING_RATE, FREE_SHIPPING_THRESHOLD } from './cartStore.js';
 
 const product = (overrides = {}) => ({
   id: 'p1',
@@ -281,3 +281,139 @@ describe('CartStore', () => {
     expect(window.localStorage.length).toBe(0);
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('CartStore additional branches (recovered 1)', () => {
+      let store;
+
+      beforeEach(() => {
+        store = new CartStore();
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      });
+
+      afterEach(() => {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      });
+
+      it('returns defensive copies from getItem and does not expose internal state', () => {
+        expect(store.getItem('missing')).toBeNull();
+
+        store.addItem({ id: 'p1', name: 'Producto', price: 10 });
+        const item = store.getItem('p1');
+        item.price = 999;
+        item.quantity = 50;
+
+        expect(store.getItem('p1').price).toBe(10);
+        expect(store.getItem('p1').quantity).toBe(1);
+      });
+
+      it('notifies on setUser only when the user id actually changes', () => {
+        const listener = jasmine.createSpy('listener');
+        store.subscribe(listener);
+
+        store.setUser(null);
+        expect(listener).not.toHaveBeenCalled();
+
+        store.setUser('u1');
+        expect(listener).toHaveBeenCalledTimes(1);
+        store.setUser('u1');
+        expect(listener).toHaveBeenCalledTimes(1);
+        store.setUser(undefined);
+        expect(listener).toHaveBeenCalledTimes(2);
+        expect(store.getUserId()).toBeNull();
+      });
+
+      it('notifies for setFromGet, setFromAddResponse and clear, but not for failed removals', () => {
+        const listener = jasmine.createSpy('listener');
+        store.subscribe(listener);
+
+        store.setFromGet([null, 'invalid', { product_id: 'p1', price: 5 }]);
+        expect(store.getItems().length).toBe(1);
+        expect(listener).toHaveBeenCalledTimes(1);
+
+        store.setFromAddResponse({ productId: 'p2', price: 3 });
+        expect(listener).toHaveBeenCalledTimes(2);
+
+        store.setFromAddResponse({});
+        expect(listener).toHaveBeenCalledTimes(2);
+
+        expect(store.removeItem('missing')).toBe(false);
+        expect(listener).toHaveBeenCalledTimes(2);
+
+        store.clear();
+        expect(listener).toHaveBeenCalledTimes(3);
+      });
+
+      it('treats a non-array setFromGet input as an empty cart', () => {
+        store.addItem({ id: 'p1', price: 5 });
+        store.setFromGet(null);
+
+        expect(store.getCount()).toBe(0);
+        expect(store.getDistinctCount()).toBe(0);
+      });
+
+      it('normalizes API item ids, images, sellers, currencies and quantities', () => {
+        store.addItem({
+          id: 'cart-1',
+          product_id: 'p1',
+          name: 'Producto',
+          price: 12.5,
+          currency: 'BOB',
+          cartItemId: 'custom-id',
+          primary_image_path: 'product-images/a.png',
+          seller: 'Taller Wari',
+          quantity: -3,
+        });
+
+        const item = store.getItem('p1');
+        expect(item.itemId).toBe('custom-id');
+        expect(item.imageUrl).toBe('product-images/a.png');
+        expect(item.currency).toBe('BOB');
+        expect(item.seller).toBe('Taller Wari');
+        expect(item.quantity).toBe(1);
+
+        store.addItem({ productId: 42, price: NaN, quantity: '3' });
+        expect(store.getItem('42').price).toBe(0);
+        expect(store.getItem('42').quantity).toBe(1);
+      });
+
+      it('does not treat an item whose id equals its product id as an API cart item', () => {
+        store.setFromAddResponse({ id: 'p1', product_id: 'p1', price: 4 });
+        expect(store.getItem('p1').itemId).toBeNull();
+      });
+
+      it('rounds fractional totals and applies shipping at the threshold', () => {
+        store.addItem({ id: 'p1', price: 10.125 }, 3);
+        expect(store.getSubtotal()).toBe(30.38);
+        expect(store.getShipping()).toBe(FLAT_SHIPPING_RATE);
+        expect(store.getTotal()).toBe(35.37);
+
+        store.addItem({ id: 'p2', price: FREE_SHIPPING_THRESHOLD - 30.38 }, 1);
+        expect(store.getSubtotal()).toBe(FREE_SHIPPING_THRESHOLD);
+        expect(store.getShipping()).toBe(0);
+        expect(store.getTotals()).toEqual({
+          subtotal: FREE_SHIPPING_THRESHOLD,
+          shipping: 0,
+          total: FREE_SHIPPING_THRESHOLD,
+          count: 4,
+          distinctCount: 2,
+        });
+      });
+
+      it('stops notifying after unsubscribe and writes nothing to storage', () => {
+        const listener = jasmine.createSpy('listener');
+        const unsubscribe = store.subscribe(listener);
+        unsubscribe();
+
+        store.addItem({ id: 'p1', price: 1 });
+        expect(listener).not.toHaveBeenCalled();
+        expect(window.localStorage.length).toBe(0);
+        expect(window.sessionStorage.length).toBe(0);
+      });
+    });
+  })();
+})();

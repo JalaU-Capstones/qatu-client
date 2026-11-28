@@ -1,5 +1,6 @@
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 
 /**
  * ViewModel for the Featured products section of the home page.
@@ -117,11 +118,11 @@ export class FeaturedProductsViewModel {
 
   /**
    * Resolves the product image url from the contract field names.
-   * @param {{ primary_image_path?: string, imageUrl?: string }} product
+   * @param {Object} product
    * @returns {string|null}
    */
   getImageUrl(product) {
-    return product?.imageUrl ?? product?.primary_image_path ?? null;
+    return getProductImageUrl(product);
   }
 
   /**

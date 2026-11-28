@@ -1,7 +1,6 @@
 import { AuthViewModel } from '../../viewmodels/components/AuthViewModel.js';
 import { AuthMarketingView } from './AuthMarketingView.js';
-
-const QATU_LOGO_URL = new URL('../../assets/icons/qatu-logo.svg', import.meta.url).href;
+import { createBrandLogo } from './BrandLogo.js';
 
 /**
  * View component for Authentication (Login and Register).
@@ -59,6 +58,53 @@ export class AuthView {
   }
 
   /**
+   * Adds an independent password-visibility control to a password input.
+   * @param {HTMLInputElement} input
+   * @private
+   */
+  _installPasswordToggle(input) {
+    const wrapper = input.closest('.q-auth-input-wrapper');
+    if (!wrapper) return;
+
+    input.classList.add('q-auth-password-input');
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'q-auth-password-toggle';
+    toggle.setAttribute('aria-controls', input.id);
+    toggle.setAttribute('aria-label', 'Mostrar contraseña');
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.innerHTML = `
+      <svg class="q-auth-password-eye" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </svg>
+      <svg class="q-auth-password-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m3 3 18 18M10.6 7.2A9.8 9.8 0 0 1 12 7c6 0 9.5 5 9.5 5a14 14 0 0 1-2.1 2.3M6.6 6.8C3.9 8.5 2.5 12 2.5 12s3.5 5 9.5 5c1.2 0 2.3-.2 3.3-.5M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+
+    toggle.addEventListener('click', () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const direction = input.selectionDirection;
+      const revealed = input.type === 'password';
+
+      input.type = revealed ? 'text' : 'password';
+      toggle.setAttribute('aria-pressed', String(revealed));
+      toggle.setAttribute('aria-label', revealed ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      toggle.classList.toggle('is-revealed', revealed);
+
+      input.focus();
+      if (typeof start === 'number' && typeof end === 'number') {
+        input.setSelectionRange(start, end, direction || 'none');
+      }
+    });
+
+    wrapper.appendChild(toggle);
+  }
+
+  /**
    * Creates the Login Form Panel (Left side).
    * @returns {HTMLElement}
    * @private
@@ -70,7 +116,6 @@ export class AuthView {
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
-          <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
         <h2 class="q-auth-title">Iniciar sesión</h2>
         <p class="q-auth-subtitle">Ingresa tus datos para continuar.</p>
@@ -143,6 +188,8 @@ export class AuthView {
       </form>
     `;
 
+    panel.querySelector('.q-auth-brand').appendChild(createBrandLogo({ size: 'md' }));
+
     // Event Listeners
     const emailInput = panel.querySelector('#q-login-email');
     emailInput.addEventListener('input', (e) => {
@@ -153,6 +200,7 @@ export class AuthView {
     passwordInput.addEventListener('input', (e) => {
       this.viewModel.setLoginField('password', e.target.value);
     });
+    this._installPasswordToggle(passwordInput);
 
     const rememberInput = panel.querySelector('#q-login-remember');
     rememberInput.addEventListener('change', (e) => {
@@ -202,7 +250,6 @@ export class AuthView {
     panel.innerHTML = `
       <div class="q-auth-header">
         <div class="q-auth-brand">
-          <img src="${QATU_LOGO_URL}" alt="Q'atu" class="q-auth-brand-logo" />
         </div>
         <h2 class="q-auth-title">Crear una cuenta</h2>
         <p class="q-auth-subtitle">Únete a la comunidad de Q'atu.</p>
@@ -210,20 +257,6 @@ export class AuthView {
 
       <div class="q-auth-alert q-auth-alert-error" style="display: none;" role="alert"></div>
       <div class="q-auth-alert q-auth-alert-success" style="display: none;" role="alert"></div>
-
-      <button type="button" class="q-btn q-btn--neutral q-btn--block q-auth-social-btn q-google-register-btn">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        Continuar con Google
-      </button>
-
-      <div class="q-auth-divider">
-        <span>o con tus datos</span>
-      </div>
 
       <form class="q-auth-form q-register-form" novalidate>
         <div class="q-auth-field">
@@ -233,7 +266,7 @@ export class AuthView {
               id="q-register-name"
               class="q-auth-input"
               type="text"
-              placeholder="Ej. Camila Morales"
+              placeholder="Valeria Quispe"
               autocomplete="name"
               required
             />
@@ -247,7 +280,7 @@ export class AuthView {
               id="q-register-username"
               class="q-auth-input"
               type="text"
-              placeholder="Ej. camilam"
+              placeholder="@valeria"
               autocomplete="username"
               required
             />
@@ -261,7 +294,7 @@ export class AuthView {
               id="q-register-email"
               class="q-auth-input"
               type="email"
-              placeholder="nombre@ejemplo.com"
+              placeholder="hola@ejemplo.com"
               autocomplete="email"
               required
             />
@@ -279,6 +312,22 @@ export class AuthView {
               autocomplete="new-password"
               required
             />
+          </div>
+          <div
+            class="q-auth-password-strength q-auth__password-strength"
+            role="meter"
+            aria-label="Seguridad de la contraseña"
+            aria-valuemin="0"
+            aria-valuemax="4"
+            aria-valuenow="0"
+            aria-valuetext="Sin contraseña"
+            data-strength="empty"
+          >
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-auth-password-strength__segment"></span>
+            <span class="q-sr-only q-auth-password-strength__status">Sin contraseña</span>
           </div>
           <p class="q-auth-password-hint">Mínimo 8 caracteres, una mayúscula y un número</p>
         </div>
@@ -308,12 +357,24 @@ export class AuthView {
           Crear Cuenta
         </button>
 
+        <button type="button" class="q-btn q-btn--neutral q-btn--block q-auth-social-btn q-google-register-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          Continuar con Google
+        </button>
+
         <p class="q-auth-switch-link">
           ¿Ya tienes una cuenta?
           <button type="button" class="q-auth-link q-register-to-login">Iniciar sesión</button>
         </p>
       </form>
     `;
+
+    panel.querySelector('.q-auth-brand').appendChild(createBrandLogo({ size: 'md' }));
 
     // Event Listeners
     const nameInput = panel.querySelector('#q-register-name');
@@ -340,6 +401,8 @@ export class AuthView {
     confirmPassInput.addEventListener('input', (e) => {
       this.viewModel.setRegisterField('confirmPassword', e.target.value);
     });
+    this._installPasswordToggle(passInput);
+    this._installPasswordToggle(confirmPassInput);
 
     const termsInput = panel.querySelector('#q-register-terms');
     termsInput.addEventListener('change', (e) => {
@@ -416,6 +479,18 @@ export class AuthView {
     submitBtns.forEach((btn) => {
       btn.disabled = vm.isLoading;
     });
+
+    const strength = vm.passwordStrength;
+    const meter = this.element.querySelector('.q-auth-password-strength');
+    if (meter) {
+      meter.setAttribute('aria-valuenow', String(strength.score));
+      meter.setAttribute('aria-valuetext', strength.label);
+      meter.dataset.strength = strength.level;
+      meter.querySelector('.q-auth-password-strength__status').textContent = strength.label;
+      meter.querySelectorAll('.q-auth-password-strength__segment').forEach((segment, index) => {
+        segment.classList.toggle('is-active', index < strength.score);
+      });
+    }
   }
 
   /**

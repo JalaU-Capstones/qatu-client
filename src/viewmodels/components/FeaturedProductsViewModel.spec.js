@@ -1,3 +1,4 @@
+import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { FeaturedProductsViewModel } from './FeaturedProductsViewModel.js';
 
 /** Contract-shaped products (OpenAPI Product schema, list endpoint). */
@@ -114,6 +115,12 @@ const createFeaturedApi = () => ({
     .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
 });
 
+const listProductsResponse = (data) =>
+  new Response(JSON.stringify({ data, meta: {} }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
 describe('FeaturedProductsViewModel', () => {
   let viewModel;
 
@@ -217,6 +224,58 @@ describe('FeaturedProductsViewModel', () => {
       expect(custom.products).toEqual([]);
       expect(custom.status).toBe('ready');
     });
+
+    it('loads weekly-sales-ranked products returned by ProductsApi', async () => {
+      const products = [
+        { id: 'p1', weekly_sales: 1, updated_at: '2026-11-19T00:00:00Z' },
+        { id: 'p2', weekly_sales: 4, updated_at: '2026-11-16T00:00:00Z' },
+      ];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        authStore: { isAuthenticated: () => false },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products.map((product) => product.id)).toEqual(['p2', 'p1']);
+      expect(custom.status).toBe('ready');
+    });
+
+    it('loads all-zero-order products newest updated first', async () => {
+      const products = [
+        { id: 'old', updated_at: '2026-11-10T00:00:00Z' },
+        { id: 'new', updated_at: '2026-11-19T00:00:00Z' },
+      ];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        authStore: { isAuthenticated: () => false },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products.map((product) => product.id)).toEqual(['new', 'old']);
+    });
+
+    it('keeps the home section available if order data is unauthorized', async () => {
+      const products = [{ id: 'p1', updated_at: '2026-11-19T00:00:00Z' }];
+      const productsApi = new ProductsApi({
+        apiFetchFn: () => Promise.resolve(listProductsResponse(products)),
+        ordersApi: {
+          listOrders: () =>
+            Promise.reject(Object.assign(new Error('Unauthorized'), { statusCode: 401 })),
+        },
+        authStore: { isAuthenticated: () => true },
+      });
+      const custom = new FeaturedProductsViewModel({ productsApi });
+
+      await custom.load();
+
+      expect(custom.products).toEqual(products);
+      expect(custom.status).toBe('ready');
+      expect(custom.errorMessage).toBe('');
+    });
   });
 
   describe('formatting', () => {
@@ -286,10 +345,22 @@ describe('FeaturedProductsViewModel', () => {
     });
 
     describe('getImageUrl', () => {
-      it('should return the contract primary_image_path', () => {
-        expect(viewModel.getImageUrl({ primary_image_path: 'https://cdn/p1.jpg' })).toBe(
-          'https://cdn/p1.jpg'
-        );
+      it('should prioritize primary_image_path over gallery images', () => {
+        expect(
+          viewModel.getImageUrl({
+            primary_image_path: 'https://cdn/p1.jpg',
+            images: [{ url: 'https://cdn/gallery.jpg' }],
+          })
+        ).toBe('https://cdn/p1.jpg');
+      });
+
+      it('should use the gallery image when primary_image_path is empty', () => {
+        expect(
+          viewModel.getImageUrl({
+            primary_image_path: ' ',
+            images: [{ url: '  ', image_path: 'product-images/p1.jpg' }],
+          })
+        ).toContain('/product-images/p1.jpg');
       });
 
       it('should return null when the product has no image', () => {
@@ -402,3 +473,354 @@ describe('FeaturedProductsViewModel', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  /** Contract-shaped products (OpenAPI Product schema, list endpoint). */
+  const FEATURED_PRODUCTS = [
+    {
+      id: 'aguayo-tradicional-tarabuco',
+      name: 'Aguayo tradicional de Tarabuco',
+      slug: 'aguayo-tradicional-tarabuco',
+      seller: { full_name: 'Tejidos Illimani' },
+      price: 40,
+      currency: 'USD',
+      stock: 10,
+      state: 'published',
+      average_rating: 4.9,
+      ratings_count: 24,
+      primary_image_path: null,
+    },
+    {
+      id: 'cafe-especialidad-cusco',
+      name: 'Café de especialidad de Cusco 500 g',
+      slug: 'cafe-especialidad-cusco',
+      seller: { full_name: 'Café Altura Cusco' },
+      price: 14,
+      currency: 'USD',
+      stock: 20,
+      state: 'published',
+      average_rating: 4.8,
+      ratings_count: 18,
+      primary_image_path: null,
+    },
+    {
+      id: 'jarron-barro-negro-oaxaca',
+      name: 'Jarrón de barro negro de Oaxaca',
+      slug: 'jarron-barro-negro-oaxaca',
+      seller: { full_name: 'Barro Negro Oaxaca' },
+      price: 38,
+      currency: 'USD',
+      stock: 5,
+      state: 'published',
+      average_rating: 5.0,
+      ratings_count: 12,
+      primary_image_path: null,
+    },
+    {
+      id: 'bolso-cuero-artesanal',
+      name: 'Bolso de cuero artesanal',
+      slug: 'bolso-cuero-artesanal',
+      seller: { full_name: 'Pampa Cuero' },
+      price: 85,
+      currency: 'USD',
+      stock: 3,
+      state: 'published',
+      average_rating: 4.7,
+      ratings_count: 31,
+      primary_image_path: null,
+    },
+    {
+      id: 'audifonos-inalambricos-anc-pro',
+      name: 'Audífonos inalámbricos ANC Pro',
+      slug: 'audifonos-inalambricos-anc-pro',
+      seller: { full_name: 'Andes Tech' },
+      price: 165,
+      currency: 'USD',
+      stock: 8,
+      state: 'published',
+      average_rating: 4.6,
+      ratings_count: 46,
+      primary_image_path: null,
+    },
+    {
+      id: 'chocolate-cacao-esmeraldas',
+      name: 'Chocolate 70% cacao de Esmeraldas',
+      slug: 'chocolate-cacao-esmeraldas',
+      seller: { full_name: 'Cacao Esmeraldas' },
+      price: 6,
+      currency: 'USD',
+      stock: 40,
+      state: 'published',
+      average_rating: 4.9,
+      ratings_count: 27,
+      primary_image_path: null,
+    },
+    {
+      id: 'mochila-trekking-45l',
+      name: 'Mochila de trekking 45 L',
+      slug: 'mochila-trekking-45l',
+      seller: { full_name: 'Sabores del Eje' },
+      price: 92,
+      currency: 'USD',
+      stock: 7,
+      state: 'published',
+      average_rating: 4.8,
+      ratings_count: 15,
+      primary_image_path: null,
+    },
+    {
+      id: 'huipil-bordado-guatemalteco',
+      name: 'Huipil bordado guatemalteco',
+      slug: 'huipil-bordado-guatemalteco',
+      seller: { full_name: 'Telar Maya' },
+      price: 65,
+      currency: 'USD',
+      stock: 15,
+      state: 'published',
+      average_rating: 4.9,
+      ratings_count: 9,
+      primary_image_path: null,
+    },
+  ];
+
+  const createFeaturedApi = () => ({
+    getFeaturedProducts: jasmine
+      .createSpy('getFeaturedProducts')
+      .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
+  });
+
+  describe('FeaturedProductsViewModel (recovered 1)', () => {
+    let viewModel;
+
+    beforeEach(async () => {
+      viewModel = new FeaturedProductsViewModel({ productsApi: createFeaturedApi() });
+      await viewModel.load();
+    });
+
+    describe('add to cart (recovered 2)', () => {
+      it('addToCart returns Promise<{ status: "not-found" }> when productId is unknown', async () => {
+        const onAddToCart = jasmine.createSpy('onAddToCart');
+        viewModel.onAddToCart = onAddToCart;
+
+        const res = await viewModel.addToCart('does-not-exist');
+        expect(res).toEqual({ status: 'not-found' });
+        expect(onAddToCart).not.toHaveBeenCalled();
+      });
+
+      it('addToCart returns { status: "added" } when onAddToCart is not set', async () => {
+        viewModel.onAddToCart = null;
+        const result = await viewModel.addToCart('cafe-especialidad-cusco');
+        expect(result).toEqual({ status: 'added' });
+      });
+    });
+  });
+
+  (() => {
+    describe('FeaturedProductsViewModel additional branches (recovered 3)', () => {
+      let api;
+      let disposers;
+      let vm;
+
+      beforeEach(() => {
+        api = {
+          getFeaturedProducts: jasmine
+            .createSpy('getFeaturedProducts')
+            .and.resolveTo([{ id: 'p1' }]),
+        };
+        vm = new FeaturedProductsViewModel({ productsApi: api });
+        disposers = [];
+      });
+
+      afterEach(() => {
+        disposers.forEach((unsubscribe) => unsubscribe());
+      });
+
+      it('accepts every custom section option including the image and error labels', () => {
+        const link = { label: 'Todo el catalogo', href: '/catalogo' };
+        const custom = new FeaturedProductsViewModel({
+          eyebrow: 'Elegidos',
+          title: 'Novedades',
+          subtitle: 'Hecho a mano',
+          link,
+          addToCartLabel: 'Comprar',
+          imagePlaceholderLabel: 'Sin foto',
+          loadErrorMessage: 'No cargaron los productos',
+          productsApi: api,
+        });
+
+        expect(custom.eyebrow).toBe('Elegidos');
+        expect(custom.title).toBe('Novedades');
+        expect(custom.subtitle).toBe('Hecho a mano');
+        expect(custom.link).toBe(link);
+        expect(custom.addToCartLabel).toBe('Comprar');
+        expect(custom.imagePlaceholderLabel).toBe('Sin foto');
+        expect(custom.loadErrorMessage).toBe('No cargaron los productos');
+      });
+
+      it('falls back to defaults for falsy option values', () => {
+        const custom = new FeaturedProductsViewModel({
+          eyebrow: '',
+          title: '',
+          subtitle: '',
+          link: null,
+          addToCartLabel: '',
+          imagePlaceholderLabel: '',
+          loadErrorMessage: '',
+          productsApi: api,
+        });
+
+        expect(custom.eyebrow).toBe('Seleccionados para ti');
+        expect(custom.title).toBe('Destacados de la semana');
+        expect(custom.subtitle).toBe('');
+        expect(custom.link).toEqual({ label: 'Ver catálogo →', href: '/products' });
+        expect(custom.addToCartLabel).toBe('Añadir');
+        expect(custom.imagePlaceholderLabel).toBe('Imagen del producto');
+        expect(custom.loadErrorMessage).toBe('No pudimos cargar los productos destacados.');
+      });
+
+      it('uses the initial products truthiness to decide between idle and ready', () => {
+        const nullProducts = new FeaturedProductsViewModel({ products: null });
+        const emptyProducts = new FeaturedProductsViewModel({ products: [] });
+        const nonArray = new FeaturedProductsViewModel({ products: 'not-an-array' });
+
+        expect(nullProducts.status).toBe('idle');
+        expect(nullProducts.products).toEqual([]);
+        expect(emptyProducts.status).toBe('ready');
+        expect(emptyProducts.products).toEqual([]);
+        expect(nonArray.status).toBe('ready');
+        expect(nonArray.products).toEqual([]);
+      });
+
+      it('exposes the loading status synchronously and notifies only after load settles', async () => {
+        const listener = jasmine.createSpy('listener');
+        disposers.push(vm.subscribe(listener));
+
+        const pending = vm.load();
+        expect(vm.status).toBe('loading');
+        expect(vm.errorMessage).toBe('');
+        expect(listener).not.toHaveBeenCalled();
+
+        await pending;
+        expect(vm.status).toBe('ready');
+        expect(vm.products).toEqual([{ id: 'p1' }]);
+        expect(listener).toHaveBeenCalledTimes(1);
+        expect(listener.calls.mostRecent().args[0]).toBe(vm);
+      });
+
+      it('treats non-array API data as an empty successful list', async () => {
+        api.getFeaturedProducts.and.resolveTo({ products: [{ id: 'p1' }] });
+
+        await vm.load();
+
+        expect(vm.status).toBe('ready');
+        expect(vm.products).toEqual([]);
+        expect(vm.errorMessage).toBe('');
+      });
+
+      it('uses the custom load error message and resets it with setProducts', async () => {
+        vm.loadErrorMessage = 'No cargaron los productos';
+        api.getFeaturedProducts.and.rejectWith(new Error('offline'));
+
+        await vm.load();
+        expect(vm.status).toBe('error');
+        expect(vm.products).toEqual([]);
+        expect(vm.errorMessage).toBe('No cargaron los productos');
+
+        vm.setProducts([{ id: 'p2' }]);
+        expect(vm.status).toBe('ready');
+        expect(vm.errorMessage).toBe('');
+        expect(vm.products).toEqual([{ id: 'p2' }]);
+
+        vm.setProducts(42);
+        expect(vm.products).toEqual([]);
+        expect(vm.status).toBe('ready');
+      });
+
+      it('formats null prices and characterizes a null product argument', () => {
+        expect(vm.getPriceLabel({ price: null, currency: null })).toBe('0.00');
+        expect(vm.getPriceLabel({ price: undefined, currency: undefined })).toBe('US$ 0.00');
+        expect(() => vm.getPriceLabel(null)).toThrowError(TypeError);
+      });
+
+      it('keeps one decimal place in rating labels and uses a 4.5 star threshold', () => {
+        for (const rating of [4.2, 4.4, 4.6]) {
+          const product = { average_rating: rating, ratings_count: 7 };
+          expect(vm.getRatingLabel(product)).toBe(`${rating.toFixed(1)} (7)`);
+          expect(vm.getRatingAccessibleLabel(product)).toBe(
+            `Calificación ${rating.toFixed(1)} de 5, 7 reseñas`
+          );
+        }
+
+        expect(vm.getStarsFilled({ average_rating: 4.2 })).toEqual([true, true, true, true, false]);
+        expect(vm.getStarsFilled({ average_rating: 4.4 })).toEqual([true, true, true, true, false]);
+        expect(vm.getStarsFilled({ average_rating: 4.6 })).toEqual([true, true, true, true, true]);
+      });
+
+      it('returns an empty origin label for null and empty sellers', () => {
+        expect(vm.getOriginLabel({ seller: null })).toBe('');
+        expect(vm.getOriginLabel({ seller: '' })).toBe('');
+        expect(vm.getOriginLabel({ seller: { full_name: '', username: '' } })).toBe('');
+        expect(vm.getOriginLabel({ seller: { full_name: 'Tienda', username: 'user' } })).toBe(
+          'Tienda'
+        );
+      });
+
+      it('returns null for undefined image paths', () => {
+        expect(vm.getImageUrl(undefined)).toBeNull();
+        expect(vm.getImageUrl(null)).toBeNull();
+      });
+
+      it('ignores string isNew values and a missing id in the index fallback', () => {
+        vm.setProducts([{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }]);
+
+        expect(vm.isNewProduct({ id: 'p1', isNew: 'true' })).toBe(true);
+        expect(vm.isNewProduct({ id: 'p3', isNew: 'true' })).toBe(false);
+        expect(vm.isNewProduct({ id: 'p1', isNew: 'false' })).toBe(true);
+        expect(vm.isNewProduct({ isNew: 'true' })).toBe(false);
+        expect(vm.isNewProduct({})).toBe(false);
+        expect(vm.isNewProduct({ id: 'p2', isNew: false })).toBe(false);
+      });
+
+      it('treats undefined, null and false add-to-cart callbacks as absent', async () => {
+        vm.setProducts([{ id: 'p1', name: 'One' }]);
+
+        for (const callback of [undefined, null, false]) {
+          vm.onAddToCart = callback;
+          await expectAsync(vm.addToCart('p1')).toBeResolvedTo({ status: 'added' });
+        }
+
+        for (const result of [undefined, null, false]) {
+          vm.onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo(result);
+          await expectAsync(vm.addToCart('p1')).toBeResolvedTo({ status: 'added' });
+        }
+      });
+
+      it('propagates add-to-cart rejections and treats non-string ids as not found', async () => {
+        vm.setProducts([{ id: 'p1', name: 'One' }]);
+        const error = new Error('cart boom');
+        vm.onAddToCart = jasmine.createSpy('onAddToCart').and.rejectWith(error);
+
+        await expectAsync(vm.addToCart('p1')).toBeRejectedWithError('cart boom');
+
+        for (const id of [123, null, undefined, {}]) {
+          await expectAsync(vm.addToCart(id)).toBeResolvedTo({ status: 'not-found' });
+        }
+        expect(vm.onAddToCart).toHaveBeenCalledTimes(1);
+      });
+
+      it('stops notifying after unsubscribe across reloads', async () => {
+        const listener = jasmine.createSpy('listener');
+        const unsubscribe = vm.subscribe(listener);
+        disposers.push(unsubscribe);
+
+        await vm.load();
+        expect(listener).toHaveBeenCalledTimes(1);
+
+        unsubscribe();
+        await vm.load();
+        expect(listener).toHaveBeenCalledTimes(1);
+      });
+    });
+  })();
+})();

@@ -1,3 +1,5 @@
+import { createImageWithFallback } from './ImageWithFallback.js';
+
 /**
  * Compact product card used by the "Productos similares" section of the
  * product detail page. It always links to the recommended product's detail.
@@ -85,38 +87,16 @@ export class RecommendationCardView {
     const image = document.createElement('div');
     image.className = 'q-recommendation-card__image';
 
-    const showPlaceholder = () => {
-      image.innerHTML = '';
-      const mark = document.createElement('span');
-      mark.className = 'q-recommendation-card__mark';
+    image.appendChild(
+      createImageWithFallback({
+        src: this.data.imageUrl,
+        alt: this.data.name || 'Imagen del producto',
+        imageClassName: 'q-recommendation-card__photo',
+        placeholderImageClassName: 'q-recommendation-card__placeholder-img',
+        placeholderAlt: this.data.name || 'Imagen del producto',
+      })
+    );
 
-      const markImg = document.createElement('img');
-      markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      markImg.alt = '';
-      markImg.setAttribute('width', '24');
-      markImg.setAttribute('height', '24');
-      mark.appendChild(markImg);
-
-      const label = document.createElement('p');
-      label.className = 'q-recommendation-card__image-label';
-      label.textContent = 'Imagen del producto';
-
-      image.appendChild(mark);
-      image.appendChild(label);
-    };
-
-    if (!this.data.imageUrl) {
-      showPlaceholder();
-      return image;
-    }
-
-    const photo = document.createElement('img');
-    photo.className = 'q-recommendation-card__photo';
-    photo.alt = '';
-    photo.loading = 'lazy';
-    photo.addEventListener('error', showPlaceholder);
-    photo.src = this.data.imageUrl;
-    image.appendChild(photo);
     return image;
   }
 

@@ -1,0 +1,21 @@
+.q-brand-logo-svg {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+  color: var(--q-fg-primary);
+}
+
+.q-brand-logo--sm {
+  width: 85px;
+  height: 24px;
+}
+
+.q-brand-logo--md {
+  width: 114px;
+  height: 32px;
+}
+
+.q-brand-logo--lg {
+  width: 142px;
+  height: 40px;
+}

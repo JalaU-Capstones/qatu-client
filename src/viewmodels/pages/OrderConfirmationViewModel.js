@@ -13,13 +13,13 @@ export class OrderConfirmationViewModel {
     this.requiresAuth = false;
     this.errorMessage = '';
 
-    this._orderId = null;
+    this._orderNumber = null;
     this._listeners = new Set();
     // On a cold start the session only resolves after GET /auth/me.
     this._authUnsubscribe =
       this.authStore.subscribe?.(() => {
-        if (this.requiresAuth && this._orderId && this.authStore.isAuthenticated()) {
-          void this.load(this._orderId);
+        if (this.requiresAuth && this._orderNumber && this.authStore.isAuthenticated()) {
+          void this.load(this._orderNumber);
         }
       }) ?? null;
   }
@@ -29,8 +29,8 @@ export class OrderConfirmationViewModel {
     return fullName.trim().split(/\s+/)[0] ?? '';
   }
 
-  async load(orderId) {
-    this._orderId = orderId;
+  async load(orderNumber) {
+    this._orderNumber = orderNumber;
     this.order = null;
     this.errorMessage = '';
     this.requiresAuth = !this.authStore.isAuthenticated();
@@ -44,8 +44,7 @@ export class OrderConfirmationViewModel {
     this._notify();
 
     try {
-      const response = await this.ordersApi.getOrderById(orderId);
-      this.order = response?.data ?? null;
+      this.order = await this._findOrderByNumber(orderNumber);
       if (!this.order) this.errorMessage = 'No encontramos este pedido.';
     } catch (error) {
       this.errorMessage = this._messageFor(error);
@@ -76,6 +75,19 @@ export class OrderConfirmationViewModel {
     if (error?.statusCode === 403) return 'No tienes permiso para ver este pedido.';
     if (error?.statusCode === 404) return 'No encontramos este pedido.';
     return 'No pudimos cargar tu pedido. Inténtalo de nuevo en unos minutos.';
+  }
+
+  async _findOrderByNumber(orderNumber) {
+    let page = 1;
+    while (true) {
+      const response = await this.ordersApi.listOrders({ page, limit: 100 });
+      const order = response.data.find((item) => item.order_number === orderNumber);
+      if (order) return order;
+
+      const totalPages = Number(response.meta?.total_pages ?? 0);
+      if (!Number.isInteger(totalPages) || page >= totalPages) return null;
+      page += 1;
+    }
   }
 
   _notify() {

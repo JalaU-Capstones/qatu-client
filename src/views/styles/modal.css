@@ -1,0 +1,220 @@
+/**
+ * Modal primitive styles (.q-modal* BEM).
+ * Shared modal shell used by confirmation and product dialogs.
+ */
+
+.q-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.q-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  /* Hardcoded rgba fallback for overlay backdrop; design tokens lack a composite semi-transparent black variable */
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.q-modal__panel {
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--q-bg-surface, #ffffff);
+  color: var(--q-fg-primary, #030712);
+  border: 1px solid var(--q-border-subtle, rgba(0, 0, 0, 0.1));
+  border-radius: calc(var(--q-radius-xl, 12) * 1px);
+  box-shadow: var(--q-shadow-lg, 0 10px 24px rgba(0, 0, 0, 0.2));
+  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.q-modal__panel--sm {
+  max-width: 400px;
+}
+
+.q-modal__panel--md {
+  max-width: 600px;
+}
+
+.q-modal__panel--lg {
+  max-width: 900px;
+}
+
+.q-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.q-modal__title {
+  margin: 0;
+  font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
+  font-size: 1.25rem;
+  font-weight: var(--q-font-weight-semibold, 600);
+  color: var(--q-fg-primary, #030712);
+}
+
+.q-modal__close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  color: var(--q-fg-muted, #71717a);
+  border-radius: calc(var(--q-radius-sm, 4) * 1px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.q-modal__close:hover {
+  color: var(--q-fg-primary, #030712);
+  background: var(--q-bg-muted, rgba(0, 0, 0, 0.05));
+}
+
+.q-modal__body {
+  margin-bottom: 1rem;
+}
+
+.q-modal__footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.q-modal__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.q-delete-confirm-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.q-delete-confirm-modal__summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.q-delete-confirm-modal__icon-badge {
+  display: grid;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border: 1px solid color-mix(in srgb, var(--q-color-error) 28%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--q-color-error) 12%, var(--q-bg-surface) 88%);
+  color: var(--q-color-error);
+  place-items: center;
+}
+
+.q-delete-confirm-modal__icon-badge svg {
+  width: 25px;
+  height: 25px;
+}
+
+.q-delete-confirm-modal__copy {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.q-delete-confirm-modal__question {
+  margin: 0 0 8px;
+  color: var(--q-fg-primary);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.q-delete-confirm-modal__product-name {
+  color: var(--q-fg-primary);
+  font-weight: var(--q-font-weight-bold, 700);
+}
+
+.q-delete-confirm-modal__warning {
+  margin: 0;
+  color: var(--q-fg-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.q-delete-confirm-modal__error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--q-color-error) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--q-color-error) 9%, var(--q-bg-surface) 91%);
+  color: var(--q-color-error);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.q-modal__footer:has(.q-delete-confirm-modal__footer) {
+  margin-top: 20px;
+}
+
+.q-delete-confirm-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.q-delete-confirm-modal__footer .q-btn {
+  min-height: 46px;
+  min-width: 120px;
+}
+
+.q-delete-confirm-modal__confirm svg {
+  width: 17px;
+  height: 17px;
+}
+
+.q-delete-confirm-modal__footer .q-btn:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+@media (max-width: 480px) {
+  .q-modal__panel {
+    max-height: calc(100dvh - 32px);
+    padding: 20px;
+  }
+
+  .q-modal__header {
+    gap: 12px;
+  }
+
+  .q-modal__title {
+    font-size: 1.125rem;
+  }
+
+  .q-modal__footer:has(.q-delete-confirm-modal__footer) {
+    margin-top: 16px;
+  }
+
+  .q-delete-confirm-modal__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .q-delete-confirm-modal__footer .q-btn {
+    width: 100%;
+  }
+}

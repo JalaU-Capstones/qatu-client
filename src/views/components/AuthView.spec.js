@@ -45,12 +45,12 @@ describe('AuthView', () => {
     aliasView.destroy();
   });
 
-  it('should render brand logo asset in both panels', () => {
+  it('should render the shared theme-aware brand logo in both panels', () => {
     const el = view.render();
-    const logos = el.querySelectorAll('.q-auth-brand-logo');
+    const logos = el.querySelectorAll('.q-auth-brand .q-brand-logo-svg');
     expect(logos.length).toBe(2);
-    expect(logos[0].getAttribute('alt')).toBe("Q'atu");
-    expect(logos[0].getAttribute('src')).toContain('qatu-logo.svg');
+    expect(logos[0].getAttribute('aria-label')).toBe('Q’atu');
+    expect(logos[0].querySelector('tspan').getAttribute('fill')).toContain('--q-accent');
   });
 
   it('should render both login and register panels with updated Figma copy and fields', () => {
@@ -88,6 +88,14 @@ describe('AuthView', () => {
     const passwordHint = registerPanel.querySelector('.q-auth-password-hint');
     expect(passwordHint).not.toBeNull();
     expect(passwordHint.textContent).toBe('Mínimo 8 caracteres, una mayúscula y un número');
+    expect(registerPanel.querySelectorAll('.q-auth-password-strength__segment').length).toBe(4);
+    expect(registerPanel.querySelector('#q-register-name').placeholder).toBe('Valeria Quispe');
+    expect(registerPanel.querySelector('#q-register-username').placeholder).toBe('@valeria');
+    expect(registerPanel.querySelector('#q-register-email').placeholder).toBe('hola@ejemplo.com');
+    const formControls = Array.from(registerPanel.querySelector('.q-register-form').children);
+    expect(
+      formControls.indexOf(registerPanel.querySelector('.q-register-submit-btn'))
+    ).toBeLessThan(formControls.indexOf(registerPanel.querySelector('.q-google-register-btn')));
 
     const directSwitchBtn = registerPanel.querySelector('.q-register-to-login');
     expect(directSwitchBtn).not.toBeNull();
@@ -191,6 +199,121 @@ describe('AuthView', () => {
     termsInput.checked = true;
     termsInput.dispatchEvent(new Event('change'));
     expect(viewModel.registerData.acceptTerms).toBe(true);
+  });
+
+  it('updates the accessible four-segment password meter on password input', () => {
+    const el = view.render();
+    const password = el.querySelector('#q-register-password');
+    const meter = el.querySelector('.q-auth-password-strength');
+    const update = (value) => {
+      password.value = value;
+      password.dispatchEvent(new Event('input'));
+    };
+
+    expect(meter.getAttribute('role')).toBe('meter');
+    expect(meter.getAttribute('aria-valuenow')).toBe('0');
+    expect(meter.querySelectorAll('.is-active').length).toBe(0);
+
+    update('abc');
+    expect(meter.dataset.strength).toBe('weak');
+    expect(meter.querySelectorAll('.is-active').length).toBe(1);
+
+    update('password');
+    expect(meter.dataset.strength).toBe('fair');
+    expect(meter.querySelectorAll('.is-active').length).toBe(2);
+
+    update('Password1!');
+    expect(meter.dataset.strength).toBe('strong');
+    expect(meter.getAttribute('aria-valuenow')).toBe('4');
+    expect(meter.querySelectorAll('.is-active').length).toBe(4);
+  });
+
+  it('should render a password toggle for login and both register password fields', () => {
+    const el = view.render();
+
+    expect(el.querySelectorAll('#q-login-password + *').length).toBe(1);
+    expect(el.querySelectorAll('.q-login-panel .q-auth-password-toggle').length).toBe(0);
+    expect(el.querySelectorAll('.q-auth-password-toggle').length).toBe(3);
+  });
+
+  it('should give the login password toggle the correct controls and initial state', () => {
+    const el = view.render();
+    const input = el.querySelector('#q-login-password');
+    const toggle = el.querySelector('.q-login-form .q-auth-password-toggle');
+
+    expect(toggle).not.toBeNull();
+    expect(toggle.type).toBe('button');
+    expect(toggle.getAttribute('aria-controls')).toBe(input.id);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('Mostrar contraseña');
+  });
+
+  it('should toggle the login password input type and accessible state', () => {
+    const el = view.render();
+    container.appendChild(el);
+    const input = el.querySelector('#q-login-password');
+    const toggle = el.querySelector('.q-login-form .q-auth-password-toggle');
+    input.value = 'hunter2';
+
+    toggle.click();
+
+    expect(input.type).toBe('text');
+    expect(input.value).toBe('hunter2');
+    expect(document.activeElement).toBe(input);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Ocultar contraseña');
+
+    toggle.click();
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('should keep register password toggles independent', () => {
+    const el = view.render();
+    const password = el.querySelector('#q-register-password');
+    const confirm = el.querySelector('#q-register-confirm-password');
+    const toggles = el.querySelectorAll('.q-register-form .q-auth-password-toggle');
+
+    expect(toggles.length).toBe(2);
+    toggles[0].click();
+    expect(password.type).toBe('text');
+    expect(confirm.type).toBe('password');
+
+    toggles[1].click();
+    expect(password.type).toBe('text');
+    expect(confirm.type).toBe('text');
+  });
+
+  it('should expose every password toggle as keyboard-focusable', () => {
+    const el = view.render();
+    const toggles = el.querySelectorAll('.q-auth-password-toggle');
+
+    expect(toggles.length).toBe(3);
+    toggles.forEach((toggle) => {
+      expect(toggle.tabIndex).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it('should preserve independent aria-controls for every password field', () => {
+    const el = view.render();
+    const controls = Array.from(el.querySelectorAll('.q-auth-password-toggle')).map((toggle) =>
+      toggle.getAttribute('aria-controls')
+    );
+
+    expect(controls).toEqual([
+      'q-login-password',
+      'q-register-password',
+      'q-register-confirm-password',
+    ]);
+  });
+
+  it('password toggle count remains unchanged after the auth layout pass', () => {
+    const el = view.render();
+    const loginToggles = el.querySelectorAll('.q-login-form .q-auth-password-toggle');
+    const registerToggles = el.querySelectorAll('.q-register-form .q-auth-password-toggle');
+
+    expect(loginToggles.length).toBe(1);
+    expect(registerToggles.length).toBe(2);
   });
 
   it('should trigger login submit when login form is submitted', () => {
@@ -305,3 +428,236 @@ describe('AuthView', () => {
     expect(container.querySelector('.q-auth-card')).not.toBeNull();
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const tick = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    describe('AuthView additional branches (recovered 1)', () => {
+      let container;
+      let viewModel;
+      let view;
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        viewModel = new AuthViewModel({ authApi: {} });
+        view = new AuthView(viewModel);
+      });
+
+      afterEach(() => {
+        view?.destroy();
+        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+        document.body.style.overflow = '';
+        container.remove();
+      });
+
+      it('caches render and subscribes exactly once across repeated renders', () => {
+        const subscribeSpy = spyOn(viewModel, 'subscribe').and.callThrough();
+        const first = view.render();
+        expect(view.render()).toBe(first);
+        expect(subscribeSpy).toHaveBeenCalledTimes(1);
+        expect(first.querySelectorAll('.q-auth-card').length).toBe(1);
+      });
+
+      it('trims email, username and register email on input but keeps name and passwords verbatim', () => {
+        const el = view.render();
+        const set = (selector, value) => {
+          const input = el.querySelector(selector);
+          input.value = value;
+          input.dispatchEvent(new Event('input'));
+        };
+
+        set('#q-login-email', '  user@example.com  ');
+        set('#q-login-password', '  secret  ');
+        set('#q-register-name', '  Valeria Quispe  ');
+        set('#q-register-username', '  valeria  ');
+        set('#q-register-email', '  valeria@example.com  ');
+        set('#q-register-password', '  Pass1  ');
+        set('#q-register-confirm-password', '  Pass1  ');
+
+        expect(viewModel.loginData.email).toBe('user@example.com');
+        expect(viewModel.loginData.password).toBe('  secret  ');
+        expect(viewModel.registerData.name).toBe('  Valeria Quispe  ');
+        expect(viewModel.registerData.full_name).toBe('  Valeria Quispe  ');
+        expect(viewModel.registerData.username).toBe('valeria');
+        expect(viewModel.registerData.email).toBe('valeria@example.com');
+        expect(viewModel.registerData.password).toBe('  Pass1  ');
+        expect(viewModel.registerData.confirmPassword).toBe('  Pass1  ');
+      });
+
+      it('submits trimmed identifiers while name and passwords keep their spaces', async () => {
+        viewModel.onLogin = jasmine.createSpy('onLogin');
+        viewModel.onRegister = jasmine.createSpy('onRegister');
+        const el = view.render();
+        const set = (selector, value) => {
+          const input = el.querySelector(selector);
+          input.value = value;
+          input.dispatchEvent(new Event('input'));
+        };
+
+        set('#q-login-email', '  user@example.com  ');
+        set('#q-login-password', '  secret  ');
+        el.querySelector('.q-login-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        await tick();
+        expect(viewModel.onLogin).toHaveBeenCalledWith(
+          jasmine.objectContaining({ email: 'user@example.com', password: '  secret  ' })
+        );
+
+        set('#q-register-name', '  Valeria Quispe  ');
+        set('#q-register-username', '  valeria  ');
+        set('#q-register-email', '  valeria@example.com  ');
+        set('#q-register-password', '  Pass1  ');
+        set('#q-register-confirm-password', '  Pass1  ');
+        const terms = el.querySelector('#q-register-terms');
+        terms.checked = true;
+        terms.dispatchEvent(new Event('change'));
+        el.querySelector('.q-register-form').dispatchEvent(
+          new Event('submit', { cancelable: true })
+        );
+        await tick();
+        expect(viewModel.onRegister).toHaveBeenCalledWith(
+          jasmine.objectContaining({
+            name: '  Valeria Quispe  ',
+            full_name: 'Valeria Quispe',
+            username: 'valeria',
+            email: 'valeria@example.com',
+            password: '  Pass1  ',
+          })
+        );
+      });
+
+      it('toggles is-revealed, preserves selection and restores the accessible label', () => {
+        const el = view.render();
+        container.appendChild(el);
+        const input = el.querySelector('#q-login-password');
+        const toggle = el.querySelector('.q-login-form .q-auth-password-toggle');
+
+        expect(input.classList.contains('q-auth-password-input')).toBe(true);
+        expect(toggle.parentElement).toBe(input.closest('.q-auth-input-wrapper'));
+        expect(toggle.classList.contains('is-revealed')).toBe(false);
+
+        Object.defineProperty(input, 'selectionStart', { configurable: true, get: () => 1 });
+        Object.defineProperty(input, 'selectionEnd', { configurable: true, get: () => 4 });
+        Object.defineProperty(input, 'selectionDirection', {
+          configurable: true,
+          get: () => 'forward',
+        });
+        const setSelectionRange = jasmine.createSpy('setSelectionRange');
+        input.setSelectionRange = setSelectionRange;
+
+        toggle.click();
+        expect(input.type).toBe('text');
+        expect(toggle.classList.contains('is-revealed')).toBe(true);
+        expect(toggle.getAttribute('aria-label')).toBe('Ocultar contraseña');
+        expect(toggle.getAttribute('aria-pressed')).toBe('true');
+        expect(setSelectionRange).toHaveBeenCalledWith(1, 4, 'forward');
+
+        toggle.click();
+        expect(input.type).toBe('password');
+        expect(toggle.classList.contains('is-revealed')).toBe(false);
+        expect(toggle.getAttribute('aria-label')).toBe('Mostrar contraseña');
+        expect(toggle.getAttribute('aria-pressed')).toBe('false');
+        expect(setSelectionRange).toHaveBeenCalledTimes(2);
+      });
+
+      it('updates both panels alerts and clears error alerts with setError("")', () => {
+        const el = view.render();
+        const errors = el.querySelectorAll('.q-auth-alert-error');
+        const successes = el.querySelectorAll('.q-auth-alert-success');
+        expect(errors.length).toBe(2);
+        expect(successes.length).toBe(2);
+
+        viewModel.setError('Fallo');
+        errors.forEach((alert) => {
+          expect(alert.textContent).toBe('Fallo');
+          expect(alert.style.display).toBe('flex');
+        });
+        successes.forEach((alert) => {
+          expect(alert.textContent).toBe('');
+          expect(alert.style.display).toBe('none');
+        });
+
+        viewModel.setError('');
+        errors.forEach((alert) => {
+          expect(alert.textContent).toBe('');
+          expect(alert.style.display).toBe('none');
+        });
+
+        viewModel.setSuccess('Listo');
+        successes.forEach((alert) => {
+          expect(alert.textContent).toBe('Listo');
+          expect(alert.style.display).toBe('flex');
+        });
+        viewModel.setError('Fallo 2');
+        errors.forEach((alert) => {
+          expect(alert.textContent).toBe('Fallo 2');
+          expect(alert.style.display).toBe('flex');
+        });
+        successes.forEach((alert) => {
+          expect(alert.textContent).toBe('');
+          expect(alert.style.display).toBe('none');
+        });
+      });
+
+      it('disables both submit buttons while loading', () => {
+        const buttons = view.render().querySelectorAll('.q-auth-submit-btn');
+        expect(buttons.length).toBe(2);
+        buttons.forEach((button) => expect(button.disabled).toBe(false));
+
+        viewModel.setLoading(true);
+        buttons.forEach((button) => expect(button.disabled).toBe(true));
+
+        viewModel.setLoading(false);
+        buttons.forEach((button) => expect(button.disabled).toBe(false));
+      });
+
+      it('maps Password1 to the good score-3 password meter state', () => {
+        const el = view.render();
+        const password = el.querySelector('#q-register-password');
+        const meter = el.querySelector('.q-auth-password-strength');
+
+        password.value = 'Password1';
+        password.dispatchEvent(new Event('input'));
+
+        expect(meter.getAttribute('aria-valuenow')).toBe('3');
+        expect(meter.getAttribute('aria-valuetext')).toBe('Buena');
+        expect(meter.dataset.strength).toBe('good');
+        expect(meter.querySelectorAll('.q-auth-password-strength__segment.is-active').length).toBe(
+          3
+        );
+        expect(meter.querySelector('.q-auth-password-strength__status').textContent).toBe('Buena');
+      });
+
+      it('unsubscribes, nulls internals on destroy and ignores updates afterwards', () => {
+        const realSubscribe = viewModel.subscribe.bind(viewModel);
+        const unsubscribeSpy = jasmine.createSpy('unsubscribe');
+        spyOn(viewModel, 'subscribe').and.callFake((listener) => {
+          const realUnsubscribe = realSubscribe(listener);
+          return () => {
+            unsubscribeSpy();
+            realUnsubscribe();
+          };
+        });
+
+        const el = view.render();
+        const errorAlert = el.querySelector('.q-auth-login-panel .q-auth-alert-error');
+        container.appendChild(el);
+        expect(view._marketing).not.toBeNull();
+
+        view.destroy();
+        expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
+        expect(view._marketing).toBeNull();
+        expect(view.element).toBeNull();
+        expect(container.querySelector('.q-auth-page')).toBeNull();
+        expect(() => view.destroy()).not.toThrow();
+        expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
+
+        expect(() => viewModel.setError('after destroy')).not.toThrow();
+        expect(errorAlert.textContent).toBe('');
+        expect(errorAlert.style.display).toBe('none');
+      });
+    });
+  })();
+})();

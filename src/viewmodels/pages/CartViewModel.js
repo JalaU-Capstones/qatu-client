@@ -216,6 +216,12 @@ export class CartViewModel {
     return `Te faltan ${formatPrice(remaining, this.getCurrency())} para obtener envío gratis.`;
   }
 
+  /** @returns {number} */
+  getShippingProgressPercentage() {
+    if (this.isEmpty) return 0;
+    return Math.min(100, Math.max(0, (this.subtotal / FREE_SHIPPING_THRESHOLD) * 100));
+  }
+
   subscribe(listener) {
     this._listeners.add(listener);
     return () => this._listeners.delete(listener);

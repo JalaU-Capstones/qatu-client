@@ -1,3 +1,4 @@
+import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
 import { CategoriesView } from '../components/CategoriesView.js';
 import { FeaturedProductsView } from '../components/FeaturedProductsView.js';
 import { FeaturedStoresView } from '../components/FeaturedStoresView.js';
@@ -16,41 +17,53 @@ export class HomeView {
    *   header cart badge. Defaults to a no-op.
    * @param {Function} [options.onSearch] Called with the hero search term on submit.
    *   The app shell uses this to open the catalog results. Defaults to a no-op.
+   * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    */
   constructor({
     onAddToCart = () => Promise.resolve({ status: 'added' }),
     onSearch = () => {},
+    productsApi,
   } = {}) {
     this.onAddToCart = onAddToCart;
     this.onSearch = onSearch;
+    this.productsApi = productsApi;
     this._hero = null;
     this._categories = null;
     this._featuredProducts = null;
     this._shippingBanner = null;
     this._stores = null;
+    this.element = null;
   }
 
   /**
    * @param {HTMLElement} container
    */
   mount(container) {
-    this._hero = new HeroView();
+    this.element = document.createElement('div');
+    this.element.className = 'q-home';
+    container.appendChild(this.element);
+
+    this._hero = new HeroView(
+      new HeroViewModel(this.productsApi ? { productsApi: this.productsApi } : {})
+    );
     this._hero.viewModel.onSearch = (term) => this.onSearch(term);
-    this._hero.mount(container);
+    this._hero.mount(this.element);
+    void this._hero.viewModel.loadVisualProducts();
+    void this._hero.viewModel.loadTopCategories();
 
     this._categories = new CategoriesView();
-    this._categories.mount(container);
+    this._categories.mount(this.element);
 
     this._featuredProducts = new FeaturedProductsView();
     this._featuredProducts.viewModel.onAddToCart = (product) => this.onAddToCart(product, 1);
-    this._featuredProducts.mount(container);
+    this._featuredProducts.mount(this.element);
     this._featuredProducts.viewModel.load();
 
     this._shippingBanner = new ShippingBannerView();
-    this._shippingBanner.mount(container);
+    this._shippingBanner.mount(this.element);
 
     this._stores = new FeaturedStoresView();
-    this._stores.mount(container);
+    this._stores.mount(this.element);
   }
 
   destroy() {
@@ -74,5 +87,7 @@ export class HomeView {
       this._hero.destroy();
       this._hero = null;
     }
+    this.element?.remove();
+    this.element = null;
   }
 }

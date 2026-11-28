@@ -1,4 +1,13 @@
 import { getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+import { formatShippingAddress } from '../utils/formatShippingAddress.js';
+
+const ITEM_PLACEHOLDER_SVG = `
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+  </svg>
+`;
 
 /**
  * Component to display full details of a specific order.
@@ -79,6 +88,9 @@ export class OrderDetailComponent {
     const tracker = document.createElement('div');
     tracker.className = 'q-order-tracker';
     tracker.setAttribute('data-testid', 'order-tracker');
+    tracker.setAttribute('role', 'group');
+    tracker.setAttribute('aria-label', 'Estado del pedido');
+    tracker.dataset.status = currentStatus;
 
     const steps = [
       { key: 'pending', label: getOrderStatusLabel('pending') },
@@ -114,6 +126,9 @@ export class OrderDetailComponent {
       }
 
       item.className = `q-order-tracker__step ${statusClass}`;
+      if (idx === activeIndex) {
+        item.setAttribute('aria-current', 'step');
+      }
       item.innerHTML = `
         <span class="q-order-tracker__icon" aria-hidden="true">${idx + 1}</span>
         <span class="q-order-tracker__label">${step.label}</span>
@@ -240,24 +255,34 @@ export class OrderDetailComponent {
           img.src = item.product_image_path || item.product_image;
           img.alt = item.product_name || item.name || 'Producto';
           img.loading = 'lazy';
+          img.addEventListener(
+            'error',
+            () => {
+              imgDiv.innerHTML = ITEM_PLACEHOLDER_SVG;
+            },
+            { once: true }
+          );
           imgDiv.appendChild(img);
         } else {
-          imgDiv.innerHTML = `
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          `;
+          imgDiv.innerHTML = ITEM_PLACEHOLDER_SVG;
         }
 
         const infoDiv = document.createElement('div');
         infoDiv.className = 'q-order-detail__item-info';
 
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'q-order-detail__item-name';
-        nameSpan.setAttribute('data-testid', 'order-item-name');
-        nameSpan.textContent = item.product_name || item.name || 'Producto sin nombre';
+        const productName = item.product_name || item.name || 'Producto sin nombre';
+        const productIdentifier = item.product_slug || item.slug || item.product_id;
+        const nameElement = document.createElement(
+          typeof productIdentifier === 'string' && productIdentifier.trim() ? 'a' : 'span'
+        );
+        nameElement.className = 'q-order-detail__item-name';
+        nameElement.setAttribute('data-testid', 'order-item-name');
+        nameElement.textContent = productName;
+        if (nameElement instanceof HTMLAnchorElement) {
+          nameElement.href = `/products/${encodeURIComponent(productIdentifier)}`;
+          nameElement.setAttribute('data-route', '');
+          nameElement.setAttribute('aria-label', `Ver producto: ${productName}`);
+        }
 
         const qtySpan = document.createElement('span');
         qtySpan.className = 'q-order-detail__item-qty';
@@ -265,7 +290,7 @@ export class OrderDetailComponent {
         const unitPriceStr = this._formatCurrency(item.unit_price, order.currency);
         qtySpan.textContent = `x${item.quantity} · ${unitPriceStr}`;
 
-        infoDiv.appendChild(nameSpan);
+        infoDiv.appendChild(nameElement);
         infoDiv.appendChild(qtySpan);
 
         const subtotalSpan = document.createElement('span');
@@ -327,27 +352,31 @@ export class OrderDetailComponent {
     summaryCard.appendChild(summaryRows);
     sidebar.appendChild(summaryCard);
 
-    // Shipping Address (if available)
-    if (order.shipping_address) {
-      const shippingCard = document.createElement('div');
-      shippingCard.className = 'q-order-detail__info-card';
-      shippingCard.setAttribute('data-testid', 'order-shipping-card');
+    // Shipping Address
+    const shippingCard = document.createElement('div');
+    shippingCard.className = 'q-order-detail__info-card';
+    shippingCard.setAttribute('data-testid', 'order-shipping-card');
 
-      const shippingTitle = document.createElement('h4');
-      shippingTitle.className = 'q-order-detail__info-title';
-      shippingTitle.textContent = 'Dirección de entrega';
+    const shippingTitle = document.createElement('h4');
+    shippingTitle.className = 'q-order-detail__info-title';
+    shippingTitle.textContent = 'Dirección de entrega';
+    shippingCard.appendChild(shippingTitle);
 
-      const shippingDesc = document.createElement('p');
-      shippingDesc.className = 'q-order-detail__info-text';
-      shippingDesc.textContent =
-        typeof order.shipping_address === 'object'
-          ? JSON.stringify(order.shipping_address)
-          : String(order.shipping_address);
-
-      shippingCard.appendChild(shippingTitle);
-      shippingCard.appendChild(shippingDesc);
-      sidebar.appendChild(shippingCard);
+    const addressEl = document.createElement('address');
+    addressEl.className = 'q-order-shipping-address';
+    const lines = formatShippingAddress(order.shipping_address);
+    if (lines.length === 0) {
+      addressEl.textContent = 'Dirección no disponible';
+    } else {
+      lines.forEach(({ line, className }) => {
+        const span = document.createElement('span');
+        span.className = `q-order-shipping-address__line q-order-shipping-address__${className}`;
+        span.textContent = line;
+        addressEl.appendChild(span);
+      });
     }
+    shippingCard.appendChild(addressEl);
+    sidebar.appendChild(shippingCard);
 
     // Buyer Notes (if available)
     if (order.notes) {

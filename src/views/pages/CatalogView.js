@@ -1,4 +1,7 @@
 import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
+import { authStore as realAuthStore } from '../../store/authStore.js';
+import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { CatalogViewModel } from '../../viewmodels/pages/CatalogViewModel.js';
 import { ProductCardView } from '../components/ProductCardView.js';
 
@@ -23,13 +26,15 @@ export class CatalogView {
    * @param {CatalogViewModel} [viewModel]
    * @param {Object} [options]
    * @param {Function} [options.onAddToCart]
+   * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor(
     viewModel = new CatalogViewModel(),
-    { onAddToCart = () => Promise.resolve({ status: 'added' }) } = {}
+    { onAddToCart = () => Promise.resolve({ status: 'added' }), authStore = realAuthStore } = {}
   ) {
     this.viewModel = viewModel;
     this.onAddToCart = onAddToCart;
+    this.authStore = authStore;
     this._section = null;
     this._grid = null;
     this._pagination = null;
@@ -37,6 +42,7 @@ export class CatalogView {
     this._renderedCategories = null;
     this._renderedFilters = null;
     this._unsubscribe = null;
+    this._authUnsubscribe = null;
   }
 
   /**
@@ -54,12 +60,6 @@ export class CatalogView {
     inner.appendChild(this._createHeader());
     inner.appendChild(this._createSearchForm());
 
-    const chips = document.createElement('ul');
-    chips.className = 'q-catalog__chips';
-    chips.setAttribute('aria-label', 'Filtros aplicados');
-    this._refs.chips = chips;
-    inner.appendChild(chips);
-
     const layout = document.createElement('div');
     layout.className = 'q-catalog__layout';
     layout.appendChild(this._createFiltersPanel());
@@ -67,10 +67,19 @@ export class CatalogView {
     const results = document.createElement('div');
     results.className = 'q-catalog__results';
 
-    // Product grid container — must be <ul> because ProductCardView renders <li> cards
+    const toolbar = document.createElement('div');
+    toolbar.className = 'q-catalog__toolbar';
+    const toolbarLabel = document.createElement('p');
+    toolbarLabel.className = 'q-catalog__toolbar-label';
+    toolbarLabel.textContent = 'Productos destacados para ti';
+    toolbar.appendChild(toolbarLabel);
+    toolbar.appendChild(this._createSortControl());
+    results.appendChild(toolbar);
+
     const grid = document.createElement('ul');
     grid.className = 'q-catalog__grid';
     grid.id = 'q-catalog-grid';
+    grid.setAttribute('role', 'list');
     this._grid = grid;
     results.appendChild(grid);
 
@@ -89,6 +98,10 @@ export class CatalogView {
       this._update(vm);
     });
 
+    this._authUnsubscribe = this.authStore.subscribe(() => {
+      this._update(this.viewModel);
+    });
+
     this._update(this.viewModel);
 
     this.viewModel.loadCategories();
@@ -100,16 +113,34 @@ export class CatalogView {
    * @private
    */
   _createHeader() {
-    const headerDiv = document.createElement('div');
+    const headerDiv = document.createElement('header');
     headerDiv.className = 'q-catalog__header';
+
+    const backLink = document.createElement('a');
+    backLink.className = 'q-catalog__back';
+    backLink.href = '/';
+    backLink.setAttribute('data-route', '');
+    backLink.textContent = 'Volver al inicio →';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'q-catalog__header-row';
 
     const heading = document.createElement('div');
     heading.className = 'q-catalog__heading';
+
+    const eyebrowRow = document.createElement('div');
+    eyebrowRow.className = 'q-catalog__eyebrow-row';
+
+    const eyebrowDot = document.createElement('span');
+    eyebrowDot.className = 'q-catalog__eyebrow-dot';
+    eyebrowDot.setAttribute('aria-hidden', 'true');
 
     const eyebrow = document.createElement('p');
     eyebrow.className = 'q-catalog__eyebrow';
     eyebrow.setAttribute('aria-live', 'polite');
     this._refs.eyebrow = eyebrow;
+    eyebrowRow.appendChild(eyebrowDot);
+    eyebrowRow.appendChild(eyebrow);
 
     const title = document.createElement('h1');
     title.className = 'q-catalog__title';
@@ -120,19 +151,54 @@ export class CatalogView {
     subtitle.textContent = 'Explora todos nuestros productos disponibles';
     this._refs.subtitle = subtitle;
 
-    heading.appendChild(eyebrow);
+    heading.appendChild(eyebrowRow);
     heading.appendChild(title);
     heading.appendChild(subtitle);
 
-    const backLink = document.createElement('a');
-    backLink.className = 'q-catalog__back';
-    backLink.href = '/';
-    backLink.setAttribute('data-route', '');
-    backLink.innerHTML = `<span>Volver al inicio</span>${ICONS.arrowRight}`;
+    const chips = document.createElement('ul');
+    chips.className = 'q-catalog__chips q-catalog__active-filters';
+    chips.setAttribute('aria-label', 'Filtros aplicados');
+    this._refs.chips = chips;
 
-    headerDiv.appendChild(heading);
-    headerDiv.appendChild(backLink);
+    titleRow.appendChild(heading);
+    titleRow.appendChild(backLink);
+    headerDiv.appendChild(titleRow);
+    headerDiv.appendChild(chips);
+
     return headerDiv;
+  }
+
+  /**
+   * @returns {HTMLLabelElement}
+   * @private
+   */
+  _createSortControl() {
+    const sortLabel = document.createElement('label');
+    sortLabel.className = 'q-catalog__sort';
+    const srOnly = document.createElement('span');
+    srOnly.className = 'q-sr-only';
+    srOnly.textContent = 'Ordenar por';
+    const sortSelect = document.createElement('select');
+    sortSelect.setAttribute('aria-label', 'Ordenar por');
+    ['Recientes', 'Precio: menor a mayor', 'Precio: mayor a menor', 'Mejor valorados'].forEach(
+      (labelText) => {
+        const option = document.createElement('option');
+        option.textContent = labelText;
+        sortSelect.appendChild(option);
+      }
+    );
+    if (
+      !Object.prototype.hasOwnProperty.call(this.viewModel, 'sort') &&
+      typeof this.viewModel.sort !== 'string'
+    ) {
+      sortSelect.disabled = true;
+      sortSelect.setAttribute('aria-disabled', 'true');
+      sortSelect.title = 'Ordenamiento próximamente';
+    }
+    this._refs.sortSelect = sortSelect;
+    sortLabel.appendChild(srOnly);
+    sortLabel.appendChild(sortSelect);
+    return sortLabel;
   }
 
   /**
@@ -195,6 +261,31 @@ export class CatalogView {
     panel.className = 'q-catalog__filters';
     panel.setAttribute('aria-labelledby', 'q-catalog-filters-title');
 
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'q-catalog__filters-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', 'q-catalog-filters-body');
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'q-catalog__filters-toggle-icon';
+    toggleIcon.innerHTML = ICONS.filter;
+    toggleIcon.setAttribute('aria-hidden', 'true');
+    const toggleText = document.createElement('span');
+    toggleText.className = 'q-catalog__filters-toggle-label';
+    toggleText.textContent = 'Filtros';
+    const toggleChevron = document.createElement('span');
+    toggleChevron.className = 'q-catalog__filters-chevron';
+    toggleChevron.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    toggleChevron.setAttribute('aria-hidden', 'true');
+    toggle.append(toggleIcon, toggleText, toggleChevron);
+    toggle.addEventListener('click', () => {
+      const open = panel.classList.toggle('q-catalog__filters--open');
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+    this._refs.filtersToggle = toggle;
+    panel.appendChild(toggle);
+
     const heading = document.createElement('h2');
     heading.className = 'q-catalog__filters-title';
     heading.id = 'q-catalog-filters-title';
@@ -202,6 +293,7 @@ export class CatalogView {
 
     const form = document.createElement('form');
     form.className = 'q-catalog__filters-form';
+    form.id = 'q-catalog-filters-body';
     form.noValidate = true;
 
     const categorySelect = document.createElement('select');
@@ -210,16 +302,31 @@ export class CatalogView {
     categorySelect.className = 'q-catalog__field-control';
     this._refs.categorySelect = categorySelect;
 
-    const minPriceInput = this._createPriceInput('q-catalog-filter-min-price', 'minPrice', '0');
-    const maxPriceInput = this._createPriceInput('q-catalog-filter-max-price', 'maxPrice', '2000');
+    const minPriceInput = this._createPriceInput('q-catalog-filter-min-price', 'minPrice', 'Bs 0');
+    const maxPriceInput = this._createPriceInput(
+      'q-catalog-filter-max-price',
+      'maxPrice',
+      'Bs 2.000'
+    );
     this._refs.minPriceInput = minPriceInput;
     this._refs.maxPriceInput = maxPriceInput;
 
     const fields = document.createElement('div');
     fields.className = 'q-catalog__filters-fields';
     fields.appendChild(this._createField('Categoría', categorySelect));
-    fields.appendChild(this._createField('Precio mínimo (USD)', minPriceInput));
-    fields.appendChild(this._createField('Precio máximo (USD)', maxPriceInput));
+    fields.appendChild(this._createField('Precio mínimo', minPriceInput));
+    fields.appendChild(this._createField('Precio máximo', maxPriceInput));
+
+    const stockLabel = document.createElement('label');
+    stockLabel.className = 'q-catalog__stock-label';
+    const stockInput = document.createElement('input');
+    stockInput.type = 'checkbox';
+    stockInput.disabled = true;
+    stockInput.setAttribute('aria-disabled', 'true');
+    stockInput.title = 'Filtro de stock próximamente';
+    stockLabel.appendChild(stockInput);
+    stockLabel.appendChild(document.createTextNode(' Solo con stock'));
+    fields.appendChild(stockLabel);
 
     const error = document.createElement('p');
     error.className = 'q-catalog__filters-error';
@@ -346,32 +453,41 @@ export class CatalogView {
       empty.textContent = 'No hay productos disponibles';
       this._grid.appendChild(empty);
     } else {
+      const user = this.authStore.getUser();
+      const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
       vm.products.forEach((product) => {
+        const isOwn = Boolean(
+          user && user.id && product.seller_id && user.id === product.seller_id
+        );
+        const rating = Number(product.average_rating || 0);
         const cardView = new ProductCardView(
           {
             id: product.id,
             name: product.name,
-            sellerLine: product.seller || '', // Catalog may not have seller — leave empty
-            priceLabel: `${product.currency || 'USD'} ${Number(product.price || 0).toFixed(2)}`,
+            sellerLine: this._getSellerLine(product, vm.categories),
+            priceLabel: formatPrice(product.price, product.currency || 'BOB'),
             ratingLabel: product.average_rating
-              ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
-              : 'Sin reseñas',
+              ? `${rating.toFixed(1)} (${product.ratings_count || 0})`
+              : undefined,
             ratingAccessible: product.average_rating
-              ? `Calificación ${Number(product.average_rating).toFixed(1)} de 5, ${product.ratings_count || 0} reseñas`
-              : 'Sin reseñas',
+              ? `Calificación ${rating.toFixed(1)} de 5, ${product.ratings_count || 0} reseñas`
+              : undefined,
             starsFilled: Array.from(
               { length: 5 },
-              (_, i) => Number(product.average_rating) >= i + 0.5
+              (_, i) => Number(product.average_rating || 0) >= i + 0.5
             ),
-            imageUrl: product.primary_image_path || null,
-            isNew: false,
+            imageUrl: getProductImageUrl(product),
+            isNew: Boolean(product.is_new || product.isNew),
+            badgeLabel: this._getProductBadge(product),
             stock: typeof product.stock === 'number' ? product.stock : null,
             state: product.state || 'published',
           },
           {
             variant: 'default',
+            showCatalogActions: true,
             onAddToCart: () => this.onAddToCart(product, 1),
             detailHref: `/products/${product.slug || product.id}`,
+            hideCartButton: isAdmin || isOwn,
           }
         );
         this._grid.appendChild(cardView.render());
@@ -382,17 +498,68 @@ export class CatalogView {
   }
 
   /**
+   * @param {Object} product
+   * @param {Object[]} [categories]
+   * @returns {string}
+   * @private
+   */
+  _getSellerLine(product, categories) {
+    const seller = product.seller || product.store;
+    if (typeof seller === 'string') return seller;
+    if (seller && typeof seller === 'object') {
+      const sellerName = seller.full_name || seller.store_name || seller.username || seller.name;
+      if (sellerName) return sellerName;
+    }
+
+    return (
+      product.seller_name ||
+      product.store_name ||
+      product.category?.name ||
+      product.category_name ||
+      categories?.find((category) => category.id === product.category_id)?.name ||
+      ''
+    );
+  }
+
+  /**
+   * @param {Object} product
+   * @returns {string|null}
+   * @private
+   */
+  _getProductBadge(product) {
+    const explicitBadge = product.badge || product.tag;
+    if (['Más vendido', 'Nuevo', 'Oferta', 'Agotado'].includes(explicitBadge)) {
+      return explicitBadge;
+    }
+    if (product.stock === 0) return 'Agotado';
+    if (product.is_best_seller || product.isBestSeller || product.best_seller) {
+      return 'Más vendido';
+    }
+    if (
+      Number(product.discount_price) > 0 ||
+      Number(product.sale_price) > 0 ||
+      Number(product.discount_percentage) > 0
+    ) {
+      return 'Oferta';
+    }
+    if (product.is_new || product.isNew) return 'Nuevo';
+    return null;
+  }
+
+  /**
    * @param {CatalogViewModel} vm
    * @private
    */
   _updateHeader(vm) {
     const { eyebrow, title, subtitle } = this._refs;
-    title.textContent = vm.title;
+    title.textContent = vm.filters.search
+      ? `Resultados para «${vm.filters.search}»`
+      : 'Todos los productos';
     subtitle.hidden = Boolean(vm.filters.search);
-
-    const showCount = vm.hasActiveFilters && !vm.isLoading && !vm.errorMessage;
-    eyebrow.textContent = showCount ? vm.resultsLabel : '';
-    eyebrow.hidden = !showCount;
+    const total = vm.meta?.total || 0;
+    eyebrow.textContent =
+      total === 1 ? '1 RESULTADO ENCONTRADO' : `${total} RESULTADOS ENCONTRADOS`;
+    eyebrow.hidden = false;
   }
 
   /**
@@ -449,7 +616,32 @@ export class CatalogView {
   _updateChips(vm) {
     const list = this._refs.chips;
     list.innerHTML = '';
-    const chips = vm.activeFilterChips;
+    const chips = (vm.activeFilterChips || [])
+      .filter((chip) => chip.key !== 'search')
+      .map((chip) => ({ ...chip }));
+    if (vm.filters?.category && !chips.some((chip) => chip.key === 'category')) {
+      const category = (vm.categories || []).find((item) => item.slug === vm.filters.category);
+      chips.push({
+        key: 'category',
+        label: category?.name || vm.filters.category,
+      });
+    }
+    if (vm.filters?.minPrice !== null || vm.filters?.maxPrice !== null) {
+      const min = vm.filters.minPrice;
+      const max = vm.filters.maxPrice;
+      const priceLabel =
+        min !== null && max !== null
+          ? `${formatPrice(min, 'BOB')} — ${formatPrice(max, 'BOB')}`
+          : min !== null
+            ? `Desde ${formatPrice(min, 'BOB')}`
+            : `Hasta ${formatPrice(max, 'BOB')}`;
+      const existingPrice = chips.find((chip) => chip.key === 'price');
+      if (existingPrice) {
+        existingPrice.label = priceLabel;
+      } else {
+        chips.push({ key: 'price', label: priceLabel });
+      }
+    }
     list.hidden = chips.length === 0;
 
     chips.forEach((chip) => {
@@ -464,7 +656,8 @@ export class CatalogView {
       remove.className = 'q-catalog__chip-remove';
       remove.setAttribute('aria-label', `Quitar filtro ${chip.label}`);
       remove.dataset.filterKey = chip.key;
-      remove.innerHTML = ICONS.close;
+      remove.innerHTML = '×';
+      remove.setAttribute('aria-hidden', 'false');
       remove.addEventListener('click', () => this.viewModel.removeFilter(chip.key));
 
       item.appendChild(label);
@@ -475,7 +668,7 @@ export class CatalogView {
 
   /**
    * @param {CatalogViewModel} vm
-   * @returns {HTMLLIElement}
+   * @returns {HTMLElement}
    * @private
    */
   _createNoResults(vm) {
@@ -562,6 +755,8 @@ export class CatalogView {
       this._unsubscribe();
       this._unsubscribe = null;
     }
+    this._authUnsubscribe?.();
+    this._authUnsubscribe = null;
     if (this._section && this._section.parentNode) {
       this._section.parentNode.removeChild(this._section);
       this._section = null;

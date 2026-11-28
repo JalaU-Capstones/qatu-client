@@ -55,6 +55,9 @@
 ## 4.8 Supabase Issues
 
 - **Missing environment variables:** Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`.
+- **Silent auth failures / connection refused on login:** Ensure
+  `VITE_SUPABASE_URL` uses port **54321** (the API gateway / Kong) — **not**
+  54323 (Supabase Studio, the dashboard). See [Auth & OAuth Setup](AUTH-OAUTH-SETUP.md).
 
 ## Styling
 
@@ -100,3 +103,63 @@
 - **Logout doesn't clear the session**:
   - `main.js#onLogoutClick` calls `authApi.logout()` first (best-effort) then `authStore.clearSession()`. If the API call fails, a warning is logged and the local clear still runs. Check console for `[main] logout API call failed`.
   - Verify the backend `/auth/logout` returns `Set-Cookie: access_token=; Max-Age=0` etc. If it doesn't, the cookie remains valid despite local state being cleared.
+
+## Images (ADR-019 Phase 2)
+
+### Images return 404 in dev
+
+Check that:
+
+1. The API's `.env` has `PUBLIC_APP_URL=http://localhost:5173` (or leave it
+   empty if you want direct Supabase URLs).
+2. `vite.config.js` has `/avatars` and `/product-images` proxy blocks.
+3. Supabase CLI is running on `:54321` (`npx supabase status`).
+
+If the URL in the browser is `http://localhost:5173/product-images/...` and
+the response is 404, the Vite proxy isn't forwarding to Supabase — restart
+`pnpm dev`.
+
+### Images return 404 in prod
+
+Check that `nginx/default.conf` has `/avatars/` and `/product-images/`
+proxy blocks pointing to the Supabase Storage host, and that the `client`
+container has `extra_hosts: host.docker.internal:...` if Supabase runs on
+the Docker host.
+
+### Images return nginx's HTML 404 (`nginx/1.29.x`) instead of JSON
+
+Root cause: `nginx/default.conf` has a regex location for static assets
+(`location ~* \.(?:png|jpe?g|gif|webp|...)$`) that fires BEFORE the
+storage proxy prefix locations. In nginx, regex locations always win
+over prefix locations — the only exception is `^~`.
+
+Fix: the `/avatars/` and `/product-images/` location blocks MUST use the
+`^~` modifier:
+
+    location ^~ /avatars/ { ... }
+    location ^~ /product-images/ { ... }
+
+If you see a **555-byte** response body with `<title>404 Not Found</title>`
+and `nginx/1.29.x` in the footer, this is nginx's own 404 — the request
+never reached Supabase Storage. A real Supabase 404 returns JSON with
+`{"statusCode":"404","error":"not_found",...}` and a different size.
+
+### Prod page is blank with `supabaseKey is required`
+
+Root cause: `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` were not
+provided at build time. Vite baked `undefined` into the bundle, and
+`createClient(undefined, undefined)` throws.
+
+Fix:
+
+1. Confirm `client/.env` has both vars (get values from `npx supabase status`).
+2. Rebuild the prod image so the build args pick them up:
+   ```bash
+   VITE_SUPABASE_URL=http://localhost:54321 \
+   VITE_SUPABASE_ANON_KEY="$(grep '^SUPABASE_ANON_KEY=' ../api/.env | cut -d= -f2-)" \
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache client
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d client
+   ```
+3. Hard refresh the browser (Cmd+Shift+R / Ctrl+Shift+R).
+
+Verify in DevTools → Console that `supabaseKey is required` is gone.

@@ -136,3 +136,24 @@ _Refer to the Wiki for full details._
 
 - Wiki: `Architecture/Frontend`, `Architecture/Overview`, `Architecture/Testing-Strategy`.
 - ADR-006, ADR-007, ADR-008.
+
+## Image Delivery (ADR-019 Phase 2)
+
+The API returns absolute image URLs (e.g. `http://localhost:5173/product-images/...`
+or `https://qatu.com/avatars/...`) controlled by the API's `PUBLIC_APP_URL`
+environment variable. To make those URLs render:
+
+- **Dev (`pnpm dev`)**: `vite.config.js` proxies `/avatars` and `/product-images`
+  to `http://localhost:54321/storage/v1/object/public` (Supabase CLI on host).
+- **Prod (nginx)**: `nginx/default.conf` proxies `/avatars/` and
+  `/product-images/` to `http://host.docker.internal:54321/storage/v1/object/public`
+  (dev/staging) or the Supabase Cloud hostname (real production).
+
+> [!IMPORTANT]
+> The nginx proxy blocks for `/avatars/` and `/product-images/` MUST use
+> `location ^~` (not plain `location`). The static-asset regex location
+> (`\.(?:png|webp|jpg|...)$`) would otherwise take priority for image URLs
+> and return nginx's 404 before the proxy runs.
+
+This keeps the Supabase hostname out of public URLs and makes the SPA origin
+the only visible origin.

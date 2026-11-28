@@ -1,3 +1,6 @@
+import { authStore } from '../../store/authStore.js';
+import { FeaturedProductsViewModel } from '../../viewmodels/components/FeaturedProductsViewModel.js';
+import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
 import { HomeView } from './HomeView.js';
 
 describe('HomeView', () => {
@@ -25,6 +28,8 @@ describe('HomeView', () => {
 
     // Home content sections are present
     expect(container.querySelector('.q-hero, .q-hero-banner, [class*="hero"]')).not.toBeNull();
+    expect(container.querySelector('.q-home')).not.toBeNull();
+    expect(container.querySelectorAll('.q-home > section').length).toBe(5);
 
     view.destroy();
   });
@@ -116,3 +121,167 @@ describe('HomeView', () => {
     expect(view._stores).toBeNull();
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('HomeView additional branches (recovered 1)', () => {
+      let container;
+      let view;
+
+      const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+      function mountView(options = {}) {
+        view = new HomeView(options);
+        view.mount(container);
+        return view;
+      }
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        spyOn(HeroViewModel.prototype, 'loadVisualProducts').and.resolveTo();
+        spyOn(FeaturedProductsViewModel.prototype, 'load').and.resolveTo();
+      });
+
+      afterEach(() => {
+        view?.destroy();
+        view = null;
+        container.remove();
+        authStore.clearSession();
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      });
+
+      it('forwards an injected productsApi to the hero view model', () => {
+        const productsApi = { getProducts: jasmine.createSpy('getProducts') };
+        mountView({ productsApi });
+
+        expect(view._hero.viewModel.productsApi).toBe(productsApi);
+        expect(view._hero.viewModel.api).toBeUndefined();
+        expect(productsApi.getProducts).not.toHaveBeenCalled();
+      });
+
+      it('uses the default callbacks with their documented return values', async () => {
+        mountView();
+
+        expect(view.onSearch('phone')).toBeUndefined();
+        expect(view._hero.viewModel.onSearch('phone')).toBeUndefined();
+        const result = await view._featuredProducts.viewModel.onAddToCart({ id: 'p1' });
+        expect(result).toEqual({ status: 'added' });
+      });
+
+      it('starts the hero visual load and the featured-products load during mount', () => {
+        mountView();
+
+        expect(HeroViewModel.prototype.loadVisualProducts).toHaveBeenCalledTimes(1);
+        expect(FeaturedProductsViewModel.prototype.load).toHaveBeenCalledTimes(1);
+        expect(view._hero.viewModel instanceof HeroViewModel).toBe(true);
+        expect(view._featuredProducts.viewModel instanceof FeaturedProductsViewModel).toBe(true);
+      });
+
+      it('mounts exactly five content sections in the documented order', () => {
+        mountView();
+
+        expect(view.element.className).toBe('q-home');
+        expect(container.firstElementChild).toBe(view.element);
+        expect(
+          Array.from(container.querySelectorAll('.q-home > section')).map((s) => s.className)
+        ).toEqual([
+          'q-hero q-ambient',
+          'q-categories',
+          'q-featured',
+          'q-section-container',
+          'q-featured-stores',
+        ]);
+      });
+
+      it('wires the hero search form to the injected onSearch callback', () => {
+        const onSearch = jasmine.createSpy('onSearch');
+        mountView({ onSearch });
+
+        const input = container.querySelector('#q-hero-search-input');
+        input.value = '  poncho  ';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        container
+          .querySelector('.q-hero__search')
+          .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        expect(onSearch).toHaveBeenCalledOnceWith('  poncho  ');
+      });
+
+      it('wires a featured-product add-to-cart button to the injected callback', async () => {
+        const onAddToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+        mountView({ onAddToCart });
+        const product = {
+          id: 'p1',
+          name: 'Manta',
+          slug: 'manta',
+          price: 40,
+          currency: 'BOB',
+          average_rating: 4,
+          ratings_count: 2,
+        };
+        view._featuredProducts.viewModel.setProducts([product]);
+
+        const button = container.querySelector('.product-card__add-button');
+        expect(button).not.toBeNull();
+        button.click();
+        await tick();
+
+        expect(onAddToCart).toHaveBeenCalledOnceWith(product, 1);
+      });
+
+      it('destroys the shipping banner with all children and clears every reference', () => {
+        mountView();
+        const destroySpies = [
+          spyOn(view._hero, 'destroy').and.callThrough(),
+          spyOn(view._categories, 'destroy').and.callThrough(),
+          spyOn(view._featuredProducts, 'destroy').and.callThrough(),
+          spyOn(view._shippingBanner, 'destroy').and.callThrough(),
+          spyOn(view._stores, 'destroy').and.callThrough(),
+        ];
+
+        view.destroy();
+
+        destroySpies.forEach((spy) => expect(spy).toHaveBeenCalledTimes(1));
+        expect(view._hero).toBeNull();
+        expect(view._categories).toBeNull();
+        expect(view._featuredProducts).toBeNull();
+        expect(view._shippingBanner).toBeNull();
+        expect(view._stores).toBeNull();
+        expect(view.element).toBeNull();
+        expect(container.children.length).toBe(0);
+
+        view.destroy();
+        expect(view._hero).toBeNull();
+        expect(view._shippingBanner).toBeNull();
+        expect(view.element).toBeNull();
+        expect(container.children.length).toBe(0);
+      });
+
+      it('duplicates the section tree and leaves the first tree behind when mounted twice', () => {
+        mountView();
+        const firstChildren = [
+          view._hero,
+          view._categories,
+          view._featuredProducts,
+          view._shippingBanner,
+          view._stores,
+        ];
+        view.mount(container);
+
+        const homes = container.querySelectorAll('.q-home');
+        expect(homes.length).toBe(2);
+        expect(container.querySelectorAll('.q-hero').length).toBe(2);
+        expect(view.element).toBe(homes[1]);
+        expect(view._hero).not.toBe(firstChildren[0]);
+
+        view.destroy();
+        expect(container.querySelectorAll('.q-home').length).toBe(1);
+
+        firstChildren.forEach((child) => child.destroy());
+      });
+    });
+  })();
+})();

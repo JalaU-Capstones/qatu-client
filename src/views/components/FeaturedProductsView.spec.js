@@ -1,13 +1,12 @@
 import { FeaturedProductsViewModel } from '../../viewmodels/components/FeaturedProductsViewModel.js';
 import { FeaturedProductsView } from './FeaturedProductsView.js';
 
-/** Contract-shaped products (OpenAPI Product schema, list endpoint). */
 const FEATURED_PRODUCTS = [
   {
-    id: 'aguayo-tradicional-tarabuco',
-    name: 'Aguayo tradicional de Tarabuco',
-    slug: 'aguayo-tradicional-tarabuco',
-    seller: { full_name: 'Tejidos Illimani' },
+    id: 'p1',
+    slug: 'aguayo',
+    name: 'Aguayo tradicional',
+    seller_id: 'seller-1',
     price: 40,
     currency: 'USD',
     stock: 10,
@@ -17,95 +16,15 @@ const FEATURED_PRODUCTS = [
     primary_image_path: null,
   },
   {
-    id: 'cafe-especialidad-cusco',
-    name: 'Café de especialidad de Cusco 500 g',
-    slug: 'cafe-especialidad-cusco',
-    seller: { full_name: 'Café Altura Cusco' },
+    id: 'p2',
+    slug: 'cafe',
+    name: 'Café de especialidad',
     price: 14,
     currency: 'USD',
-    stock: 20,
+    stock: 0,
     state: 'published',
-    average_rating: 4.8,
-    ratings_count: 18,
-    primary_image_path: null,
-  },
-  {
-    id: 'jarron-barro-negro-oaxaca',
-    name: 'Jarrón de barro negro de Oaxaca',
-    slug: 'jarron-barro-negro-oaxaca',
-    seller: { full_name: 'Barro Negro Oaxaca' },
-    price: 38,
-    currency: 'USD',
-    stock: 5,
-    state: 'published',
-    average_rating: 5.0,
-    ratings_count: 12,
-    primary_image_path: null,
-  },
-  {
-    id: 'bolso-cuero-artesanal',
-    name: 'Bolso de cuero artesanal',
-    slug: 'bolso-cuero-artesanal',
-    seller: { full_name: 'Pampa Cuero' },
-    price: 85,
-    currency: 'USD',
-    stock: 3,
-    state: 'published',
-    average_rating: 4.7,
-    ratings_count: 31,
-    primary_image_path: null,
-  },
-  {
-    id: 'audifonos-inalambricos-anc-pro',
-    name: 'Audífonos inalámbricos ANC Pro',
-    slug: 'audifonos-inalambricos-anc-pro',
-    seller: { full_name: 'Andes Tech' },
-    price: 165,
-    currency: 'USD',
-    stock: 8,
-    state: 'published',
-    average_rating: 4.6,
-    ratings_count: 46,
-    primary_image_path: null,
-  },
-  {
-    id: 'chocolate-cacao-esmeraldas',
-    name: 'Chocolate 70% cacao de Esmeraldas',
-    slug: 'chocolate-cacao-esmeraldas',
-    seller: { full_name: 'Cacao Esmeraldas' },
-    price: 6,
-    currency: 'USD',
-    stock: 40,
-    state: 'published',
-    average_rating: 4.9,
-    ratings_count: 27,
-    primary_image_path: null,
-  },
-  {
-    id: 'mochila-trekking-45l',
-    name: 'Mochila de trekking 45 L',
-    slug: 'mochila-trekking-45l',
-    seller: { full_name: 'Sabores del Eje' },
-    price: 92,
-    currency: 'USD',
-    stock: 7,
-    state: 'published',
-    average_rating: 4.8,
-    ratings_count: 15,
-    primary_image_path: null,
-  },
-  {
-    id: 'huipil-bordado-guatemalteco',
-    name: 'Huipil bordado guatemalteco',
-    slug: 'huipil-bordado-guatemalteco',
-    seller: { full_name: 'Telar Maya' },
-    price: 65,
-    currency: 'USD',
-    stock: 15,
-    state: 'published',
-    average_rating: 4.9,
-    ratings_count: 9,
-    primary_image_path: null,
+    average_rating: undefined,
+    primary_image_path: 'https://example.test/coffee.jpg',
   },
 ];
 
@@ -114,6 +33,18 @@ const createFeaturedApi = () => ({
     .createSpy('getFeaturedProducts')
     .and.resolveTo(FEATURED_PRODUCTS.map((product) => ({ ...product }))),
 });
+
+function makeAuthStore(user = null, isAdmin = false) {
+  const listeners = new Set();
+  return {
+    getUser: () => user,
+    isAdmin: () => isAdmin,
+    subscribe: jasmine.createSpy('subscribe').and.callFake((listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }),
+  };
+}
 
 describe('FeaturedProductsView', () => {
   let view;
@@ -130,266 +61,389 @@ describe('FeaturedProductsView', () => {
 
   afterEach(() => {
     view.destroy();
-    if (container.parentNode) {
-      container.parentNode.removeChild(container);
-    }
+    container.remove();
   });
 
-  it('should render a labelled section with the heading copy', () => {
-    const el = view.render();
-    expect(el.tagName.toLowerCase()).toBe('section');
-    expect(el.classList.contains('q-featured')).toBe(true);
+  it('renders the section heading and one list item per featured product', () => {
+    const element = view.render();
+    const cards = element.querySelectorAll('[role="listitem"]');
 
-    const title = el.querySelector('h2.q-featured-title');
-    expect(title.textContent).toBe('Destacados de la semana');
-    expect(el.getAttribute('aria-labelledby')).toBe(title.id);
-
-    expect(el.querySelector('.q-featured-eyebrow').textContent).toBe('Seleccionados para ti');
-    expect(el.querySelector('.q-featured-subtitle')).toBeNull();
+    expect(element.querySelector('h2').textContent).toBe('Destacados de la semana');
+    expect(cards.length).toBe(2);
+    expect(cards[0].textContent).toContain('Aguayo tradicional');
+    expect(cards[1].textContent).toContain('Café de especialidad');
   });
 
-  it('render() does NOT include a .q-featured-subtitle element when subtitle is empty', () => {
-    const el = view.render();
-    expect(el.querySelector('.q-featured-subtitle')).toBeNull();
+  it('renders formatted price and rating details when available', () => {
+    const firstCard = view.render().querySelector('[role="listitem"]');
+
+    expect(firstCard.textContent).toContain('US$ 40.00');
+    expect(firstCard.textContent).toContain('4.9');
+    expect(firstCard.textContent).toContain('(24)');
+    expect(firstCard.querySelector('.product-card__rating')).not.toBeNull();
+    expect(firstCard.querySelector('img').src).toContain('product-placeholder.svg');
   });
 
-  it('should render the catalog link without navigating', () => {
-    const el = view.render();
-    const link = el.querySelector('.q-featured-link');
-    expect(link.textContent).toBe('Ver catálogo →');
-    expect(link.getAttribute('href')).toBe('/products');
+  it('uses the product photo and hides the rating when no average is provided', () => {
+    const secondCard = view.render().querySelectorAll('[role="listitem"]')[1];
 
-    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-    link.dispatchEvent(event);
-    expect(event.defaultPrevented).toBe(true);
+    expect(secondCard.querySelector('img').src).toBe('https://example.test/coffee.jpg');
+    expect(secondCard.querySelector('.product-card__rating')).toBeNull();
   });
 
-  it('should render one card per product in a list', () => {
-    const el = view.render();
-    expect(el.querySelector('ul.q-featured-grid')).not.toBeNull();
+  it('wires add-to-cart and forwards the selected product', async () => {
+    const addToCart = jasmine.createSpy('onAddToCart').and.resolveTo({ status: 'added' });
+    viewModel.onAddToCart = addToCart;
+    const button = view.render().querySelector('button[aria-label^="Añadir"]');
 
-    const cards = el.querySelectorAll('li.q-product-card');
-    expect(cards.length).toBe(8);
+    button.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const titles = Array.from(cards).map(
-      (card) => card.querySelector('.q-product-card-title').textContent
-    );
-    expect(titles[0]).toBe('Aguayo tradicional de Tarabuco');
-    expect(titles[4]).toBe('Audífonos inalámbricos ANC Pro');
+    expect(addToCart).toHaveBeenCalledWith(FEATURED_PRODUCTS[0]);
   });
 
-  it('should render seller, price and rating for each card', () => {
-    const el = view.render();
-    const card = el.querySelector('.q-product-card');
-
-    expect(card.querySelector('.q-product-card-seller').textContent).toBe('Tejidos Illimani');
-    expect(card.querySelector('.q-product-card-price').textContent).toBe('US$ 40.00');
-
-    const rating = card.querySelector('.q-product-card-rating');
-    expect(rating.querySelector('.q-product-card-rating-value').textContent).toContain('4.9 (24)');
-    expect(rating.querySelector('.q-sr-only').textContent).toBe(
-      'Calificación 4.9 de 5, 24 reseñas'
-    );
-  });
-
-  it('should render the image placeholder with the Figma mark when there is no image', () => {
-    const el = view.render();
-    const image = el.querySelector('.q-product-card-media .q-product-card-image');
-
-    expect(image.querySelector('.q-product-card-image-label').textContent).toBe(
-      'Imagen del producto'
-    );
-    const mark = image.querySelector('.q-product-card-mark img');
-    expect(mark).not.toBeNull();
-    expect(mark.getAttribute('alt')).toBe('');
-    expect(mark.getAttribute('src')).toContain('placeholder-mark.svg');
-    expect(mark.getAttribute('width')).toBe('24.7071');
-    expect(mark.getAttribute('height')).toBe('24.7071');
-  });
-
-  it('should render the product photo instead of the placeholder when primary_image_path is set', () => {
-    viewModel.setProducts([
-      {
-        id: 'p1',
-        name: 'Con foto',
-        seller: { full_name: 'Tienda' },
-        price: 10,
-        currency: 'USD',
-        stock: 1,
-        state: 'published',
-        average_rating: 4,
-        ratings_count: 2,
-        primary_image_path: 'https://example.com/foto.jpg',
-      },
-    ]);
-    const el = view.render();
-
-    const photo = el.querySelector('.q-product-card-photo');
-    expect(photo.getAttribute('src')).toBe('https://example.com/foto.jpg');
-    expect(photo.getAttribute('alt')).toBe('');
-    expect(el.querySelector('.q-product-card-mark')).toBeNull();
-  });
-
-  it('should render an accessible Add to cart button per product', () => {
-    const el = view.render();
-    const buttons = el.querySelectorAll('button.q-product-card-action');
-
-    expect(buttons.length).toBe(8);
-    expect(buttons[0].type).toBe('button');
-    expect(buttons[0].textContent).toBe('Añadir');
-    expect(buttons[0].getAttribute('aria-label')).toBe('Añadir: Aguayo tradicional de Tarabuco');
-  });
-
-  it('should call onAddToCart with the clicked product', () => {
-    const onAddToCart = jasmine.createSpy('onAddToCart');
-    viewModel.onAddToCart = onAddToCart;
-    const el = view.render();
-
-    el.querySelectorAll('button.q-product-card-action')[1].click();
-
-    expect(onAddToCart).toHaveBeenCalledTimes(1);
-    expect(onAddToCart.calls.mostRecent().args[0].id).toBe('cafe-especialidad-cusco');
-  });
-
-  it('should mount into a container and be reusable after destroy', () => {
-    view.mount(container);
-    expect(container.querySelector('.q-featured')).not.toBeNull();
-
-    view.destroy();
-    expect(container.querySelector('.q-featured')).toBeNull();
-
-    view.mount(container);
-    expect(container.querySelectorAll('.q-featured').length).toBe(1);
-  });
-
-  it('should render the products once load() finishes after the view is mounted', async () => {
-    const emptyViewModel = new FeaturedProductsViewModel({ productsApi: createFeaturedApi() });
-    const lazyView = new FeaturedProductsView(emptyViewModel);
-    lazyView.mount(container);
-    expect(container.querySelectorAll('.q-product-card').length).toBe(0);
-
-    await emptyViewModel.load();
-
-    expect(container.querySelectorAll('.q-featured').length).toBe(1);
-    expect(container.querySelectorAll('.q-product-card').length).toBe(8);
-    lazyView.destroy();
-  });
-
-  it('should show the error message instead of the grid when loading fails', async () => {
-    const failingViewModel = new FeaturedProductsViewModel({
-      productsApi: { getFeaturedProducts: () => Promise.reject(new Error('x')) },
+  it('hides add-to-cart for the current seller and disables out-of-stock products', () => {
+    const sellerView = new FeaturedProductsView(viewModel, {
+      authStore: makeAuthStore({ id: 'seller-1' }),
     });
-    const failingView = new FeaturedProductsView(failingViewModel);
+    const cards = sellerView.render().querySelectorAll('[role="listitem"]');
+
+    expect(cards[0].querySelector('button[aria-label^="Añadir"]')).toBeNull();
+    expect(cards[1].textContent).toContain('Agotado');
+    expect(cards[1].querySelector('button[aria-label^="Añadir"]').disabled).toBe(true);
+    sellerView.destroy();
+  });
+
+  it('hides add-to-cart on every featured card for an admin who is also a seller', () => {
+    const adminView = new FeaturedProductsView(viewModel, {
+      authStore: makeAuthStore({ id: 'seller-1' }, true),
+    });
+    const cards = adminView.render().querySelectorAll('[role="listitem"]');
+
+    expect(cards.length).toBe(2);
+    cards.forEach((card) => expect(card.querySelector('button[aria-label^="Añadir"]')).toBeNull());
+    adminView.destroy();
+  });
+
+  it('updates the visible cards when the ViewModel products change', () => {
+    view.mount(container);
+    viewModel.setProducts([FEATURED_PRODUCTS[0]]);
+
+    expect(container.querySelectorAll('[role="listitem"]').length).toBe(1);
+    expect(container.textContent).toContain('Aguayo tradicional');
+  });
+
+  it('shows a loading error instead of the product list', async () => {
+    const failingView = new FeaturedProductsView(
+      new FeaturedProductsViewModel({
+        productsApi: { getFeaturedProducts: () => Promise.reject(new Error('Network error')) },
+      })
+    );
     failingView.mount(container);
+    await failingView.viewModel.load();
 
-    await failingViewModel.load();
-
-    const message = container.querySelector('.q-featured-message');
-    expect(message.textContent).toBe('No pudimos cargar los productos destacados.');
-    expect(message.getAttribute('role')).toBe('alert');
-    expect(container.querySelector('.q-featured-grid')).toBeNull();
-    expect(container.querySelector('.q-featured-title')).not.toBeNull();
+    expect(container.textContent).toContain('No pudimos cargar los productos destacados.');
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(container.querySelector('[role="listitem"]')).toBeNull();
     failingView.destroy();
   });
-
-  it('should re-render in place when the products change', () => {
-    view.mount(container);
-    expect(container.querySelectorAll('.q-product-card').length).toBe(8);
-
-    viewModel.setProducts(viewModel.products.slice(0, 3));
-
-    expect(container.querySelectorAll('.q-featured').length).toBe(1);
-    expect(container.querySelectorAll('.q-product-card').length).toBe(3);
-  });
-
-  it('should wrap image, badge and heart inside .q-product-card-media', () => {
-    const el = view.render();
-    const card = el.querySelector('.q-product-card');
-    const media = card.querySelector('.q-product-card-media');
-    expect(media).not.toBeNull();
-    expect(media.querySelector('.q-product-card-image')).not.toBeNull();
-    expect(media.querySelector('.q-product-card-heart-btn')).not.toBeNull();
-  });
-
-  it('should render a "Nuevo" badge for the first two products by default', () => {
-    const el = view.render();
-    const cards = el.querySelectorAll('.q-product-card');
-    expect(cards[0].querySelector('.q-product-card-new-badge')).not.toBeNull();
-    expect(cards[1].querySelector('.q-product-card-new-badge')).not.toBeNull();
-    expect(cards[2].querySelector('.q-product-card-new-badge')).toBeNull();
-  });
-
-  it('should not render a badge when product.isNew is explicitly false', () => {
-    viewModel.setProducts([
-      {
-        id: 'p1',
-        name: 'P1',
-        seller: { full_name: 'S' },
-        price: 1,
-        currency: 'USD',
-        stock: 1,
-        state: 'published',
-        average_rating: 4,
-        ratings_count: 1,
-        isNew: false,
-      },
-    ]);
-    const el = view.render();
-    expect(el.querySelector('.q-product-card-new-badge')).toBeNull();
-  });
-
-  it('should render 5 star spans with .is-filled matching getStarsFilled', () => {
-    const el = view.render();
-    const card = el.querySelector('.q-product-card');
-    const stars = card.querySelectorAll('.q-product-card-star');
-    expect(stars.length).toBe(5);
-    const filled = viewModel.getStarsFilled(viewModel.products[0]);
-    stars.forEach((star, i) => {
-      expect(star.classList.contains('is-filled')).toBe(filled[i]);
-    });
-  });
-
-  it('should render the action button with the configured label', () => {
-    const el = view.render();
-    const btn = el.querySelector('button.q-product-card-action');
-    expect(btn.textContent).toBe(viewModel.addToCartLabel);
-  });
-
-  it('should call viewModel.addToCart when the action button is clicked', () => {
-    spyOn(viewModel, 'addToCart').and.returnValue(true);
-    const el = view.render();
-    el.querySelector('button.q-product-card-action').click();
-    expect(viewModel.addToCart).toHaveBeenCalledTimes(1);
-  });
-
-  it('should render one heart button per card and clicking it does not propagate addToCart', () => {
-    spyOn(viewModel, 'addToCart');
-    const el = view.render();
-    const hearts = el.querySelectorAll('.q-product-card-heart-btn');
-    expect(hearts.length).toBe(8);
-    hearts[0].click();
-    expect(viewModel.addToCart).not.toHaveBeenCalled();
-  });
-
-  it('_renderCard passes stock from the product to ProductCardView', () => {
-    const cardEl = view._renderCard({
-      id: 'p-test',
-      name: 'Test Product',
-      stock: 0,
-    });
-    const btn = cardEl.querySelector('button.q-product-card-action');
-    expect(btn.textContent).toBe('Sin stock');
-    expect(btn.disabled).toBe(true);
-  });
-
-  it('_renderCard defaults state to "published" when product.state is missing', () => {
-    const cardEl = view._renderCard({
-      id: 'p-test-2',
-      name: 'Test Product 2',
-      stock: 5,
-    });
-    const btn = cardEl.querySelector('button.q-product-card-action');
-    expect(btn.textContent).toBe('Añadir');
-    expect(btn.disabled).toBe(false);
-  });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('FeaturedProductsView additional branches (recovered 1)', () => {
+      const tick = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      const makeProduct = (overrides = {}) => ({
+        id: 'p1',
+        slug: 'p1',
+        name: 'Producto p1',
+        seller_id: 'seller-1',
+        price: 10,
+        currency: 'USD',
+        stock: 5,
+        state: 'published',
+        ...overrides,
+      });
+
+      const makeAuthStore = (initialUser = null) => {
+        let user = initialUser;
+        const listeners = new Set();
+        return {
+          getUser: () => user,
+          setUser: (nextUser) => {
+            user = nextUser;
+          },
+          notify: () => [...listeners].forEach((listener) => listener()),
+          subscribe: jasmine.createSpy('subscribe').and.callFake((listener) => {
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+          }),
+        };
+      };
+
+      let view;
+      let container;
+      let extraViews;
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        extraViews = [];
+      });
+
+      afterEach(() => {
+        view?.destroy();
+        extraViews.forEach((extraView) => extraView.destroy());
+        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+        document.body.style.overflow = '';
+        container.remove();
+      });
+
+      it('caches render() and does not subscribe until mount()', () => {
+        const viewModel = new FeaturedProductsViewModel({ products: [makeProduct()] });
+        const authStore = makeAuthStore();
+        view = new FeaturedProductsView(viewModel, { authStore });
+        const subscribeSpy = spyOn(viewModel, 'subscribe').and.callThrough();
+
+        const first = view.render();
+
+        expect(view.render()).toBe(first);
+        expect(subscribeSpy).not.toHaveBeenCalled();
+        expect(authStore.subscribe).not.toHaveBeenCalled();
+        expect(viewModel._listeners.size).toBe(0);
+
+        expect(view.mount(container)).toBe(first);
+        expect(view.element).toBe(first);
+        expect(subscribeSpy).toHaveBeenCalledTimes(1);
+        expect(authStore.subscribe).toHaveBeenCalledTimes(1);
+      });
+
+      it('mounts twice into the same container once, then moves the element to a new container', () => {
+        const viewModel = new FeaturedProductsViewModel({ products: [makeProduct()] });
+        const authStore = makeAuthStore();
+        view = new FeaturedProductsView(viewModel, { authStore });
+        const subscribeSpy = spyOn(viewModel, 'subscribe').and.callThrough();
+
+        const first = view.mount(container);
+        expect(view.mount(container)).toBe(first);
+        expect(container.querySelectorAll('.q-featured').length).toBe(1);
+        expect(subscribeSpy).toHaveBeenCalledTimes(1);
+        expect(authStore.subscribe).toHaveBeenCalledTimes(1);
+
+        view.mount(document.body);
+        expect(container.contains(first)).toBe(false);
+        expect(document.body.contains(first)).toBe(true);
+        expect(subscribeSpy).toHaveBeenCalledTimes(1);
+        expect(authStore.subscribe).toHaveBeenCalledTimes(1);
+      });
+
+      it('rebuilds cards on auth notifications so a seller no longer sees add-to-cart', () => {
+        const viewModel = new FeaturedProductsViewModel({ products: [makeProduct()] });
+        const authStore = makeAuthStore(null);
+        view = new FeaturedProductsView(viewModel, { authStore });
+        const el = view.mount(container);
+
+        expect(el.querySelector('button[aria-label^="Añadir"]')).not.toBeNull();
+
+        authStore.setUser({ id: 'seller-1' });
+        authStore.notify();
+
+        expect(view.element).toBe(el);
+        expect(view.element.querySelector('button[aria-label^="Añadir"]')).toBeNull();
+
+        authStore.setUser(null);
+        authStore.notify();
+
+        expect(view.element.querySelector('button[aria-label^="Añadir"]')).not.toBeNull();
+      });
+
+      it('unsubscribes from both stores, removes the DOM and tolerates a second destroy', () => {
+        const viewModel = new FeaturedProductsViewModel({ products: [makeProduct()] });
+        const authStore = makeAuthStore();
+        const viewModelUnsubscribe = jasmine.createSpy('viewModelUnsubscribe');
+        const authUnsubscribe = jasmine.createSpy('authUnsubscribe');
+        spyOn(viewModel, 'subscribe').and.returnValue(viewModelUnsubscribe);
+        authStore.subscribe.and.returnValue(authUnsubscribe);
+        view = new FeaturedProductsView(viewModel, { authStore });
+
+        const el = view.mount(container);
+        expect(viewModelUnsubscribe).not.toHaveBeenCalled();
+        expect(authUnsubscribe).not.toHaveBeenCalled();
+
+        view.destroy();
+
+        expect(viewModelUnsubscribe).toHaveBeenCalledTimes(1);
+        expect(authUnsubscribe).toHaveBeenCalledTimes(1);
+        expect(view._unsubscribe).toBeNull();
+        expect(view._authUnsubscribe).toBeNull();
+        expect(view.element).toBeNull();
+        expect(container.contains(el)).toBe(false);
+        expect(() => view.destroy()).not.toThrow();
+        expect(viewModelUnsubscribe).toHaveBeenCalledTimes(1);
+        expect(authUnsubscribe).toHaveBeenCalledTimes(1);
+      });
+
+      it('replaces the heading node without replacing the section on a VM update', () => {
+        const viewModel = new FeaturedProductsViewModel({
+          products: [makeProduct(), makeProduct({ id: 'p2', slug: 'p2', name: 'Producto p2' })],
+        });
+        view = new FeaturedProductsView(viewModel);
+        const el = view.mount(container);
+        const heading = el.querySelector('.q-featured-heading');
+
+        viewModel.setProducts([makeProduct({ id: 'p3', slug: 'p3', name: 'Producto p3' })]);
+
+        expect(view.element).toBe(el);
+        expect(el.querySelector('.q-featured-heading')).not.toBe(heading);
+        expect(el.textContent).toContain('Producto p3');
+        expect(container.querySelectorAll('[role="listitem"]').length).toBe(1);
+      });
+
+      it('renders the subtitle only when the ViewModel provides one', () => {
+        const withSubtitle = new FeaturedProductsViewModel({
+          products: [makeProduct()],
+          subtitle: 'Subtítulo destacado',
+        });
+        view = new FeaturedProductsView(withSubtitle);
+        expect(view.render().querySelector('.q-featured-subtitle').textContent).toBe(
+          'Subtítulo destacado'
+        );
+
+        const withoutSubtitle = new FeaturedProductsView(
+          new FeaturedProductsViewModel({ products: [makeProduct()] })
+        );
+        extraViews.push(withoutSubtitle);
+        expect(withoutSubtitle.render().querySelector('.q-featured-subtitle')).toBeNull();
+      });
+
+      it('renders a route-marked see-all link, prevents its default click and exposes a list grid', () => {
+        view = new FeaturedProductsView(
+          new FeaturedProductsViewModel({ products: [makeProduct()] })
+        );
+        const el = view.render();
+        const link = el.querySelector('.q-featured-link');
+
+        expect(link.getAttribute('href')).toBe('/products');
+        expect(link.textContent).toBe('Ver catálogo →');
+        expect(link.getAttribute('data-route')).toBe('');
+
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+        link.dispatchEvent(clickEvent);
+        expect(clickEvent.defaultPrevented).toBe(true);
+
+        const grid = el.querySelector('.q-featured-grid');
+        expect(grid.getAttribute('role')).toBe('list');
+        expect(grid.querySelectorAll('[role="listitem"]').length).toBe(1);
+      });
+
+      it('only hides add-to-cart when both user.id and product.seller_id are present and equal', () => {
+        const cases = [
+          { user: null, product: makeProduct(), hidden: false },
+          { user: { id: 'seller-1' }, product: makeProduct(), hidden: true },
+          { user: {}, product: makeProduct(), hidden: false },
+          {
+            user: { id: 'seller-1' },
+            product: makeProduct({ seller_id: undefined }),
+            hidden: false,
+          },
+        ];
+
+        cases.forEach(({ user, product, hidden }) => {
+          const caseView = new FeaturedProductsView(
+            new FeaturedProductsViewModel({ products: [product] }),
+            { authStore: makeAuthStore(user) }
+          );
+          extraViews.push(caseView);
+
+          const button = caseView.render().querySelector('button[aria-label^="Añadir"]');
+          if (hidden) {
+            expect(button).toBeNull();
+          } else {
+            expect(button).not.toBeNull();
+          }
+        });
+      });
+
+      it('forwards add-to-cart clicks as (product id, quantity)', async () => {
+        const viewModel = new FeaturedProductsViewModel({ products: [makeProduct()] });
+        const addToCartSpy = spyOn(viewModel, 'addToCart').and.resolveTo({ status: 'added' });
+        view = new FeaturedProductsView(viewModel, { authStore: makeAuthStore(null) });
+
+        view.render().querySelector('button[aria-label^="Añadir"]').click();
+        await tick();
+
+        expect(addToCartSpy).toHaveBeenCalledTimes(1);
+        expect(addToCartSpy).toHaveBeenCalledWith('p1', 1);
+      });
+
+      it('renders route-marked view links whose click handler is a no-op', () => {
+        view = new FeaturedProductsView(
+          new FeaturedProductsViewModel({ products: [makeProduct()] })
+        );
+        const card = view.render().querySelector('[role="listitem"]');
+        const links = card.querySelectorAll('.product-card__view-link');
+
+        expect(links.length).toBe(2);
+        expect(links[0].getAttribute('href')).toBe('/products/p1');
+        expect(links[0].getAttribute('aria-label')).toBe('Ver Producto p1');
+        expect(links[0].getAttribute('data-route')).toBe('');
+
+        // The component's onView callback does not preventDefault, so a real click would navigate
+        // away and reload the runner. Block the default action locally after recording whether
+        // the component itself prevented it.
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+        let preventedByComponent;
+        const blockNavigation = (event) => {
+          preventedByComponent = event.defaultPrevented;
+          event.preventDefault();
+        };
+        links[0].addEventListener('click', blockNavigation);
+        links[0].dispatchEvent(clickEvent);
+        links[0].removeEventListener('click', blockNavigation);
+
+        expect(preventedByComponent).toBe(false);
+        expect(clickEvent.defaultPrevented).toBe(true);
+      });
+
+      it('replaces a failed product image with the placeholder exactly once', () => {
+        view = new FeaturedProductsView(
+          new FeaturedProductsViewModel({
+            products: [makeProduct({ primary_image_path: 'https://example.test/p.png' })],
+          })
+        );
+        const image = view.render().querySelector('.product-card__image');
+
+        expect(image.getAttribute('src')).toBe('https://example.test/p.png');
+
+        image.dispatchEvent(new Event('error'));
+        expect(image.getAttribute('src')).toContain('product-placeholder.svg');
+        expect(image.classList.contains('product-card__image--placeholder')).toBe(true);
+
+        image.dispatchEvent(new Event('error'));
+        expect(image.getAttribute('src')).toContain('product-placeholder.svg');
+      });
+
+      it('renders an empty grid for empty and loading states instead of a status message', () => {
+        const emptyView = new FeaturedProductsView(new FeaturedProductsViewModel({ products: [] }));
+        extraViews.push(emptyView);
+        const emptyEl = emptyView.render();
+
+        expect(emptyEl.querySelector('.q-featured-grid')).not.toBeNull();
+        expect(emptyEl.querySelectorAll('[role="listitem"]').length).toBe(0);
+        expect(emptyEl.querySelector('.q-featured-message')).toBeNull();
+
+        const loadingViewModel = new FeaturedProductsViewModel({ products: [] });
+        loadingViewModel.status = 'loading';
+        const loadingView = new FeaturedProductsView(loadingViewModel);
+        extraViews.push(loadingView);
+        const loadingEl = loadingView.render();
+
+        expect(loadingEl.querySelector('.q-featured-grid')).not.toBeNull();
+        expect(loadingEl.querySelectorAll('[role="listitem"]').length).toBe(0);
+        expect(loadingEl.querySelector('.q-featured-message')).toBeNull();
+      });
+    });
+  })();
+})();

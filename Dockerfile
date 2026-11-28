@@ -16,8 +16,24 @@ RUN pnpm install --frozen-lockfile
 # ── Stage 2: build ──────────────────────────────────────────────────────────
 FROM deps AS build
 COPY --chown=node:node . .
+
+# Vite bakes import.meta.env.VITE_* at build time. Values MUST be passed as
+# build args — `.env` is excluded from the build context by .dockerignore
+# (secrets should never be baked into images).
+#
+# Only PUBLIC vars belong here:
+#   - VITE_API_BASE_URL    → '/v1' in prod (nginx proxy) or 'http://...' in dev
+#   - VITE_SUPABASE_URL    → Supabase API origin (reachable from the browser)
+#   - VITE_SUPABASE_ANON_KEY → public anon key (shipped in every Supabase SPA)
+#
+# NEVER add SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET, or GOOGLE_CLIENT_SECRET
+# here — those are backend-only and must never appear in a frontend bundle.
 ARG VITE_API_BASE_URL=/v1
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+    VITE_SUPABASE_URL=${VITE_SUPABASE_URL} \
+    VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
 RUN pnpm build
 
 # ── Stage 3: development ────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { SEARCH_MAX_LENGTH } from '../../models/validation/productSearchFilters.js';
 import { CatalogViewModel } from './CatalogViewModel.js';
 
 describe('CatalogViewModel', () => {
@@ -561,3 +562,262 @@ describe('CatalogViewModel', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const categories = [
+      { id: 'cat-electronics', name: 'Electronics', slug: 'electronics' },
+      { id: 'cat-textiles', name: 'Textiles', slug: 'textiles' },
+    ];
+
+    const makeMeta = (overrides = {}) => ({
+      page: 1,
+      per_page: 20,
+      total: 0,
+      total_pages: 0,
+      ...overrides,
+    });
+
+    const makeProduct = (id) => ({ id, name: `Product ${id}` });
+
+    describe('CatalogViewModel additional branches (recovered 1)', () => {
+      let productsApi;
+      let categoriesApi;
+      let viewModels;
+      let unsubscribes;
+
+      beforeEach(() => {
+        productsApi = {
+          getProducts: jasmine
+            .createSpy('getProducts')
+            .and.resolveTo({ data: [], meta: makeMeta() }),
+        };
+        categoriesApi = {
+          getCategories: jasmine.createSpy('getCategories').and.resolveTo({ data: categories }),
+        };
+        viewModels = [];
+        unsubscribes = [];
+      });
+
+      afterEach(() => {
+        unsubscribes.forEach((unsubscribe) => unsubscribe());
+        unsubscribes = [];
+        viewModels = [];
+      });
+
+      const createViewModel = (options = {}) => {
+        const vm = new CatalogViewModel({ productsApi, categoriesApi, ...options });
+        viewModels.push(vm);
+        return vm;
+      };
+
+      const subscribe = (vm, listener) => {
+        const unsubscribe = vm.subscribe(listener);
+        unsubscribes.push(unsubscribe);
+        return unsubscribe;
+      };
+
+      it('uses the slug itself as the category chip label when no category matches', () => {
+        const vm = createViewModel();
+        vm.filters = { search: '', category: 'unknown', minPrice: null, maxPrice: null };
+
+        expect(vm.activeFilterChips).toEqual([{ key: 'category', label: 'unknown' }]);
+      });
+
+      it('serializes single category, minimum price and maximum price filters', () => {
+        const vm = createViewModel();
+
+        vm.filters = { search: '', category: 'textiles', minPrice: null, maxPrice: null };
+        expect(vm.toQueryString()).toBe('?category=textiles');
+
+        vm.filters = { search: '', category: '', minPrice: 10, maxPrice: null };
+        expect(vm.toQueryString()).toBe('?min_price=10');
+
+        vm.filters = { search: '', category: '', minPrice: null, maxPrice: 20 };
+        expect(vm.toQueryString()).toBe('?max_price=20');
+      });
+
+      it('trims q/category and discards non-numeric prices from the query string', () => {
+        const vm = createViewModel();
+        const query = new URLSearchParams({
+          q: '  café  ',
+          category: '  textiles  ',
+          min_price: 'abc',
+          max_price: 'xyz',
+        }).toString();
+
+        vm.setFiltersFromQuery(query);
+
+        expect(vm.filters).toEqual({
+          search: 'café',
+          category: 'textiles',
+          minPrice: null,
+          maxPrice: null,
+        });
+      });
+
+      it('accepts null and non-string query strings without throwing', () => {
+        const vm = createViewModel();
+
+        expect(() => vm.setFiltersFromQuery(null)).not.toThrow();
+        expect(vm.filters).toEqual({ search: '', category: '', minPrice: null, maxPrice: null });
+
+        expect(() => vm.setFiltersFromQuery(42)).not.toThrow();
+        expect(vm.filters).toEqual({ search: '', category: '', minPrice: null, maxPrice: null });
+      });
+
+      it('rejects searches longer than the API limit with the exact validation message', async () => {
+        const vm = createViewModel();
+        const listener = jasmine.createSpy('listener');
+        subscribe(vm, listener);
+
+        const applied = await vm.applyFilters({ search: 'a'.repeat(SEARCH_MAX_LENGTH + 1) });
+
+        expect(applied).toBe(false);
+        expect(vm.filterError).toBe(
+          `La búsqueda puede tener como máximo ${SEARCH_MAX_LENGTH} caracteres.`
+        );
+        expect(productsApi.getProducts).not.toHaveBeenCalled();
+        expect(listener).toHaveBeenCalledTimes(1);
+      });
+
+      it('rejects non-numeric minimum and maximum prices', async () => {
+        const vm = createViewModel();
+
+        await expectAsync(vm.applyFilters({ minPrice: 'abc' })).toBeResolvedTo(false);
+        expect(vm.filterError).toBe('El precio mínimo debe ser un número mayor o igual a 0.');
+
+        await expectAsync(vm.applyFilters({ minPrice: '', maxPrice: 'xyz' })).toBeResolvedTo(false);
+        expect(vm.filterError).toBe('El precio máximo debe ser un número mayor o igual a 0.');
+        expect(productsApi.getProducts).not.toHaveBeenCalled();
+      });
+
+      it('uses request defaults when the API response has no meta object', async () => {
+        const vm = createViewModel();
+        productsApi.getProducts.and.resolveTo({ data: [makeProduct('p1')] });
+
+        await vm.loadProducts(3);
+
+        expect(vm.products).toEqual([makeProduct('p1')]);
+        expect(vm.meta).toEqual({ page: 3, per_page: 20, total: 0, total_pages: 0 });
+      });
+
+      it('maps a non-Error rejection to the exact generic catalog message', async () => {
+        const vm = createViewModel();
+        productsApi.getProducts.and.rejectWith('string rejection');
+
+        await vm.loadProducts();
+
+        expect(vm.errorMessage).toBe('No pudimos cargar el catálogo de productos.');
+        expect(vm.isLoading).toBe(false);
+      });
+
+      it('discards a stale failure so it cannot overwrite newer results', async () => {
+        const vm = createViewModel();
+        let rejectFirst;
+        productsApi.getProducts.and.returnValues(
+          new Promise((resolve, reject) => {
+            rejectFirst = reject;
+          }),
+          Promise.resolve({ data: [makeProduct('new')], meta: makeMeta() })
+        );
+
+        const first = vm.loadProducts();
+        await vm.loadProducts();
+        rejectFirst(new Error('stale error'));
+        await first;
+
+        expect(vm.products.map((product) => product.id)).toEqual(['new']);
+        expect(vm.errorMessage).toBe('');
+        expect(vm.isLoading).toBe(false);
+      });
+
+      it('removes search and category filters, reporting each query change', async () => {
+        const onFiltersChange = jasmine.createSpy('onFiltersChange');
+        const vm = createViewModel({ onFiltersChange });
+
+        await vm.applyFilters({ search: 'cafe', category: 'textiles' });
+        onFiltersChange.calls.reset();
+
+        await vm.removeFilter('search');
+        expect(vm.filters.search).toBe('');
+        expect(vm.filters.category).toBe('textiles');
+        expect(onFiltersChange).toHaveBeenCalledWith('?category=textiles');
+
+        await vm.removeFilter('category');
+        expect(vm.filters.category).toBe('');
+        expect(onFiltersChange).toHaveBeenCalledWith('');
+      });
+
+      it('treats an unknown filter key as a no-op that still commits the query', async () => {
+        const onFiltersChange = jasmine.createSpy('onFiltersChange');
+        const vm = createViewModel({ onFiltersChange });
+        vm.filters = { search: 'cafe', category: '', minPrice: null, maxPrice: null };
+        onFiltersChange.calls.reset();
+
+        await vm.removeFilter('unknown');
+
+        expect(vm.filters).toEqual({
+          search: 'cafe',
+          category: '',
+          minPrice: null,
+          maxPrice: null,
+        });
+        expect(onFiltersChange).toHaveBeenCalledWith('?q=cafe');
+        expect(productsApi.getProducts).toHaveBeenCalledWith({
+          page: 1,
+          limit: 20,
+          search: 'cafe',
+        });
+      });
+
+      it('falls back to an empty category list when API data is not an array', async () => {
+        const vm = createViewModel();
+        categoriesApi.getCategories.and.resolveTo({ data: 'not-an-array' });
+
+        await vm.loadCategories();
+
+        expect(vm.categories).toEqual([]);
+      });
+
+      it('notifies a snapshot so a listener can unsubscribe and resubscribe during a change', async () => {
+        const vm = createViewModel();
+        const listenerA = jasmine.createSpy('listenerA');
+        const listenerB = jasmine.createSpy('listenerB');
+        const unsubscribeA = subscribe(vm, () => {
+          listenerA();
+          unsubscribeA();
+          subscribe(vm, listenerB);
+        });
+
+        await vm.loadProducts();
+
+        expect(listenerA).toHaveBeenCalledTimes(1);
+        expect(listenerB).toHaveBeenCalledTimes(1);
+      });
+
+      it('characterizes that an unknown category is dropped without syncing the URL', async () => {
+        const onFiltersChange = jasmine.createSpy('onFiltersChange');
+        const vm = createViewModel({ onFiltersChange });
+        vm.filters = { search: '', category: 'ghost', minPrice: null, maxPrice: null };
+
+        await vm.loadProducts();
+
+        expect(vm.filters.category).toBe('');
+        expect(productsApi.getProducts).toHaveBeenCalledWith({ page: 1, limit: 20 });
+        expect(onFiltersChange).not.toHaveBeenCalled();
+      });
+
+      it('characterizes that setFiltersFromQuery does not clear a previous filterError', () => {
+        const vm = createViewModel();
+        vm.filterError = 'error anterior';
+
+        vm.setFiltersFromQuery('?q=cafe');
+
+        expect(vm.filters.search).toBe('cafe');
+        expect(vm.filterError).toBe('error anterior');
+      });
+    });
+  })();
+})();

@@ -1,7 +1,7 @@
 import {
-  SEARCH_MAX_LENGTH,
   createEmptyFilters,
   parsePrice,
+  SEARCH_MAX_LENGTH,
   validateSearchFilters,
 } from './productSearchFilters.js';
 
@@ -90,3 +90,104 @@ describe('productSearchFilters', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('productSearchFilters additional branches (recovered 1)', () => {
+      describe('parsePrice (recovered 2)', () => {
+        it('trims whitespace and keeps negative, exponential and hexadecimal values', () => {
+          expect(parsePrice(' 42 ')).toBe(42);
+          expect(parsePrice('-10')).toBe(-10);
+          expect(parsePrice('1e3')).toBe(1000);
+          expect(parsePrice('0x10')).toBe(16);
+          expect(parsePrice('Infinity')).toBe(Infinity);
+          expect(parsePrice(true)).toBeNaN();
+          expect(parsePrice([])).toBeNull();
+        });
+
+        it('treats null, undefined and blank strings as null', () => {
+          expect(parsePrice(null)).toBeNull();
+          expect(parsePrice(undefined)).toBeNull();
+          expect(parsePrice('   ')).toBeNull();
+        });
+      });
+
+      describe('validateSearchFilters (recovered 3)', () => {
+        it('normalizes non-string search and category values to empty strings', () => {
+          const { filters, error } = validateSearchFilters({
+            search: 123,
+            category: null,
+            minPrice: ' ',
+            maxPrice: undefined,
+          });
+
+          expect(filters).toEqual(createEmptyFilters());
+          expect(error).toBe('');
+        });
+
+        it('measures search length after trimming', () => {
+          const padded = `${'a'.repeat(SEARCH_MAX_LENGTH)}   `;
+          expect(validateSearchFilters({ search: padded }).error).toBe('');
+
+          const overLimit = `${'a'.repeat(SEARCH_MAX_LENGTH + 1)}   `;
+          expect(validateSearchFilters({ search: overLimit }).error).toBe(
+            `La búsqueda puede tener como máximo ${SEARCH_MAX_LENGTH} caracteres.`
+          );
+        });
+
+        it('rejects negative and non-finite prices for both bounds', () => {
+          expect(validateSearchFilters({ minPrice: '-1' })).toEqual({
+            filters: {
+              search: '',
+              category: '',
+              minPrice: -1,
+              maxPrice: null,
+            },
+            error: 'El precio mínimo debe ser un número mayor o igual a 0.',
+          });
+          expect(validateSearchFilters({ maxPrice: '-1' }).error).toBe(
+            'El precio máximo debe ser un número mayor o igual a 0.'
+          );
+          expect(validateSearchFilters({ minPrice: 'Infinity' }).error).toBe(
+            'El precio mínimo debe ser un número mayor o igual a 0.'
+          );
+          expect(validateSearchFilters({ maxPrice: '-Infinity' }).error).toBe(
+            'El precio máximo debe ser un número mayor o igual a 0.'
+          );
+        });
+
+        it('accepts -0 and a zero-width range', () => {
+          expect(validateSearchFilters({ minPrice: '-0', maxPrice: 0 }).error).toBe('');
+        });
+
+        it('keeps the invalid filters in the result and respects error precedence', () => {
+          const result = validateSearchFilters({
+            search: 'x'.repeat(SEARCH_MAX_LENGTH + 1),
+            minPrice: 'abc',
+            maxPrice: '-1',
+          });
+          expect(result.error).toBe(
+            `La búsqueda puede tener como máximo ${SEARCH_MAX_LENGTH} caracteres.`
+          );
+          expect(Number.isNaN(result.filters.minPrice)).toBe(true);
+          expect(result.filters.maxPrice).toBe(-1);
+
+          const minWins = validateSearchFilters({ minPrice: 'abc', maxPrice: '-1' });
+          expect(minWins.error).toBe('El precio mínimo debe ser un número mayor o igual a 0.');
+
+          const maxValidityWins = validateSearchFilters({ minPrice: 10, maxPrice: -2 });
+          expect(maxValidityWins.error).toBe(
+            'El precio máximo debe ser un número mayor o igual a 0.'
+          );
+        });
+
+        it('does not impose a length limit on the category', () => {
+          const category = 'c'.repeat(500);
+          expect(validateSearchFilters({ category }).error).toBe('');
+          expect(validateSearchFilters({ category }).filters.category).toBe(category);
+        });
+      });
+    });
+  })();
+})();

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 coverage/
+.nyc_output/
 .env
 *.log
 .DS_Store
@@ -11,3 +12,7 @@ coverage/
 pnpm-debug.log*
 jasmine-browser-runner/
 .pnpm-store/
+
+# ── Dev SSL certs (DevOps Lab W3 #5) ──
+# NEVER commit private keys or self-signed certs. Regenerate on each machine.
+nginx/certs/

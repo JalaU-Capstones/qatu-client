@@ -51,24 +51,9 @@ export class ThemeStore {
     this._apply();
   }
 
-  /** Cycles light → dark → system → light. */
+  /** Toggles to the opposite of the currently applied theme. */
   cycle() {
-    let next;
-    try {
-      const stored = window.localStorage.getItem(THEME_KEY);
-      if (!stored && this._theme === 'system') {
-        next = this._resolved === 'dark' ? 'light' : 'dark';
-      }
-    } catch {
-      // ignore
-    }
-
-    if (!next) {
-      const order = ['light', 'dark', 'system'];
-      next = order[(order.indexOf(this._theme) + 1) % order.length];
-    }
-
-    this.setPreference(next);
+    this.setPreference(this._resolved === 'dark' ? 'light' : 'dark');
   }
 
   subscribe(listener) {

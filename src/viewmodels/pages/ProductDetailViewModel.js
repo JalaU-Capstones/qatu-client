@@ -1,12 +1,17 @@
+import { ConversationsApi } from '../../models/api/ConversationsApi.js';
 import { ProductsApi } from '../../models/api/ProductsApi.js';
 import { cartService as defaultCartService } from '../../services/CartService.js';
+import { authRedirectStore as defaultAuthRedirectStore } from '../../store/authRedirectStore.js';
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
 
 const TABS = [
-  { id: 'features', label: 'Características' },
   { id: 'description', label: 'Descripción' },
+  { id: 'features', label: 'Características' },
   { id: 'reviews', label: 'Reseñas' },
 ];
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * ViewModel for the product detail page (`/products/:slug`).
@@ -23,10 +28,25 @@ export class ProductDetailViewModel {
    * @param {Object} [options]
    * @param {import('../../models/api/ProductsApi.js').ProductsApi} [options.productsApi]
    * @param {import('../../services/CartService.js').CartService} [options.cartService]
+   * @param {import('../../models/api/ConversationsApi.js').ConversationsApi} [options.conversationsApi]
+   * @param {Object} [options.authStore]
+   * @param {Object} [options.authRedirectStore]
+   * @param {Object} [options.router]
    */
-  constructor({ productsApi = new ProductsApi(), cartService = defaultCartService } = {}) {
+  constructor({
+    productsApi = new ProductsApi(),
+    cartService = defaultCartService,
+    conversationsApi = new ConversationsApi(),
+    authStore = defaultAuthStore,
+    authRedirectStore = defaultAuthRedirectStore,
+    router = null,
+  } = {}) {
     this.productsApi = productsApi;
     this.cartService = cartService;
+    this.conversationsApi = conversationsApi;
+    this.authStore = authStore;
+    this.authRedirectStore = authRedirectStore;
+    this.router = router;
 
     this.productSlug = null;
     /** @type {Object|null} */
@@ -38,17 +58,25 @@ export class ProductDetailViewModel {
     this.errorMessage = '';
 
     this.quantity = 1;
-    this.activeTab = 'features';
+    this.activeTab = 'description';
     this.selectedImage = 0;
     this.isAdding = false;
     this.feedback = '';
+    this.isUnpublishing = false;
+    this.isDeleting = false;
+    this.ownerActionFeedback = '';
+    this.ownerActionFeedbackType = 'status';
 
     this.tabs = TABS;
     this._listeners = new Set();
   }
 
+  get canPurchase() {
+    return typeof this.authStore.isAdmin !== 'function' || !this.authStore.isAdmin();
+  }
+
   /**
-   * Loads the product by slug and up to three related products.
+   * Loads the product by slug or UUID and up to three related products.
    * @param {string} productSlug
    * @returns {Promise<void>}
    */
@@ -58,13 +86,16 @@ export class ProductDetailViewModel {
     this.errorMessage = '';
     this.product = null;
     this.similarProducts = [];
+    this.ownerActionFeedback = '';
     this.quantity = 1;
-    this.activeTab = 'features';
+    this.activeTab = 'description';
     this.selectedImage = 0;
     this._notify();
 
     try {
-      const product = await this.productsApi.getProductBySlug(productSlug);
+      const product = UUID_PATTERN.test(productSlug)
+        ? await this.productsApi.getProductById(productSlug)
+        : await this.productsApi.getProductBySlug(productSlug);
       if (!product) {
         this.status = 'not-found';
         this._notify();
@@ -123,9 +154,12 @@ export class ProductDetailViewModel {
    * Adds the current product/quantity to the cart through `CartService`.
    * Returns the service union; `auth-required` lets the caller decide how to
    * prompt the guest (the shell redirects to `/login`).
-   * @returns {Promise<{ status: 'added'|'auth-required'|'error', item?: Object, error?: Error }>}
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
    */
   async addToCart() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
     if (!this.product || this.isOutOfStock() || this.isAdding) {
       return { status: 'error', error: new Error('Producto no disponible') };
     }
@@ -155,6 +189,92 @@ export class ProductDetailViewModel {
       this.isAdding = false;
       this._notify();
     }
+  }
+
+  /**
+   * Adds the current product to the cart for immediate checkout.
+   * @returns {Promise<{ status: 'added'|'auth-required'|'error'|'forbidden', item?: Object, error?: Error }>}
+   */
+  async buyNow() {
+    if (!this.canPurchase) {
+      return { status: 'forbidden' };
+    }
+    return this.addToCart();
+  }
+
+  /**
+   * Unpublishes the current product for its owner.
+   * @returns {Promise<{ status: 'success'|'error', error?: Error }>}
+   */
+  async unpublishProduct() {
+    if (!this.product || this.isUnpublishing || this.product.state !== 'published') {
+      return { status: 'error', error: new Error('El producto no se puede despublicar.') };
+    }
+
+    this.isUnpublishing = true;
+    this.ownerActionFeedback = '';
+    this.ownerActionFeedbackType = 'status';
+    this._notify();
+
+    try {
+      await this.productsApi.unpublishProduct(this.product.id);
+      this.product = { ...this.product, state: 'unpublished' };
+      this.ownerActionFeedback =
+        'Producto despublicado. Ya no está disponible en el endpoint público products/{id}; puedes verlo y administrarlo en Mis productos.';
+      return { status: 'success' };
+    } catch (error) {
+      this.ownerActionFeedback =
+        error instanceof Error ? error.message : 'No pudimos despublicar el producto.';
+      this.ownerActionFeedbackType = 'alert';
+      return { status: 'error', error };
+    } finally {
+      this.isUnpublishing = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Permanently deletes the current product after caller confirmation.
+   * @returns {Promise<{ status: 'success'|'error', error?: Error }>}
+   */
+  async deleteProduct() {
+    if (!this.product || this.isDeleting) {
+      return { status: 'error', error: new Error('El producto no se puede eliminar.') };
+    }
+
+    this.isDeleting = true;
+    this._notify();
+    try {
+      await this.productsApi.deleteProduct(this.product.id);
+      return { status: 'success' };
+    } catch (error) {
+      return { status: 'error', error };
+    } finally {
+      this.isDeleting = false;
+      this._notify();
+    }
+  }
+
+  /**
+   * Starts or reuses a conversation with the product's seller.
+   * @returns {Promise<{ redirected: true }|{ conversationId: string, created: boolean }>}
+   */
+  async contactSeller() {
+    if (!this.authStore.isAuthenticated()) {
+      this.authRedirectStore.setReturnTo(window.location.pathname + window.location.search);
+      this.router?.navigate('/login');
+      return { redirected: true };
+    }
+
+    const sellerId = this.product?.seller_id || this.product?.seller?.id;
+    if (!sellerId) throw new Error('Vendedor no disponible');
+
+    const { data, created } = await this.conversationsApi.createOrGetConversation({
+      sellerId,
+      productId: this.product.id,
+    });
+
+    return { conversationId: data.id, created };
   }
 
   /** @returns {boolean} */
@@ -247,7 +367,7 @@ export class ProductDetailViewModel {
     const images = Array.isArray(product.images) ? product.images : [];
     if (images.length > 0) {
       return images.map((image, index) => ({
-        path: typeof image?.image_path === 'string' ? image.image_path : null,
+        path: typeof image?.path === 'string' ? image.path : null,
         label: image?.label || `Vista ${index + 1}`,
       }));
     }

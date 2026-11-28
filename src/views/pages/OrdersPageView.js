@@ -1,4 +1,4 @@
-import { ORDER_STATUSES, getOrderStatusLabel } from '../../models/entities/orderStatus.js';
+import { getOrderStatusLabel, ORDER_STATUSES } from '../../models/entities/orderStatus.js';
 import { authRedirectStore } from '../../store/authRedirectStore.js';
 import { authStore } from '../../store/authStore.js';
 import { OrdersViewModel } from '../../viewmodels/pages/OrdersViewModel.js';
@@ -14,16 +14,30 @@ export class OrdersPageView {
    * @param {Object} [options]
    * @param {OrdersViewModel} [options.viewModel]
    * @param {Function} [options.onNavigate]
+   * @param {string|null} [options.orderNumber]
    */
-  constructor({ viewModel = new OrdersViewModel(), onNavigate = null } = {}) {
+  constructor({ viewModel = new OrdersViewModel(), onNavigate = null, orderNumber = null } = {}) {
     this.viewModel = viewModel;
     this.onNavigate = onNavigate;
+    this.orderNumber = orderNumber;
     this.element = null;
     this._orderList = new OrderListComponent({
-      onOrderClick: (order) => this.viewModel.loadOrderById(order.id),
+      onOrderClick: (order) => {
+        if (this.onNavigate) {
+          this.onNavigate(`/orders/${encodeURIComponent(order.order_number || order.id)}`);
+        } else {
+          this.viewModel.loadOrderById(order.id);
+        }
+      },
     });
     this._orderDetail = new OrderDetailComponent({
-      onBack: () => this.viewModel.clearSelectedOrder(),
+      onBack: () => {
+        if (this.orderNumber && this.onNavigate) {
+          this.onNavigate('/orders');
+        } else {
+          this.viewModel.clearSelectedOrder();
+        }
+      },
     });
     this._unsubscribe = null;
   }
@@ -46,7 +60,16 @@ export class OrdersPageView {
       return;
     }
 
-    this.viewModel.loadOrders(1);
+    if (authStore.isAdmin()) {
+      this._renderAdminForbidden();
+      return this.element;
+    }
+
+    if (this.orderNumber) {
+      this.viewModel.loadOrderByNumber(this.orderNumber);
+    } else {
+      this.viewModel.loadOrders(1);
+    }
   }
 
   /**
@@ -69,7 +92,7 @@ export class OrdersPageView {
    */
   render() {
     const section = document.createElement('section');
-    section.className = 'q-orders-page';
+    section.className = this.orderNumber ? 'q-orders-page q-orders-page--detail' : 'q-orders-page';
     section.setAttribute('aria-label', 'Historial de compras');
 
     const container = document.createElement('div');
@@ -79,6 +102,9 @@ export class OrdersPageView {
     const header = document.createElement('div');
     header.className = 'q-orders-page__header';
 
+    const heading = document.createElement('div');
+    heading.className = 'q-orders-page__heading';
+
     const title = document.createElement('h1');
     title.className = 'q-orders-page__title';
     title.textContent = 'Mis Órdenes';
@@ -87,8 +113,9 @@ export class OrdersPageView {
     subtitle.className = 'q-orders-page__subtitle';
     subtitle.textContent = 'Revisa el historial y estado de todas tus compras';
 
-    header.appendChild(title);
-    header.appendChild(subtitle);
+    heading.appendChild(title);
+    heading.appendChild(subtitle);
+    header.appendChild(heading);
 
     // Status filter dropdown (aligned with API contract: pending, confirmed, shipped, delivered, cancelled)
     const filterContainer = document.createElement('div');
@@ -171,10 +198,49 @@ export class OrdersPageView {
     if (loginLink && this.onNavigate) {
       loginLink.addEventListener('click', (e) => {
         e.preventDefault();
-        authRedirectStore.setReturnTo('/orders');
+        authRedirectStore.setReturnTo(
+          this.orderNumber ? `/orders/${encodeURIComponent(this.orderNumber)}` : '/orders'
+        );
         this.onNavigate('/login');
       });
     }
+  }
+
+  _renderAdminForbidden() {
+    const content = this.element?.querySelector('.q-orders-page__content');
+    if (!content) return;
+    content.replaceChildren();
+
+    const box = document.createElement('div');
+    box.className = 'q-admin-applications-forbidden';
+    box.setAttribute('role', 'alert');
+
+    const code = document.createElement('p');
+    code.className = 'q-admin-applications-forbidden__code';
+    code.textContent = 'No disponible';
+
+    const title = document.createElement('h2');
+    title.className = 'q-admin-applications-forbidden__title';
+    title.textContent = 'Esta sección no está disponible para administradores';
+
+    const description = document.createElement('p');
+    description.textContent =
+      'La gestión de compras es exclusiva de compradores y vendedores. Como administrador, tu trabajo está en el panel de administración.';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'q-btn q-btn--primary';
+    button.textContent = 'Ir a reportes';
+    button.addEventListener('click', () => {
+      if (typeof this.onNavigate === 'function') {
+        this.onNavigate('/admin/reports');
+      } else {
+        window.location.assign('/admin/reports');
+      }
+    });
+
+    box.append(code, title, description, button);
+    content.appendChild(box);
   }
 
   /**

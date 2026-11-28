@@ -1,17 +1,25 @@
+import { authStore as defaultAuthStore } from '../../store/authStore.js';
 import { FooterViewModel } from '../../viewmodels/components/FooterViewModel.js';
+import { getCategoriesIndexPath } from '../utils/categoriesIndexPath.js';
+import { createBrandLogo } from './BrandLogo.js';
 
 /**
  * View component for the Footer.
- * Renders brand description, site navigation links, support links, social links, and legal notice.
+ * Renders brand description, site navigation links, and the legal notice.
  */
 export class FooterView {
   /**
    * @param {FooterViewModel} [viewModel]
+   * @param {Object} [options]
+   * @param {Object} [options.authStore]
    */
-  constructor(viewModel = new FooterViewModel()) {
+  constructor(viewModel = new FooterViewModel(), { authStore = defaultAuthStore } = {}) {
     this.viewModel = viewModel;
+    this.authStore = authStore;
     this.element = null;
     this._unsubscribe = null;
+    this._unsubscribeAuth = null;
+    this._categoryLinks = new Set();
   }
 
   /**
@@ -38,11 +46,12 @@ export class FooterView {
     brandCol.className = 'q-footer-col q-footer-col-brand';
 
     const brandLink = document.createElement('a');
-    brandLink.className = 'q-brand-logo';
+    brandLink.className = 'q-brand-link';
     brandLink.href = this.viewModel.brand.logoHref;
-    brandLink.textContent = this.viewModel.brand.logoText;
     brandLink.setAttribute('aria-label', `${this.viewModel.brand.logoText} inicio`);
     brandLink.dataset.route = '';
+
+    brandLink.appendChild(createBrandLogo({ size: 'md' }));
 
     brandLink.addEventListener('click', (e) => {
       e.preventDefault();
@@ -71,10 +80,25 @@ export class FooterView {
       section.links.forEach((link) => {
         const item = document.createElement('li');
         const anchor = document.createElement('a');
-        anchor.href = link.href;
+        let href = link.href;
+        const normalizedLabel = link.label
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+        if (normalizedLabel === 'categorias') {
+          href =
+            typeof this.authStore?.isAdmin === 'function' && this.authStore.isAdmin()
+              ? getCategoriesIndexPath('admin')
+              : getCategoriesIndexPath('user');
+          this._categoryLinks.add(anchor);
+        }
+        if (link.label.toLowerCase().includes('vender') || link.href === '/vender') {
+          href = this.authStore?.isSeller() ? '/seller/products' : '/seller/apply';
+        }
+        anchor.href = href;
         anchor.textContent = link.label;
         // Mark internal links so the router can intercept navigation
-        if (!link.href.startsWith('http')) {
+        if (!href.startsWith('http')) {
           anchor.dataset.route = '';
         }
         anchor.addEventListener('click', (e) => {
@@ -89,33 +113,7 @@ export class FooterView {
       grid.appendChild(col);
     });
 
-    // 3. Social Column
-    const socialCol = document.createElement('div');
-    socialCol.className = 'q-footer-col q-footer-col-social';
-
-    const socialHeading = document.createElement('h3');
-    socialHeading.className = 'q-footer-heading';
-    socialHeading.textContent = this.viewModel.social.title;
-
-    const socialGroup = document.createElement('div');
-    socialGroup.className = 'q-footer-social';
-
-    this.viewModel.social.items.forEach((item) => {
-      const socialLink = document.createElement('a');
-      socialLink.className = 'q-footer-social-btn';
-      socialLink.href = item.href;
-      socialLink.textContent = item.label;
-      socialLink.setAttribute('aria-label', item.ariaLabel || item.label);
-      socialLink.setAttribute('target', '_blank');
-      socialLink.setAttribute('rel', 'noopener noreferrer');
-      socialGroup.appendChild(socialLink);
-    });
-
-    socialCol.appendChild(socialHeading);
-    socialCol.appendChild(socialGroup);
-    grid.appendChild(socialCol);
-
-    // 4. Bottom bar
+    // Bottom bar
     const bottomBar = document.createElement('div');
     bottomBar.className = 'q-footer-bottom';
 
@@ -123,8 +121,10 @@ export class FooterView {
     copyright.className = 'q-footer-copyright';
     copyright.textContent = this.viewModel.bottomBar.copyright;
 
-    const motto = document.createElement('span');
+    const motto = document.createElement('a');
     motto.className = 'q-footer-motto';
+    motto.href = this.viewModel.bottomBar.mottoHref || '/about';
+    motto.dataset.route = '';
     motto.textContent = this.viewModel.bottomBar.motto;
 
     bottomBar.appendChild(copyright);
@@ -135,6 +135,10 @@ export class FooterView {
     footer.appendChild(container);
 
     this.element = footer;
+
+    if (typeof this.authStore?.subscribe === 'function') {
+      this._unsubscribeAuth = this.authStore.subscribe(() => this._refreshCategoryLinks());
+    }
 
     this._unsubscribe = this.viewModel.subscribe(() => {
       // Re-render if full model changes
@@ -161,10 +165,25 @@ export class FooterView {
     return el;
   }
 
+  _refreshCategoryLinks() {
+    const href =
+      typeof this.authStore?.isAdmin === 'function' && this.authStore.isAdmin()
+        ? getCategoriesIndexPath('admin')
+        : getCategoriesIndexPath('user');
+    this._categoryLinks.forEach((link) => {
+      link.href = href;
+    });
+  }
+
   /**
    * Cleans up event listeners and subscriptions.
    */
   destroy() {
+    if (typeof this._unsubscribeAuth === 'function') {
+      this._unsubscribeAuth();
+      this._unsubscribeAuth = null;
+    }
+    this._categoryLinks.clear();
     if (typeof this._unsubscribe === 'function') {
       this._unsubscribe();
       this._unsubscribe = null;

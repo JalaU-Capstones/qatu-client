@@ -295,3 +295,299 @@ describe('CartService', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('CartService (recovered 1)', () => {
+    let cartApi;
+    let cartStore;
+    let authStore;
+    let pendingStore;
+    let service;
+
+    beforeEach(() => {
+      cartApi = { addItem: jasmine.createSpy('addItem') };
+      cartStore = {
+        setFromAddResponse: jasmine.createSpy('setFromAddResponse'),
+        getCount: () => 0,
+      };
+      authStore = {
+        isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(true),
+      };
+      pendingStore = {
+        set: jasmine.createSpy('set'),
+        get: jasmine.createSpy('get').and.returnValue(null),
+        clear: jasmine.createSpy('clear'),
+      };
+      service = new CartService({
+        cartApi,
+        cartStore,
+        authStore,
+        pendingCartActionStore: pendingStore,
+      });
+    });
+
+    describe('addToCart — unauthenticated (recovered 2)', () => {
+      it('addToCart queues pending and returns { status: "auth-required" } when unauthenticated', async () => {
+        authStore.isAuthenticated.and.returnValue(false);
+        const res = await service.addToCart('p1', 2);
+        expect(pendingStore.set).toHaveBeenCalledWith({ productId: 'p1', quantity: 2 });
+        expect(res).toEqual({ status: 'auth-required' });
+      });
+    });
+
+    describe('addToCart — authenticated happy path (recovered 3)', () => {
+      it('addToCart returns { status: "added", item } on success', async () => {
+        const item = { id: 'c1', product_id: 'p1', quantity: 3 };
+        cartApi.addItem.and.returnValue(Promise.resolve({ data: item }));
+        const res = await service.addToCart('p1', 3);
+        expect(res).toEqual({ status: 'added', item });
+      });
+    });
+
+    describe('addToCart — authenticated error path (recovered 4)', () => {
+      it('addToCart returns { status: "error", error, statusCode: 422 } when API throws PRODUCT_OUT_OF_STOCK', async () => {
+        const error = new Error('Out of stock');
+        error.code = 'PRODUCT_OUT_OF_STOCK';
+        error.statusCode = 422;
+        cartApi.addItem.and.returnValue(Promise.reject(error));
+        const res = await service.addToCart('p1', 1);
+        expect(res).toEqual({ status: 'error', error, statusCode: 422 });
+      });
+
+      it('addToCart returns { status: "error", statusCode: 0 } when API throws a network error (no statusCode)', async () => {
+        const netError = new Error('Network failure');
+        cartApi.addItem.and.returnValue(Promise.reject(netError));
+        const res = await service.addToCart('p1', 1);
+        expect(res).toEqual({ status: 'error', error: netError, statusCode: 0 });
+      });
+    });
+
+    describe('processPending (recovered 5)', () => {
+      it('processPending clears pending on success (status: "added")', async () => {
+        pendingStore.get.and.returnValue({ productId: 'p1', quantity: 2 });
+        cartApi.addItem.and.returnValue(
+          Promise.resolve({ data: { product_id: 'p1', quantity: 2 } })
+        );
+        const res = await service.processPending();
+        expect(res.status).toBe('added');
+        expect(pendingStore.clear).toHaveBeenCalled();
+      });
+    });
+  });
+
+  (() => {
+    describe('CartService additional branches (recovered 6)', () => {
+      let deps;
+      let service;
+
+      beforeEach(() => {
+        deps = {
+          cartApi: {
+            addItem: jasmine.createSpy('addItem'),
+            getCart: jasmine.createSpy('getCart'),
+            updateItem: jasmine.createSpy('updateItem'),
+            removeItem: jasmine.createSpy('removeItem'),
+            clear: jasmine.createSpy('clear'),
+          },
+          cartStore: {
+            getItem: jasmine.createSpy('getItem').and.returnValue({ itemId: 'ci-1' }),
+            setFromAddResponse: jasmine.createSpy('setFromAddResponse'),
+            setFromGet: jasmine.createSpy('setFromGet'),
+            removeItem: jasmine.createSpy('removeItem'),
+            clear: jasmine.createSpy('clear'),
+            getCount: jasmine.createSpy('getCount').and.returnValue(2),
+          },
+          authStore: {
+            isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(true),
+          },
+          pendingCartActionStore: {
+            set: jasmine.createSpy('set'),
+            get: jasmine.createSpy('get').and.returnValue(null),
+            clear: jasmine.createSpy('clear'),
+          },
+        };
+        service = new CartService(deps);
+      });
+
+      describe('updateItem (recovered 7)', () => {
+        it('rejects a missing productId before touching the store', async () => {
+          const result = await service.updateItem('', 2);
+
+          expect(result.status).toBe('error');
+          expect(result.statusCode).toBe(400);
+          expect(result.error.code).toBe('INVALID_REQUEST');
+          expect(deps.cartStore.getItem).not.toHaveBeenCalled();
+          expect(deps.cartApi.updateItem).not.toHaveBeenCalled();
+        });
+
+        it('rejects a product without a server-side item id', async () => {
+          deps.cartStore.getItem.and.returnValue(null);
+
+          const result = await service.updateItem('p1', 2);
+
+          expect(result.status).toBe('error');
+          expect(result.statusCode).toBe(400);
+          expect(result.error.message).toBe('No se encontró el item del carrito en el servidor.');
+        });
+
+        it('updates the API item and syncs the store', async () => {
+          const item = { product_id: 'p1', quantity: 3 };
+          deps.cartApi.updateItem.and.resolveTo({ data: item });
+
+          await expectAsync(service.updateItem('p1', 3)).toBeResolvedTo({
+            status: 'updated',
+            item,
+            productId: 'p1',
+            quantity: 3,
+          });
+          expect(deps.cartApi.updateItem).toHaveBeenCalledWith({ cartItemId: 'ci-1', quantity: 3 });
+          expect(deps.cartStore.setFromAddResponse).toHaveBeenCalledWith(item);
+        });
+
+        it('does not write to the store when the API returns no data or fails', async () => {
+          deps.cartApi.updateItem.and.resolveTo({});
+          await expectAsync(service.updateItem('p1', 0)).toBeResolvedTo({
+            status: 'updated',
+            item: undefined,
+            productId: 'p1',
+            quantity: 0,
+          });
+          expect(deps.cartStore.setFromAddResponse).not.toHaveBeenCalled();
+
+          const error = new Error('failed');
+          error.statusCode = 422;
+          deps.cartApi.updateItem.and.rejectWith(error);
+          const result = await service.updateItem('p1', 2);
+          expect(result).toEqual({ status: 'error', error, statusCode: 422 });
+        });
+      });
+
+      describe('removeItem (recovered 8)', () => {
+        it('rejects missing ids and items without a server id', async () => {
+          const missing = await service.removeItem('');
+          expect(missing.statusCode).toBe(400);
+          expect(deps.cartApi.removeItem).not.toHaveBeenCalled();
+
+          deps.cartStore.getItem.and.returnValue(undefined);
+          const unknown = await service.removeItem('p1');
+          expect(unknown.statusCode).toBe(400);
+          expect(unknown.error.code).toBe('INVALID_REQUEST');
+        });
+
+        it('removes from the API first and then from the store', async () => {
+          deps.cartApi.removeItem.and.resolveTo({});
+
+          await expectAsync(service.removeItem('p1')).toBeResolvedTo({
+            status: 'removed',
+            productId: 'p1',
+          });
+          expect(deps.cartApi.removeItem).toHaveBeenCalledWith({ cartItemId: 'ci-1' });
+          expect(deps.cartStore.removeItem).toHaveBeenCalledWith('p1');
+        });
+
+        it('keeps the local snapshot when the API rejects', async () => {
+          deps.cartApi.removeItem.and.rejectWith(new Error('offline'));
+
+          const result = await service.removeItem('p1');
+          expect(result.status).toBe('error');
+          expect(result.statusCode).toBe(0);
+          expect(deps.cartStore.removeItem).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('clear (recovered 9)', () => {
+        it('does nothing for guests', async () => {
+          deps.authStore.isAuthenticated.and.returnValue(false);
+
+          await expectAsync(service.clear()).toBeResolvedTo({ status: 'auth-required' });
+          expect(deps.cartApi.clear).not.toHaveBeenCalled();
+          expect(deps.cartStore.clear).not.toHaveBeenCalled();
+        });
+
+        it('clears the store only after the API confirms', async () => {
+          deps.cartApi.clear.and.resolveTo({});
+
+          await expectAsync(service.clear()).toBeResolvedTo({ status: 'cleared' });
+          expect(deps.cartStore.clear).toHaveBeenCalled();
+        });
+
+        it('maps API errors without clearing the store', async () => {
+          const error = new Error('failed');
+          error.statusCode = 503;
+          deps.cartApi.clear.and.rejectWith(error);
+
+          await expectAsync(service.clear()).toBeResolvedTo({
+            status: 'error',
+            error,
+            statusCode: 503,
+          });
+          expect(deps.cartStore.clear).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('loadCart (recovered 10)', () => {
+        it('does not call the API for guests', async () => {
+          deps.authStore.isAuthenticated.and.returnValue(false);
+
+          await expectAsync(service.loadCart()).toBeResolvedTo({ status: 'auth-required' });
+          expect(deps.cartApi.getCart).not.toHaveBeenCalled();
+        });
+
+        it('normalizes a non-array response and returns the full result shape', async () => {
+          deps.cartApi.getCart.and.resolveTo({ data: null });
+
+          await expectAsync(service.loadCart()).toBeResolvedTo({
+            status: 'loaded',
+            items: [],
+            itemCount: 2,
+          });
+          expect(deps.cartApi.getCart).toHaveBeenCalledWith({ include: ['product'] });
+          expect(deps.cartStore.setFromGet).toHaveBeenCalledWith([]);
+        });
+
+        it('maps API errors to the error union', async () => {
+          deps.cartApi.getCart.and.rejectWith(new Error('offline'));
+
+          const result = await service.loadCart();
+          expect(result.status).toBe('error');
+          expect(result.statusCode).toBe(0);
+          expect(deps.cartStore.setFromGet).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('addToCart and processPending edges (recovered 11)', () => {
+        it('defaults quantity to 1 and does not write when the API returns no item', async () => {
+          deps.cartApi.addItem.and.resolveTo({});
+
+          await expectAsync(service.addToCart('p1')).toBeResolvedTo({
+            status: 'added',
+            item: undefined,
+          });
+          expect(deps.cartApi.addItem).toHaveBeenCalledWith({ productId: 'p1', quantity: 1 });
+          expect(deps.cartStore.setFromAddResponse).not.toHaveBeenCalled();
+        });
+
+        it('triggers a non-fatal post-add refresh and enriches the store', async () => {
+          deps.cartApi.addItem.and.resolveTo({ data: { product_id: 'p1' } });
+          deps.cartApi.getCart.and.resolveTo({ data: [] });
+
+          const result = await service.addToCart('p1', 2);
+
+          expect(result).toEqual({ status: 'added', item: { product_id: 'p1' } });
+          expect(deps.cartApi.getCart).toHaveBeenCalledWith({ include: ['product'] });
+          expect(deps.cartStore.setFromGet).toHaveBeenCalledWith([]);
+        });
+
+        it('clears pending when the retried add ends up unauthenticated', async () => {
+          deps.authStore.isAuthenticated.and.returnValue(false);
+          deps.pendingCartActionStore.get.and.returnValue({ productId: 'p1', quantity: 2 });
+
+          await expectAsync(service.processPending()).toBeResolvedTo({ status: 'auth-required' });
+          expect(deps.pendingCartActionStore.set).not.toHaveBeenCalled();
+          expect(deps.pendingCartActionStore.clear).toHaveBeenCalled();
+        });
+      });
+    });
+  })();
+})();

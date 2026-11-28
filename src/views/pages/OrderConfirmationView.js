@@ -28,12 +28,12 @@ const TIMELINE = [
 
 export class OrderConfirmationView {
   constructor({
-    orderId,
+    orderNumber,
     viewModel = new OrderConfirmationViewModel(),
     onNavigate = null,
     onLogin = null,
   } = {}) {
-    this.orderId = orderId;
+    this.orderNumber = orderNumber;
     this.viewModel = viewModel;
     this.onNavigate = onNavigate;
     this.onLogin = onLogin;
@@ -57,7 +57,7 @@ export class OrderConfirmationView {
     container.appendChild(el);
 
     this._unsubscribe = this.viewModel.subscribe(() => this._renderContent());
-    void this.viewModel.load(this.orderId);
+    void this.viewModel.load(this.orderNumber);
 
     return el;
   }
@@ -157,6 +157,7 @@ export class OrderConfirmationView {
 
     const cta = document.createElement('a');
     cta.className = 'q-btn q-btn--primary';
+    cta.classList.add('q-btn--block');
     cta.href = '/orders';
     cta.dataset.route = '';
     cta.textContent = 'Ver mis pedidos';
@@ -202,7 +203,6 @@ export class OrderConfirmationView {
     return list;
   }
 
-  // Not in the mockup: a short receipt so the buyer can check what was ordered.
   _renderReceipt(order) {
     const vm = this.viewModel;
 

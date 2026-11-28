@@ -14,6 +14,7 @@ export class HeaderViewModel {
    * @param {string} [options.loginText]
    * @param {string} [options.loginHref]
    * @param {Object|null} [options.user]
+   * @param {boolean} [options.isSeller] Show the seller dashboard link (seller or admin role).
    * @param {Function} [options.onLoginClick]
    * @param {Function} [options.onCartClick]
    * @param {Function} [options.onLogoClick]
@@ -28,16 +29,33 @@ export class HeaderViewModel {
     this.loginText = options.loginText || 'Iniciar sesión';
     this.loginHref = options.loginHref || '/login';
     this.user = options.user || null;
+    this.isSeller = Boolean(options.isSeller);
+    this.isAdmin = Boolean(options.isAdmin);
     this.theme = options.theme || 'system';
     this.onLoginClick = options.onLoginClick || null;
     this.onCartClick = options.onCartClick || null;
     this.onLogoClick = options.onLogoClick || null;
     this.onProfileClick = options.onProfileClick || null;
     this.onOrdersClick = options.onOrdersClick || null;
+    this.onConversations = options.onConversations || null;
+    this.onSellerOrdersClick = options.onSellerOrdersClick || null;
+    this.onSellerProductsClick = options.onSellerProductsClick || null;
+    this.onSellerApplyClick = options.onSellerApplyClick || null;
+    this.onAdminSellerApplicationsClick = options.onAdminSellerApplicationsClick || null;
+    this.onAdminReportsClick = options.onAdminReportsClick || null;
     this.onLogoutClick = options.onLogoutClick || null;
     this.onThemeToggleClick = options.onThemeToggleClick || null;
+    this.categories = options.categories || [];
+    this.searchValue = '';
+    this.onSearch = options.onSearch || null;
+    this.onCategoryClick = options.onCategoryClick || null;
+    this.onAdminCategoriesClick = options.onAdminCategoriesClick || null;
     this.isDropdownOpen = false;
     this._listeners = new Set();
+  }
+
+  get canPurchase() {
+    return !this.isAdmin;
   }
 
   /**
@@ -49,6 +67,31 @@ export class HeaderViewModel {
     this.user = user || null;
     if (!this.user) this.isDropdownOpen = false;
     this._notify();
+  }
+
+  /**
+   * Whether the signed-in user may open the seller dashboard (seller or admin role).
+   * UX only: the API enforces the real permission on every request.
+   * @param {boolean} value
+   */
+  setIsSeller(value) {
+    const next = Boolean(value);
+    if (this.isSeller !== next) {
+      this.isSeller = next;
+      this._notify();
+    }
+  }
+
+  /**
+   * Whether the signed-in user has the admin role.
+   * @param {boolean} value
+   */
+  setIsAdmin(value) {
+    const next = Boolean(value);
+    if (this.isAdmin !== next) {
+      this.isAdmin = next;
+      this._notify();
+    }
   }
 
   /**
@@ -110,12 +153,14 @@ export class HeaderViewModel {
   }
 
   /**
-   * Triggers user profile avatar click.
+   * Triggers user profile navigation and closes the dropdown.
    */
   triggerProfile() {
+    this.isDropdownOpen = false;
     if (typeof this.onProfileClick === 'function') {
       this.onProfileClick(this.user);
     }
+    this._notify();
   }
 
   /**
@@ -125,6 +170,86 @@ export class HeaderViewModel {
     this.isDropdownOpen = false;
     if (typeof this.onOrdersClick === 'function') {
       this.onOrdersClick();
+    }
+    this._notify();
+  }
+
+  triggerConversations() {
+    this.isDropdownOpen = false;
+    if (typeof this.onConversations === 'function') {
+      this.onConversations();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller orders dashboard. */
+  triggerSellerOrders() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerOrdersClick === 'function') {
+      this.onSellerOrdersClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller products dashboard. */
+  triggerSellerProducts() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerProductsClick === 'function') {
+      this.onSellerProductsClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to seller application page. */
+  triggerSellerApply() {
+    this.isDropdownOpen = false;
+    if (typeof this.onSellerApplyClick === 'function') {
+      this.onSellerApplyClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to the admin reports dashboard. */
+  triggerAdminReports() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminReportsClick === 'function') {
+      this.onAdminReportsClick();
+    }
+    this._notify();
+  }
+
+  /** Navigate to admin seller applications page. */
+  triggerAdminSellerApplications() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminSellerApplicationsClick === 'function') {
+      this.onAdminSellerApplicationsClick();
+    }
+    this._notify();
+  }
+
+  setCategories(categories = []) {
+    this.categories = categories;
+    this._notify();
+  }
+
+  setSearchValue(value) {
+    this.searchValue = typeof value === 'string' ? value : '';
+  }
+
+  triggerSearch() {
+    const term = this.searchValue.trim();
+    if (!term) return;
+    if (typeof this.onSearch === 'function') this.onSearch(term);
+  }
+
+  triggerCategory(categoryId) {
+    if (typeof this.onCategoryClick === 'function') this.onCategoryClick(categoryId);
+  }
+
+  triggerAdminCategories() {
+    this.isDropdownOpen = false;
+    if (typeof this.onAdminCategoriesClick === 'function') {
+      this.onAdminCategoriesClick();
     }
     this._notify();
   }

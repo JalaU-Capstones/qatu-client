@@ -1,5 +1,6 @@
-import { OrdersApi } from './OrdersApi.js';
+import { ORDER_STATUSES } from '../entities/orderStatus.js';
 import { apiFetch } from './client.js';
+import { OrdersApi } from './OrdersApi.js';
 
 describe('OrdersApi', () => {
   let fetchSpy;
@@ -47,6 +48,167 @@ describe('OrdersApi', () => {
     );
     expect(result.data.length).toBe(1);
     expect(result.meta.page).toBe(1);
+  });
+
+  it('listOrders appends view=seller for the seller dashboard', async () => {
+    await api.listOrders({ page: 1, limit: 10, view: 'seller' });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/orders?page=1&limit=10&view=seller',
+      jasmine.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('listOrders rejects an unknown view without calling the API', async () => {
+    try {
+      await api.listOrders({ view: 'superadmin' });
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.code).toBe('INVALID_REQUEST');
+      expect(err.statusCode).toBe(400);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('listOrders rejects an unknown status filter without calling the API', async () => {
+    try {
+      await api.listOrders({ status: 'teleported' });
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.code).toBe('INVALID_REQUEST');
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('listOrders accepts every documented view', async () => {
+    for (const view of ['buyer', 'seller', 'admin']) {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(JSON.stringify({ data: [], meta: {} }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+      await api.listOrders({ view });
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('updateOrderStatus rejects an unknown status or missing id without calling the API', async () => {
+    for (const [id, status] of [
+      ['ord-1', 'teleported'],
+      ['ord-1', ''],
+      ['', 'shipped'],
+    ]) {
+      try {
+        await api.updateOrderStatus(id, status);
+        fail(`Expected to throw for (${id}, ${status})`);
+      } catch (err) {
+        expect(err.code).toBe('INVALID_REQUEST');
+      }
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('updateOrderStatus surfaces FORBIDDEN (403) and NOT_FOUND (404) with their codes', async () => {
+    for (const [status, code] of [
+      [403, 'FORBIDDEN'],
+      [404, 'NOT_FOUND'],
+    ]) {
+      fetchSpy.and.returnValue(
+        Promise.resolve(
+          new Response(JSON.stringify({ error: { code, message: 'nope' } }), {
+            status,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
+      try {
+        await api.updateOrderStatus('ord-1', 'shipped');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(status);
+        expect(err.code).toBe(code);
+      }
+    }
+  });
+
+  it('updateOrderStatus keeps the INVALID_CSRF_TOKEN code (a 403 that is not a permission error)', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ error: { code: 'INVALID_CSRF_TOKEN', message: 'Invalid CSRF token' } }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+    try {
+      await api.updateOrderStatus('ord-1', 'shipped');
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.statusCode).toBe(403);
+      expect(err.code).toBe('INVALID_CSRF_TOKEN');
+    }
+  });
+
+  it('updateOrderStatus falls back to a code derived from the HTTP status when the body is not JSON', async () => {
+    for (const [status, code] of [
+      [403, 'FORBIDDEN'],
+      [404, 'NOT_FOUND'],
+      [422, 'INVALID_STATUS_TRANSITION'],
+      [500, 'UNKNOWN_ERROR'],
+    ]) {
+      fetchSpy.and.returnValue(Promise.resolve(new Response('<html>boom</html>', { status })));
+      try {
+        await api.updateOrderStatus('ord-1', 'shipped');
+        fail('Expected to throw');
+      } catch (err) {
+        expect(err.statusCode).toBe(status);
+        expect(err.code).toBe(code);
+      }
+    }
+  });
+
+  it('updateOrderStatus PATCHes /orders/:id/status', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(JSON.stringify({ data: { id: 'ord-1', status: 'shipped' }, meta: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+
+    const result = await api.updateOrderStatus('ord-1', 'shipped');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/orders/ord-1/status',
+      jasmine.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'shipped' }),
+      })
+    );
+    expect(result.data.status).toBe('shipped');
+  });
+
+  it('updateOrderStatus surfaces INVALID_STATUS_TRANSITION', async () => {
+    fetchSpy.and.returnValue(
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            error: { code: 'INVALID_STATUS_TRANSITION', message: 'Invalid status transition' },
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    try {
+      await api.updateOrderStatus('ord-1', 'pending');
+      fail('Expected to throw');
+    } catch (err) {
+      expect(err.statusCode).toBe(422);
+      expect(err.code).toBe('INVALID_STATUS_TRANSITION');
+    }
   });
 
   it('listOrders throws on error response', async () => {
@@ -236,3 +398,129 @@ describe('OrdersApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const jsonResponse = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('OrdersApi additional branches (recovered 1)', () => {
+      let fetchFn;
+      let api;
+
+      beforeEach(() => {
+        fetchFn = jasmine.createSpy('apiFetchFn');
+        api = new OrdersApi({ apiFetchFn: fetchFn });
+      });
+
+      it('uses default pagination when listOrders is called with no arguments', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+
+        await api.listOrders();
+
+        expect(fetchFn).toHaveBeenCalledWith('/orders?page=1&limit=10', { method: 'GET' });
+      });
+
+      it('omits falsy filter values from the query string', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: [], meta: {} }));
+
+        await api.listOrders({ page: 0, limit: 0, status: '', view: '' });
+        expect(fetchFn.calls.first().args[0]).toBe('/orders');
+      });
+
+      it('accepts every documented status in updateOrderStatus', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+        for (const status of ORDER_STATUSES) {
+          await expectAsync(api.updateOrderStatus('order-1', status)).toBeResolved();
+        }
+        expect(fetchFn).toHaveBeenCalledTimes(ORDER_STATUSES.length);
+      });
+
+      it('validates missing and non-string ids/statuses with exact errors', async () => {
+        for (const orderId of [undefined, null, 12, {}]) {
+          await expectAsync(api.getOrderById(orderId)).toBeRejectedWithError('orderId is required');
+          await expectAsync(api.updateOrderStatus(orderId, 'shipped')).toBeRejectedWithError(
+            'orderId is required'
+          );
+        }
+        for (const status of [undefined, null, 12, {}]) {
+          await expectAsync(api.updateOrderStatus('order-1', status)).toBeRejectedWithError(
+            'status is required'
+          );
+        }
+
+        let error;
+        try {
+          await api.getOrderById('');
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.code).toBe('INVALID_REQUEST');
+        expect(error.statusCode).toBe(400);
+        expect(fetchFn).not.toHaveBeenCalled();
+      });
+
+      it('encodes order ids in detail and status URLs', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+
+        await api.getOrderById('order/1 ?');
+        expect(fetchFn.calls.first().args[0]).toBe('/orders/order%2F1%20%3F');
+
+        await api.updateOrderStatus('order/1', 'shipped');
+        expect(fetchFn.calls.mostRecent().args[0]).toBe('/orders/order%2F1/status');
+      });
+
+      it('uses generic messages, UNKNOWN_ERROR and status-derived codes', async () => {
+        fetchFn.and.resolveTo(new Response('not-json', { status: 500 }));
+        await expectAsync(api.getOrderById('o1')).toBeRejectedWithError(
+          'Failed to fetch order details (500)'
+        );
+
+        fetchFn.and.resolveTo(new Response('', { status: 401 }));
+        let error;
+        try {
+          await api.updateOrderStatus('o1', 'shipped');
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.code).toBe('UNAUTHORIZED');
+        expect(error.statusCode).toBe(401);
+
+        fetchFn.and.resolveTo(jsonResponse({ error: { code: 'CUSTOM', details: ['d'] } }, 422));
+        try {
+          await api.listOrders();
+        } catch (caught) {
+          error = caught;
+        }
+        expect(error.message).toBe('Failed to fetch orders (422)');
+        expect(error.code).toBe('CUSTOM');
+        expect(error.details).toEqual(['d']);
+      });
+
+      it('omits falsy createOrder fields and accepts an empty payload', async () => {
+        fetchFn.and.resolveTo(jsonResponse({ data: {} }));
+
+        await api.createOrder({ shippingAddress: { city: 'LP' }, paymentMethod: '', notes: null });
+        expect(JSON.parse(fetchFn.calls.first().args[1].body)).toEqual({
+          shipping_address: { city: 'LP' },
+        });
+
+        await api.createOrder();
+        expect(JSON.parse(fetchFn.calls.mostRecent().args[1].body)).toEqual({});
+      });
+
+      it('propagates network rejections from every endpoint', async () => {
+        fetchFn.and.rejectWith(new Error('offline'));
+
+        await expectAsync(api.listOrders()).toBeRejectedWithError('offline');
+        await expectAsync(api.createOrder({})).toBeRejectedWithError('offline');
+        await expectAsync(api.getOrderById('o1')).toBeRejectedWithError('offline');
+        await expectAsync(api.updateOrderStatus('o1', 'shipped')).toBeRejectedWithError('offline');
+      });
+    });
+  })();
+})();

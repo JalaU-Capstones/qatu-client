@@ -70,14 +70,33 @@
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.q-app {
+html,
+body,
+#app {
   display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  flex: 1 0 auto;
+}
+
+.q-app {
+  --q-header-overlay-height: calc(var(--q-header-height, 64) * 1px + 8px);
+  display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
   min-height: 100vh;
 }
 
 .q-main {
-  flex: 1;
+  flex: 1 0 auto;
+  padding-top: var(--q-header-overlay-height, 72px);
 }
 
 .q-section-container {
@@ -168,9 +187,7 @@
  * ──────────────────────────────────────────────────────────── */
 body {
   background-color: var(--q-bg-page);
-  background-image:
-    radial-gradient(circle at 0% 0%, var(--q-ambient-pink) 0%, transparent 60%),
-    radial-gradient(circle at 100% 100%, var(--q-ambient-cyan) 0%, transparent 60%);
+  background-image: none;
   background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
@@ -245,6 +262,29 @@ body {
   transform: translateY(-1px);
 }
 
+/* Variant: Danger (Red Solid — destructive actions) */
+/* Only one red palette token exists (--q-color-red-56, #ea4335). It is
+ * used for both base and hover; hover darkens via opacity on a dark bg
+ * overlay rather than a separate token shade. When a --q-color-red-700
+ * is added to the token palette it can replace the fallback below. */
+.q-btn--danger {
+  color: #ffffff;
+  background-color: var(--q-color-red-56, #dc3545);
+  border-color: var(--q-color-red-56, #dc3545);
+}
+
+.q-btn--danger:hover:not(:disabled),
+.q-btn--danger:focus-visible:not(:disabled) {
+  background-color: color-mix(in srgb, var(--q-color-red-56, #dc3545) 85%, #000000);
+  border-color: color-mix(in srgb, var(--q-color-red-56, #dc3545) 85%, #000000);
+  transform: translateY(-1px);
+}
+
+.q-btn--danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Variant: Outline (Pink Outline) */
 .q-btn--outline {
   color: var(--q-accent);
@@ -301,4 +341,44 @@ body {
 [data-theme='dark'] .q-glass-panel {
   background-color: rgba(26, 26, 30, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.q-home {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background: var(--q-bg-page);
+}
+
+.q-home::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 500px 430px at 5% 2%,
+      color-mix(in srgb, var(--q-ambient-pink) 72%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 480px 560px at 100% 28%,
+      color-mix(in srgb, var(--q-ambient-cyan) 66%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 600px 430px at 70% 92%,
+      color-mix(in srgb, var(--q-ambient-pink) 24%, transparent),
+      transparent 75%
+    );
+  content: '';
+  pointer-events: none;
+}
+
+/* Utility label for ImageWithFallback placeholder text.
+   Neutralizes default <p> margin/font so consumers can style their
+   own label class on top without inheriting block-element defaults. */
+.q-image-fallback__label {
+  margin: 0;
+  font: inherit;
+  color: inherit;
 }

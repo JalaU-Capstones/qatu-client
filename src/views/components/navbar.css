@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 36px;
+  gap: 20px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -25,27 +25,27 @@
   padding: 0;
 }
 
-a.q-navbar-link {
-  color: var(--q-fg-secondary, #4b5563) !important;
+.q-navbar-link {
+  color: var(--q-fg-primary);
   font-family: var(--q-font-sans, system-ui, -apple-system, sans-serif);
-  font-size: 0.9375rem;
+  font-size: 14px;
   font-weight: 500;
-  text-decoration: none !important;
+  text-decoration: none;
   padding: 4px 0;
   transition: color 150ms ease;
   cursor: pointer;
   white-space: nowrap;
 }
 
-a.q-navbar-link:hover {
-  color: var(--q-fg-primary, #111827) !important;
-  text-decoration: none !important;
+.q-navbar-link:hover {
+  color: var(--q-accent);
+  text-decoration: none;
 }
 
-a.q-navbar-link.is-active {
-  color: var(--q-fg-primary, #111827) !important;
+.q-navbar-link.is-active {
+  color: var(--q-fg-primary);
   font-weight: 600;
-  text-decoration: none !important;
+  text-decoration: none;
 }
 
 .q-navbar-burger {
@@ -119,7 +119,7 @@ a.q-navbar-link.is-active {
     gap: 16px;
   }
 
-  a.q-navbar-link {
+  .q-navbar-link {
     font-size: 1rem;
     display: block;
     width: 100%;

@@ -4,6 +4,7 @@ import {
   SHIPPING_LIMITS,
 } from '../../models/validation/shippingForm.js';
 import { CheckoutViewModel } from '../../viewmodels/pages/CheckoutViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 
 const FORM_ID = 'q-checkout-form';
 
@@ -192,8 +193,32 @@ export class CheckoutView {
       void this._submit();
     });
 
-    form.append(this._renderShippingPanel(), this._renderPaymentPanel());
+    const shipping = document.createElement('div');
+    shipping.className = 'q-checkout__shipping';
+    shipping.append(this._renderSteps(), this._renderShippingPanel());
+
+    form.append(shipping, this._renderPaymentPanel());
     return form;
+  }
+
+  _renderSteps() {
+    const steps = document.createElement('ol');
+    steps.className = 'q-checkout__steps';
+    steps.setAttribute('aria-label', 'Progreso de compra');
+
+    [
+      { label: 'PASO 1 DE 3 · ENVÍO', current: true },
+      { label: '2 · PAGO' },
+      { label: '3 · REVISIÓN' },
+    ].forEach(({ label, current }) => {
+      const step = document.createElement('li');
+      step.className = `q-checkout__step${current ? ' is-active' : ''}`;
+      if (current) step.setAttribute('aria-current', 'step');
+      step.textContent = label;
+      steps.appendChild(step);
+    });
+
+    return steps;
   }
 
   _renderShippingPanel() {
@@ -239,6 +264,15 @@ export class CheckoutView {
         autocomplete: 'address-level1',
         maxLength: SHIPPING_LIMITS.state.max,
         wide: true,
+      }),
+      this._field({
+        name: 'postalCode',
+        label: 'Código postal',
+        placeholder: 'Ej. 760001',
+        autocomplete: 'postal-code',
+        maxLength: SHIPPING_LIMITS.postalCode.max,
+        wide: true,
+        optional: true,
       })
     );
 
@@ -317,6 +351,7 @@ export class CheckoutView {
     autocomplete = 'off',
     maxLength,
     wide = false,
+    optional = false,
   }) {
     const vm = this.viewModel;
     const id = `q-checkout-${name}`;
@@ -328,17 +363,28 @@ export class CheckoutView {
     const labelEl = document.createElement('label');
     labelEl.className = 'q-checkout__label';
     labelEl.htmlFor = id;
-    labelEl.textContent = label;
+    if (optional) {
+      labelEl.textContent = label;
+      const opt = document.createElement('span');
+      opt.className = 'q-form-optional';
+      opt.textContent = ' (opcional)';
+      labelEl.appendChild(opt);
+    } else {
+      labelEl.textContent = label;
+    }
 
     const input = document.createElement('input');
     input.id = id;
-    input.name = name;
+    input.name = name === 'postalCode' ? 'postal_code' : name;
     input.type = type;
     input.className = `q-checkout__input${error ? ' is-invalid' : ''}`;
-    input.value = vm.form[name] ?? '';
+    input.value = vm.form[name] ?? vm.form.postal_code ?? '';
     input.placeholder = placeholder;
     input.autocomplete = autocomplete;
     input.maxLength = maxLength;
+    if (name === 'postalCode' || name === 'postal_code') {
+      input.dataset.field = 'postal_code';
+    }
     if (error) {
       input.setAttribute('aria-invalid', 'true');
       input.setAttribute('aria-describedby', `${id}-error`);
@@ -478,27 +524,16 @@ export class CheckoutView {
     const thumb = document.createElement('div');
     thumb.className = 'q-checkout__thumb';
 
-    const showPlaceholder = () => {
-      thumb.innerHTML = '';
-      const mark = document.createElement('img');
-      mark.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-      mark.alt = '';
-      mark.width = 18;
-      mark.height = 18;
-      thumb.appendChild(mark);
-    };
+    thumb.appendChild(
+      createImageWithFallback({
+        src: item.imageUrl,
+        alt: item.name || '',
+        size: 18,
+        placeholderClassName: 'q-checkout__thumb-placeholder',
+        label: '',
+      })
+    );
 
-    if (!item.imageUrl) {
-      showPlaceholder();
-      return thumb;
-    }
-
-    const photo = document.createElement('img');
-    photo.src = item.imageUrl;
-    photo.alt = '';
-    photo.loading = 'lazy';
-    photo.addEventListener('error', showPlaceholder);
-    thumb.appendChild(photo);
     return thumb;
   }
 

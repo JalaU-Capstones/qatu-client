@@ -1,22 +1,7 @@
+import { authStore } from '../../store/authStore.js';
 import { CategoriesViewModel } from '../../viewmodels/components/CategoriesViewModel.js';
-
-/**
- * Inline SVG icon factory for category cards.
- * Returns an SVG string ready for innerHTML.
- * @param {string} name
- * @returns {string}
- */
-function categoryIconSvg(name) {
-  const icons = {
-    laptop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>`,
-    coffee: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8z"/><path d="M17 10h2a2 2 0 1 1 0 4h-2"/><line x1="5" y1="2" x2="5" y2="5"/><line x1="10" y1="2" x2="10" y2="5"/><line x1="15" y1="2" x2="15" y2="5"/></svg>`,
-    vase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l-1 5c2 2 3 4 3 7a6 6 0 0 1-6 6 6 6 0 0 1-6-6c0-3 1-5 3-7L8 3z"/></svg>`,
-    home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>`,
-    ball: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>`,
-    headphones: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="6" rx="1"/><rect x="17" y="14" width="4" height="6" rx="1"/></svg>`,
-  };
-  return icons[name] || icons.home;
-}
+import { getCategoriesIndexPath } from '../utils/categoriesIndexPath.js';
+import { CategoryIcon } from './CategoryIcon.js';
 
 /**
  * View component for the Categories section.
@@ -30,6 +15,7 @@ export class CategoriesView {
     this.viewModel = viewModel;
     this.element = null;
     this._unsubscribe = null;
+    this._authUnsubscribe = null;
     this._gridElement = null;
   }
 
@@ -77,11 +63,10 @@ export class CategoriesView {
 
     const seeAll = document.createElement('a');
     seeAll.className = 'q-categories__see-all';
-    seeAll.href = this.viewModel.seeAllHref;
+    seeAll.href = getCategoriesIndexPath(this._getRole());
+    seeAll.dataset.route = '';
     seeAll.textContent = `${this.viewModel.seeAllLabel} →`;
-    seeAll.addEventListener('click', (e) => {
-      e.preventDefault();
-    });
+    this._seeAllElement = seeAll;
 
     header.appendChild(titleGroup);
     header.appendChild(seeAll);
@@ -101,8 +86,17 @@ export class CategoriesView {
     this._unsubscribe = this.viewModel.subscribe((vm) => {
       this._update(vm);
     });
+    this._authUnsubscribe = authStore.subscribe(() => {
+      if (this._seeAllElement) {
+        this._seeAllElement.href = getCategoriesIndexPath(this._getRole());
+      }
+    });
 
     return this.element;
+  }
+
+  _getRole() {
+    return authStore.isAdmin() ? 'admin' : 'user';
   }
 
   /**
@@ -113,34 +107,43 @@ export class CategoriesView {
   _renderCards(grid) {
     grid.innerHTML = '';
 
+    if (this.viewModel.isLoading) {
+      for (let index = 0; index < 6; index += 1) {
+        const item = document.createElement('li');
+        item.className = 'q-categories__item';
+        item.innerHTML =
+          '<article class="q-category-card" aria-hidden="true"><span class="q-category-card__icon"></span><h3 class="q-category-card__name">&nbsp;</h3></article>';
+        grid.appendChild(item);
+      }
+      return;
+    }
+
     this.viewModel.categories.forEach((category) => {
       const item = document.createElement('li');
       item.className = 'q-categories__item';
 
       const card = document.createElement('a');
       card.className = `q-category-card q-category-card--${category.style?.color || 'pink'}`;
-      card.href = category.href;
+      card.href = `/products?category=${encodeURIComponent(category.slug || category.id)}`;
+      card.dataset.route = '';
 
-      const iconWrapper = document.createElement('div');
+      const iconWrapper = document.createElement('span');
       iconWrapper.className = 'q-category-card__icon';
       iconWrapper.setAttribute('aria-hidden', 'true');
-      iconWrapper.innerHTML = categoryIconSvg(category.style?.icon);
+      iconWrapper.appendChild(
+        new CategoryIcon({
+          name: category.name,
+          key: category.iconSlug || category.slug || category.id,
+          size: 22,
+        }).render()
+      );
 
       const name = document.createElement('h3');
       name.className = 'q-category-card__name';
       name.textContent = category.name;
 
-      const count = document.createElement('p');
-      count.className = 'q-category-card__count';
-      count.textContent = `${category.productCount} productos`;
-
       card.appendChild(iconWrapper);
       card.appendChild(name);
-      card.appendChild(count);
-
-      card.addEventListener('click', (e) => {
-        e.preventDefault();
-      });
 
       item.appendChild(card);
       grid.appendChild(item);
@@ -155,6 +158,7 @@ export class CategoriesView {
   mount(container) {
     const el = this.render();
     container.appendChild(el);
+    void this.viewModel.loadCategories();
     return el;
   }
 
@@ -171,6 +175,10 @@ export class CategoriesView {
    * Cleans up subscriptions and removes element from DOM.
    */
   destroy() {
+    if (typeof this._authUnsubscribe === 'function') {
+      this._authUnsubscribe();
+      this._authUnsubscribe = null;
+    }
     if (typeof this._unsubscribe === 'function') {
       this._unsubscribe();
       this._unsubscribe = null;

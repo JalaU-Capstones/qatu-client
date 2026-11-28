@@ -1,4 +1,6 @@
 import { HeroViewModel } from '../../viewmodels/components/HeroViewModel.js';
+import { CategoryIcon } from './CategoryIcon.js';
+import { createImageWithFallback } from './ImageWithFallback.js';
 
 /**
  * View component for the Hero banner.
@@ -13,6 +15,8 @@ export class HeroView {
     this.element = null;
     this._unsubscribe = null;
     this._searchInput = null;
+    this._collage = null;
+    this._renderedVisualImages = null;
   }
 
   /**
@@ -50,7 +54,12 @@ export class HeroView {
 
     const eyebrow = document.createElement('p');
     eyebrow.className = 'q-hero__eyebrow';
-    eyebrow.textContent = this.viewModel.eyebrow.toUpperCase();
+    const eyebrowDot = document.createElement('span');
+    eyebrowDot.className = 'q-hero__eyebrow-dot';
+    eyebrowDot.setAttribute('aria-hidden', 'true');
+    const eyebrowText = document.createElement('span');
+    eyebrowText.textContent = this.viewModel.eyebrow.toUpperCase();
+    eyebrow.append(eyebrowDot, eyebrowText);
 
     const title = document.createElement('h1');
     title.id = 'q-hero-title';
@@ -75,6 +84,12 @@ export class HeroView {
     const searchForm = document.createElement('form');
     searchForm.className = 'q-hero__search';
     searchForm.setAttribute('role', 'search');
+
+    const searchIcon = document.createElement('span');
+    searchIcon.className = 'q-hero__search-icon';
+    searchIcon.setAttribute('aria-hidden', 'true');
+    searchIcon.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>';
 
     const searchLabel = document.createElement('label');
     searchLabel.htmlFor = 'q-hero-search-input';
@@ -103,7 +118,7 @@ export class HeroView {
       this.viewModel.triggerSearch();
     });
 
-    searchForm.appendChild(searchLabel);
+    searchForm.append(searchIcon, searchLabel);
     searchForm.appendChild(searchInput);
     searchForm.appendChild(searchButton);
 
@@ -118,25 +133,8 @@ export class HeroView {
     quickLinksLabel.textContent = this.viewModel.quickLinksLabel;
     quickLinksContainer.appendChild(quickLinksLabel);
 
-    this.viewModel.quickLinks.forEach((link, index) => {
-      const a = document.createElement('a');
-      a.className = 'q-hero__quick-link';
-      a.href = link.href;
-      a.textContent = link.label;
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-      });
-
-      quickLinksContainer.appendChild(a);
-
-      if (index < this.viewModel.quickLinks.length - 1) {
-        const sep = document.createElement('span');
-        sep.className = 'q-hero__quick-link-sep';
-        sep.setAttribute('aria-hidden', 'true');
-        sep.textContent = '·';
-        quickLinksContainer.appendChild(sep);
-      }
-    });
+    this._quickLinksContainer = quickLinksContainer;
+    this._renderQuickLinks();
 
     content.appendChild(eyebrow);
     content.appendChild(title);
@@ -147,13 +145,11 @@ export class HeroView {
     // Visual container (right column)
     const visual = document.createElement('div');
     visual.className = 'q-hero__visual';
-    visual.setAttribute('aria-hidden', 'true');
 
-    const visualImg = document.createElement('img');
-    visualImg.className = 'q-hero__visual-img';
-    visualImg.src = this.viewModel.visualImageUrl;
-    visualImg.alt = '';
-    visualImg.loading = 'lazy';
+    const collage = document.createElement('div');
+    collage.className = 'q-hero__collage';
+    this._collage = collage;
+    this._renderCollage();
 
     const badge = document.createElement('div');
     badge.className = 'q-hero__badge';
@@ -172,22 +168,36 @@ export class HeroView {
     const floatingCard = document.createElement('a');
     floatingCard.className = 'q-hero__floating-card';
     floatingCard.href = this.viewModel.floatingCardHref;
-    floatingCard.addEventListener('click', (e) => {
-      e.preventDefault();
-    });
+    floatingCard.dataset.route = '';
 
     const floatingCardLabel = document.createElement('span');
     floatingCardLabel.className = 'q-hero__floating-card-label';
     floatingCardLabel.textContent = this.viewModel.floatingCardLabel;
 
+    const floatingCardCopy = document.createElement('span');
+    floatingCardCopy.className = 'q-hero__floating-card-copy';
+    floatingCardCopy.appendChild(floatingCardLabel);
+
+    const floatingCardSublabel = document.createElement('span');
+    floatingCardSublabel.className = 'q-hero__floating-card-sublabel';
+    floatingCardSublabel.textContent = this.viewModel.floatingCardSublabel;
+    floatingCardCopy.appendChild(floatingCardSublabel);
+
     const floatingCardCta = document.createElement('span');
     floatingCardCta.className = 'q-hero__floating-card-cta';
-    floatingCardCta.textContent = `${this.viewModel.floatingCardCtaLabel} →`;
+    floatingCardCta.setAttribute('aria-label', this.viewModel.floatingCardCtaLabel);
+    floatingCardCta.setAttribute('aria-hidden', 'true');
+    floatingCardCta.textContent = '→';
 
-    floatingCard.appendChild(floatingCardLabel);
+    const floatingIcon = document.createElement('span');
+    floatingIcon.className = 'q-hero__floating-card-icon';
+    floatingIcon.setAttribute('aria-hidden', 'true');
+    floatingIcon.textContent = '✦';
+
+    floatingCard.append(floatingIcon, floatingCardCopy);
     floatingCard.appendChild(floatingCardCta);
 
-    visual.appendChild(visualImg);
+    visual.appendChild(collage);
     visual.appendChild(badge);
     visual.appendChild(floatingCard);
 
@@ -223,6 +233,90 @@ export class HeroView {
     if (this._searchInput && this._searchInput.value !== this.viewModel.searchValue) {
       this._searchInput.value = this.viewModel.searchValue;
     }
+    if (this._renderedVisualImages !== this.viewModel.visualImages) {
+      this._renderCollage();
+    }
+    this._renderQuickLinks();
+  }
+
+  _renderQuickLinks() {
+    if (!this._quickLinksContainer) return;
+    this._quickLinksContainer.replaceChildren();
+
+    const label = document.createElement('span');
+    label.className = 'q-hero__quick-links-label';
+    label.textContent = this.viewModel.quickLinksLabel;
+    this._quickLinksContainer.appendChild(label);
+
+    if (this.viewModel.isCategoriesLoading) {
+      for (let index = 0; index < 5; index += 1) {
+        const skeleton = document.createElement('span');
+        skeleton.className = 'q-hero__quick-link q-hero__quick-link--loading';
+        skeleton.setAttribute('aria-hidden', 'true');
+        this._quickLinksContainer.appendChild(skeleton);
+      }
+      return;
+    }
+
+    this.viewModel.quickLinks.forEach((link, index) => {
+      const a = document.createElement('a');
+      a.className = 'q-hero__quick-link';
+      a.href = link.href;
+      a.dataset.route = '';
+      a.appendChild(new CategoryIcon({ name: link.label, size: 16 }).render());
+      const text = document.createElement('span');
+      text.textContent = link.label;
+      a.appendChild(text);
+      this._quickLinksContainer.appendChild(a);
+
+      if (index < this.viewModel.quickLinks.length - 1) {
+        const sep = document.createElement('span');
+        sep.className = 'q-hero__quick-link-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '·';
+        this._quickLinksContainer.appendChild(sep);
+      }
+    });
+  }
+
+  _renderCollage() {
+    if (!this._collage) return;
+    const positions = ['coffee', 'bag', 'pottery'];
+    const products = this.viewModel.visualImages;
+    const items = products.slice(0, 3);
+    while (items.length < 3) {
+      items.push({
+        src: null,
+        label: 'Producto local',
+        price: 'Descubre piezas únicas',
+      });
+    }
+
+    this._collage.replaceChildren();
+    items.forEach((product, index) => {
+      const position = positions[index] || 'extra';
+      const card = document.createElement(product.slug ? 'a' : 'article');
+      card.className = `q-hero__collage-card q-hero__collage-card--${position}`;
+      if (product.slug) {
+        card.href = `/products/${encodeURIComponent(product.slug)}`;
+        card.dataset.route = '';
+        card.setAttribute('aria-label', `${product.label} · ${product.price}`);
+      }
+
+      const image = createImageWithFallback({
+        src: product.src,
+        alt: product.slug ? product.label : '',
+        imageClassName: 'q-hero__visual-img',
+        placeholderImageClassName: 'q-hero__visual-img',
+      });
+
+      const caption = document.createElement('span');
+      caption.className = 'q-hero__collage-caption';
+      caption.textContent = `${product.label} · ${product.price}`;
+      card.append(image, caption);
+      this._collage.appendChild(card);
+    });
+    this._renderedVisualImages = products;
   }
 
   /**
@@ -238,5 +332,7 @@ export class HeroView {
     }
     this.element = null;
     this._searchInput = null;
+    this._collage = null;
+    this._renderedVisualImages = null;
   }
 }

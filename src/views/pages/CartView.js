@@ -1,4 +1,5 @@
 import { CartViewModel } from '../../viewmodels/pages/CartViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
 
 /**
@@ -82,20 +83,32 @@ export class CartView {
     const header = document.createElement('div');
     header.className = 'q-cart__header';
 
+    const heading = document.createElement('div');
+    heading.className = 'q-cart__heading';
+
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'q-cart__eyebrow';
+    eyebrow.textContent = 'Compra segura';
+
     const title = document.createElement('h1');
     title.className = 'q-cart__title';
-    title.textContent = 'Carrito de compras';
+    title.textContent = 'Tu carrito';
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'q-cart__subtitle';
-    subtitle.textContent = this.viewModel.requiresAuth
-      ? 'Inicia sesión para ver los productos guardados en tu carrito.'
-      : this.viewModel.isEmpty
-        ? 'Todavía no tienes productos en tu carrito.'
-        : `Revisa tus productos: ${this.viewModel.getItemCountLabel()}.`;
+    const back = document.createElement('a');
+    back.className = 'q-cart__back';
+    back.href = '/';
+    back.dataset.route = '';
+    back.appendChild(document.createTextNode('Volver al inicio'));
 
-    header.appendChild(title);
-    header.appendChild(subtitle);
+    const arrow = document.createElement('span');
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.textContent = '→';
+    back.appendChild(arrow);
+
+    heading.appendChild(eyebrow);
+    heading.appendChild(title);
+    header.appendChild(heading);
+    header.appendChild(back);
     return header;
   }
 
@@ -203,7 +216,7 @@ export class CartView {
     const title = document.createElement('h2');
     title.id = 'q-cart-items-title';
     title.className = 'q-cart__items-title';
-    title.textContent = 'Productos';
+    title.textContent = `Productos (${this.viewModel.distinctCount})`;
 
     const list = document.createElement('ul');
     list.className = 'q-cart__list';
@@ -254,10 +267,6 @@ export class CartView {
     const quantity = document.createElement('div');
     quantity.className = 'q-cart-item__quantity';
 
-    const quantityLabel = document.createElement('span');
-    quantityLabel.className = 'q-cart-item__quantity-label';
-    quantityLabel.textContent = 'Cantidad';
-
     const selector = new QuantitySelectorView({
       value: item.quantity,
       min: 1,
@@ -265,24 +274,8 @@ export class CartView {
       label: `Cantidad de ${item.name}`,
     });
 
-    quantity.appendChild(quantityLabel);
     quantity.appendChild(selector.render());
     li.appendChild(quantity);
-
-    const subtotal = document.createElement('div');
-    subtotal.className = 'q-cart-item__subtotal';
-
-    const subtotalLabel = document.createElement('span');
-    subtotalLabel.className = 'q-cart-item__subtotal-label';
-    subtotalLabel.textContent = 'Subtotal';
-
-    const subtotalValue = document.createElement('strong');
-    subtotalValue.className = 'q-cart-item__subtotal-value';
-    subtotalValue.textContent = item.subtotalLabel;
-
-    subtotal.appendChild(subtotalLabel);
-    subtotal.appendChild(subtotalValue);
-    li.appendChild(subtotal);
 
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -304,45 +297,19 @@ export class CartView {
     const media = document.createElement('div');
     media.className = 'q-cart-item__media';
 
-    if (item.imageUrl) {
-      const photo = document.createElement('img');
-      photo.className = 'q-cart-item__photo';
-      photo.src = item.imageUrl;
-      photo.alt = '';
-      photo.loading = 'lazy';
-      photo.addEventListener('error', () => {
-        media.innerHTML = '';
-        media.appendChild(this._renderMediaPlaceholder());
-      });
-      media.appendChild(photo);
-      return media;
-    }
+    media.appendChild(
+      createImageWithFallback({
+        src: item.imageUrl,
+        alt: item.name || '',
+        size: 20,
+        imageClassName: 'q-cart-item__photo',
+        placeholderClassName: 'q-cart-item__placeholder',
+        label: 'Imagen',
+        labelClassName: 'q-cart-item__placeholder-label',
+      })
+    );
 
-    media.appendChild(this._renderMediaPlaceholder());
     return media;
-  }
-
-  /**
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderMediaPlaceholder() {
-    const placeholder = document.createElement('div');
-    placeholder.className = 'q-cart-item__placeholder';
-
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', '20');
-    markImg.setAttribute('height', '20');
-
-    const label = document.createElement('span');
-    label.className = 'q-cart-item__placeholder-label';
-    label.textContent = 'Imagen';
-
-    placeholder.appendChild(markImg);
-    placeholder.appendChild(label);
-    return placeholder;
   }
 
   /**
@@ -369,6 +336,16 @@ export class CartView {
     }
     rows.appendChild(shippingRow);
 
+    const shippingProgress = document.createElement('progress');
+    shippingProgress.className = 'q-cart__shipping-progress';
+    shippingProgress.max = 100;
+    shippingProgress.value = this.viewModel.getShippingProgressPercentage();
+    shippingProgress.setAttribute('aria-label', 'Progreso para obtener envío gratis');
+
+    const shippingNotice = document.createElement('p');
+    shippingNotice.className = 'q-cart__shipping-notice';
+    shippingNotice.textContent = this.viewModel.getShippingNotice();
+
     const totalRow = document.createElement('div');
     totalRow.className = 'q-cart__summary-row q-cart__summary-row--total';
     const totalLabel = document.createElement('span');
@@ -378,11 +355,6 @@ export class CartView {
     totalValue.textContent = this.viewModel.getTotalLabel();
     totalRow.appendChild(totalLabel);
     totalRow.appendChild(totalValue);
-    rows.appendChild(totalRow);
-
-    const shippingNotice = document.createElement('p');
-    shippingNotice.className = 'q-cart__shipping-notice';
-    shippingNotice.textContent = this.viewModel.getShippingNotice();
 
     const checkout = document.createElement('button');
     checkout.type = 'button';
@@ -410,7 +382,9 @@ export class CartView {
 
     aside.appendChild(title);
     aside.appendChild(rows);
+    aside.appendChild(shippingProgress);
     aside.appendChild(shippingNotice);
+    aside.appendChild(totalRow);
     aside.appendChild(checkout);
     aside.appendChild(clear);
     aside.appendChild(continueLink);

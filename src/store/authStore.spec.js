@@ -247,9 +247,186 @@ describe('AuthStore', () => {
     });
   });
 
+  describe('roles (hasRole / isSeller)', () => {
+    const sessionWith = (...names) =>
+      store.setSession({ user: { id: 'u1' }, roles: names.map((name) => ({ name })) });
+
+    it('anonymous users have no roles and are not sellers', () => {
+      expect(store.hasRole('seller')).toBe(false);
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('a buyer is not a seller', () => {
+      sessionWith('buyer');
+      expect(store.hasRole('buyer')).toBe(true);
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('a seller and an admin can open the seller dashboard', () => {
+      sessionWith('seller');
+      expect(store.isSeller()).toBe(true);
+      sessionWith('buyer', 'admin');
+      expect(store.isSeller()).toBe(true);
+    });
+
+    it('hasRole ignores invalid input and malformed role entries', () => {
+      store.setSession({ user: { id: 'u1' }, roles: [null, {}, { name: 'buyer' }] });
+      expect(store.hasRole()).toBe(false);
+      expect(store.hasRole(42)).toBe(false);
+      expect(store.hasRole('')).toBe(false);
+      expect(store.hasRole('buyer')).toBe(true);
+    });
+
+    it('does not read a role from user.user_metadata (user-editable, never trusted)', () => {
+      store.setSession({
+        user: { id: 'u1', user_metadata: { role: 'admin' }, app_metadata: { role: 'admin' } },
+        roles: [{ name: 'buyer' }],
+      });
+      expect(store.isSeller()).toBe(false);
+    });
+
+    it('loses seller access on clearSession', () => {
+      sessionWith('seller');
+      store.clearSession();
+      expect(store.isSeller()).toBe(false);
+    });
+  });
+
   describe('singleton', () => {
     it('exports a singleton authStore instance', () => {
       expect(authStore instanceof AuthStore).toBe(true);
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    describe('AuthStore additional branches (recovered 1)', () => {
+      let store;
+
+      beforeEach(() => {
+        window.sessionStorage.clear();
+        window.localStorage.clear();
+        store = new AuthStore();
+      });
+
+      afterEach(() => {
+        window.sessionStorage.clear();
+        window.localStorage.clear();
+      });
+
+      it('tracks savedAt and isAdmin through the session lifecycle', () => {
+        expect(store.getSavedAt()).toBeNull();
+        expect(store.isAdmin()).toBe(false);
+
+        store.setSession({
+          user: { id: 'u1' },
+          roles: [{ name: 'admin' }],
+        });
+
+        expect(store.getSavedAt()).toEqual(jasmine.any(String));
+        expect(new Date(store.getSavedAt()).toISOString()).toBe(store.getSavedAt());
+        expect(store.isAdmin()).toBe(true);
+        expect(store.isSeller()).toBe(true);
+
+        store.clearSession();
+        expect(store.getSavedAt()).toBeNull();
+        expect(store.isAdmin()).toBe(false);
+      });
+
+      it('normalizes invalid session inputs and non-array roles', () => {
+        store.setSession(null);
+        store.setSession(undefined);
+        store.setSession({});
+        expect(store.isAuthenticated()).toBe(false);
+
+        store.setSession({ user: { id: 'u1' }, roles: null });
+        expect(store.getRoles()).toEqual([]);
+        expect(store.isAdmin()).toBe(false);
+        expect(store.getProfile()).toEqual({ id: 'u1' });
+
+        store.setSession({ user: { id: '' } });
+        expect(store.isAuthenticated()).toBe(false);
+      });
+
+      it('does not notify twice for a listener that unsubscribes during notification', () => {
+        const first = jasmine.createSpy('first');
+        const second = jasmine.createSpy('second');
+        let unsubscribeSecond;
+        store.subscribe(() => {
+          first();
+          unsubscribeSecond();
+        });
+        unsubscribeSecond = store.subscribe(second);
+
+        store.setSession({ user: { id: 'u1' } });
+
+        expect(first).toHaveBeenCalledTimes(1);
+        expect(second).toHaveBeenCalledTimes(1);
+      });
+
+      it('survives storage failures on read, write and remove', () => {
+        const getItemSpy = spyOn(window.sessionStorage, 'getItem').and.throwError('blocked');
+        const setItemSpy = spyOn(window.sessionStorage, 'setItem').and.throwError('blocked');
+        const removeItemSpy = spyOn(window.sessionStorage, 'removeItem').and.throwError('blocked');
+        spyOn(window.localStorage, 'getItem').and.throwError('blocked');
+
+        expect(store.loadFromStorage()).toBe(false);
+        expect(() => store.setSession({ user: { id: 'u1' } })).not.toThrow();
+        expect(() => store.clearSession()).not.toThrow();
+        expect(getItemSpy).toHaveBeenCalled();
+        expect(setItemSpy).toHaveBeenCalled();
+        expect(removeItemSpy).toHaveBeenCalled();
+      });
+
+      it('rejects malformed hydrated payloads without notifying listeners', () => {
+        const listener = jasmine.createSpy('listener');
+        store.subscribe(listener);
+        const payloads = [
+          '"a string"',
+          'null',
+          '[]',
+          JSON.stringify({ v: 2, user: 'not-an-object' }),
+          JSON.stringify({ v: 2, user: { id: 42 } }),
+          JSON.stringify({ v: 2, user: {} }),
+        ];
+
+        for (const raw of payloads) {
+          window.sessionStorage.setItem('qatu.auth.session', raw);
+          expect(store.loadFromStorage()).toBe(false);
+        }
+        expect(listener).not.toHaveBeenCalled();
+        expect(store.getUser()).toBeNull();
+      });
+
+      it('normalizes profile, roles and savedAt from a valid hydrated payload', () => {
+        window.sessionStorage.setItem(
+          'qatu.auth.session',
+          JSON.stringify({
+            v: 2,
+            user: { id: 'u1' },
+            roles: 'not-an-array',
+            savedAt: 123,
+          })
+        );
+
+        expect(store.loadFromStorage()).toBe(true);
+        expect(store.getProfile()).toBeNull();
+        expect(store.getRoles()).toEqual([]);
+        expect(store.getSavedAt()).toBeNull();
+        expect(store.isAuthenticated()).toBe(true);
+      });
+
+      it('preserves a string savedAt from storage', () => {
+        window.sessionStorage.setItem(
+          'qatu.auth.session',
+          JSON.stringify({ v: 2, user: { id: 'u1' }, savedAt: '2026-01-01T00:00:00.000Z' })
+        );
+
+        expect(store.loadFromStorage()).toBe(true);
+        expect(store.getSavedAt()).toBe('2026-01-01T00:00:00.000Z');
+      });
+    });
+  })();
+})();

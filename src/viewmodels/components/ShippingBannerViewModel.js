@@ -6,14 +6,16 @@ export class ShippingBannerViewModel {
   /**
    * @param {Object} [options]
    * @param {string} [options.title]
+   * @param {string} [options.subtitle]
    * @param {string} [options.ctaLabel]
    * @param {string} [options.ctaLink]
    * @param {string} [options.ctaHref]
    */
   constructor(options = {}) {
-    this.title = options.title || 'Envío gratis sobre US$ 50';
+    this.title = options.title || 'Envío gratis';
+    this.subtitle = options.subtitle || 'en compras desde US$ 50';
     this.ctaLabel = options.ctaLabel || 'A toda Latinoamérica';
-    this.ctaLink = options.ctaLink || 'Compra ahora';
+    this.ctaLink = options.ctaLink || 'Compra segura';
     this.ctaHref = options.ctaHref || '/products';
     this._listeners = new Set();
   }

@@ -317,3 +317,133 @@ describe('AuthApi', () => {
     });
   });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  (() => {
+    const jsonResponse = (body, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    describe('AuthApi additional branches (recovered 1)', () => {
+      let api;
+      let fetchSpy;
+
+      beforeEach(() => {
+        api = new AuthApi();
+        fetchSpy = spyOn(window, 'fetch');
+      });
+
+      describe('exchangeOAuthToken (recovered 2)', () => {
+        it('exchanges the Supabase tokens for the backend session', async () => {
+          const body = { data: { user: { id: 'u1' } }, meta: {} };
+          fetchSpy.and.resolveTo(jsonResponse(body));
+
+          await expectAsync(api.exchangeOAuthToken('access', 'refresh')).toBeResolvedTo(body);
+          expect(fetchSpy).toHaveBeenCalledWith(
+            jasmine.stringMatching(/\/auth\/oauth\/exchange$/),
+            jasmine.objectContaining({
+              method: 'POST',
+              body: JSON.stringify({ access_token: 'access', refresh_token: 'refresh' }),
+            })
+          );
+        });
+
+        it('surfaces the backend message, status and data on error', async () => {
+          fetchSpy.and.resolveTo(jsonResponse({ error: { message: 'Token inválido' } }, 401));
+
+          let error;
+          try {
+            await api.exchangeOAuthToken('a', 'b');
+          } catch (caught) {
+            error = caught;
+          }
+          expect(error.message).toBe('Token inválido');
+          expect(error.status).toBe(401);
+          expect(error.data).toEqual({ error: { message: 'Token inválido' } });
+        });
+
+        it('falls back to data.message and then to the default message', async () => {
+          fetchSpy.and.resolveTo(jsonResponse({ message: 'No autorizado' }, 400));
+          await expectAsync(api.exchangeOAuthToken('a', 'b')).toBeRejectedWithError(
+            'No autorizado'
+          );
+
+          fetchSpy.and.resolveTo(new Response('not-json', { status: 400 }));
+          await expectAsync(api.exchangeOAuthToken('a', 'b')).toBeRejectedWithError(
+            'Error en el handoff de OAuth'
+          );
+        });
+      });
+
+      it('uses top-level message and defaults in register/login/me/refresh errors', async () => {
+        fetchSpy.and.resolveTo(jsonResponse({ message: 'Registro bloqueado' }, 400));
+        await expectAsync(
+          api.register({ email: 'a@b.com', password: 'x', username: 'u' })
+        ).toBeRejectedWithError('Registro bloqueado');
+
+        fetchSpy.and.resolveTo(new Response('not-json', { status: 400 }));
+        await expectAsync(
+          api.register({ email: 'a@b.com', password: 'x', username: 'u' })
+        ).toBeRejectedWithError('Error en el registro');
+
+        fetchSpy.and.resolveTo(jsonResponse({ message: 'Bloqueado' }, 401));
+        await expectAsync(api.login({ email: 'a@b.com', password: 'x' })).toBeRejectedWithError(
+          'Bloqueado'
+        );
+
+        fetchSpy.and.resolveTo(new Response('', { status: 401 }));
+        await expectAsync(api.login({ email: 'a@b.com', password: 'x' })).toBeRejectedWithError(
+          'Credenciales inválidas'
+        );
+
+        fetchSpy.and.resolveTo(new Response('', { status: 401 }));
+        await expectAsync(api.me()).toBeRejectedWithError('No se pudo cargar el usuario');
+
+        fetchSpy.and.resolveTo(jsonResponse({ message: 'Refresh bloqueado' }, 401));
+        await expectAsync(api.refresh()).toBeRejectedWithError('Refresh bloqueado');
+
+        fetchSpy.and.resolveTo(new Response('', { status: 401 }));
+        await expectAsync(api.refresh()).toBeRejectedWithError('No se pudo refrescar la sesión');
+      });
+
+      it('falls through details when the array is empty', async () => {
+        fetchSpy.and.resolveTo(
+          jsonResponse({ error: { details: [], message: 'Datos inválidos' } }, 400)
+        );
+
+        await expectAsync(
+          api.register({ email: 'a@b.com', password: 'x', username: 'u' })
+        ).toBeRejectedWithError('Datos inválidos');
+      });
+
+      it('omits full_name from the register body when it is not provided', async () => {
+        fetchSpy.and.resolveTo(jsonResponse({ data: {} }));
+
+        await api.register({ email: 'a@b.com', password: 'secret', username: 'user' });
+
+        expect(fetchSpy.calls.first().args[1].body).toBe(
+          '{"email":"a@b.com","password":"secret","username":"user"}'
+        );
+      });
+
+      it('accepts a non-204 ok response and an ok:false 204 response on logout', async () => {
+        fetchSpy.and.resolveTo(new Response('{}', { status: 200 }));
+        await expectAsync(api.logout()).toBeResolved();
+
+        fetchSpy.and.resolveTo(new Response(null, { status: 204 }));
+        await expectAsync(api.logout()).toBeResolved();
+      });
+
+      it('maps logout failures using the top-level message and the default', async () => {
+        fetchSpy.and.resolveTo(jsonResponse({ message: 'No se pudo salir' }, 500));
+        await expectAsync(api.logout()).toBeRejectedWithError('No se pudo salir');
+
+        fetchSpy.and.resolveTo(new Response('', { status: 500 }));
+        await expectAsync(api.logout()).toBeRejectedWithError('No se pudo cerrar sesión');
+      });
+    });
+  })();
+})();

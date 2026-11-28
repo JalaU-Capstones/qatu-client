@@ -1,4 +1,5 @@
 import { HeaderViewModel } from '../../viewmodels/components/HeaderViewModel.js';
+import { NavbarViewModel } from '../../viewmodels/components/NavbarViewModel.js';
 import { HeaderView } from './HeaderView.js';
 
 describe('HeaderView', () => {
@@ -27,7 +28,8 @@ describe('HeaderView', () => {
 
     const logo = el.querySelector('.q-brand-logo');
     expect(logo).not.toBeNull();
-    expect(logo.textContent).toBe("Q'atu");
+    expect(logo.getAttribute('aria-label')).toBe('Q’atu');
+    expect(logo.querySelector('text').textContent).toBe('Q’atu');
 
     const loginBtn = el.querySelector('.q-header-login-btn');
     expect(loginBtn).not.toBeNull();
@@ -43,7 +45,59 @@ describe('HeaderView', () => {
     expect(nav).not.toBeNull();
 
     const links = el.querySelectorAll('.q-navbar-link');
-    expect(links.length).toBe(3);
+    expect(links.length).toBe(2);
+  });
+
+  it('login button text is "Iniciar sesión"', () => {
+    expect(view.render().querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+  });
+
+  describe('restored behavioral checks', () => {
+    it('login button text is "Iniciar sesión"', () => {
+      expect(view.render().querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+    });
+  });
+
+  it('renders the header shell with the pill inside and its three content clusters', () => {
+    const el = view.render();
+    const shell = el.querySelector('.q-header__shell');
+    const pill = shell.querySelector('.q-header__pill');
+
+    expect(shell).not.toBeNull();
+    expect(pill).not.toBeNull();
+    expect(pill.querySelector('.q-header__left .q-header-brand')).not.toBeNull();
+    expect(pill.querySelector('.q-header-search')).not.toBeNull();
+    expect(pill.querySelector('.q-header-actions')).not.toBeNull();
+  });
+
+  describe('restored route-awareness check', () => {
+    it('route-awareness: mounting the header does not remove the body route', () => {
+      const previousRoute = document.body.dataset.route;
+      document.body.dataset.route = 'auth';
+      view.mount(container);
+
+      expect(document.body.dataset.route).toBe('auth');
+
+      if (previousRoute === undefined) {
+        delete document.body.dataset.route;
+      } else {
+        document.body.dataset.route = previousRoute;
+      }
+    });
+  });
+
+  it('route-awareness: mounting the header does not remove the body route', () => {
+    const previousRoute = document.body.dataset.route;
+    document.body.dataset.route = 'auth';
+    view.mount(container);
+
+    expect(document.body.dataset.route).toBe('auth');
+
+    if (previousRoute === undefined) {
+      delete document.body.dataset.route;
+    } else {
+      document.body.dataset.route = previousRoute;
+    }
   });
 
   it('should render cart badge when cartCount > 0 and update reactively', () => {
@@ -107,9 +161,32 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('renders circular placeholder SVG when avatar image fails to load', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: {
+        username: 'camilam',
+        avatarUrl: 'https://invalid.example/avatar-broken.jpg',
+      },
+    });
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const img = el.querySelector('.q-header-avatar-img');
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+
+    const avatar = el.querySelector('.q-header-user-avatar');
+    expect(avatar.querySelector('.q-header-avatar-img')).toBeNull();
+    expect(avatar.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+
+    loggedInView.destroy();
+  });
+
   it('should reactively transition from login button to avatar when user logs in', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+    expect(el.querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
     expect(el.querySelector('.q-header-user-avatar')).toBeNull();
 
     viewModel.setUser({ username: 'roberto' });
@@ -119,6 +196,68 @@ describe('HeaderView', () => {
     viewModel.setUser(null);
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
     expect(el.querySelector('.q-header-user-avatar')).toBeNull();
+  });
+
+  it('preserves header, navigation, and dropdown handlers after mounting', () => {
+    const callbacks = {
+      onLoginClick: jasmine.createSpy('onLoginClick'),
+      onLogoClick: jasmine.createSpy('onLogoClick'),
+      onCartClick: jasmine.createSpy('onCartClick'),
+      onOrdersClick: jasmine.createSpy('onOrdersClick'),
+      onSellerOrdersClick: jasmine.createSpy('onSellerOrdersClick'),
+      onSellerProductsClick: jasmine.createSpy('onSellerProductsClick'),
+      onProfileClick: jasmine.createSpy('onProfileClick'),
+      onSearch: jasmine.createSpy('onSearch'),
+      onCategoryClick: jasmine.createSpy('onCategoryClick'),
+      onLogoutClick: jasmine.createSpy('onLogoutClick'),
+      onThemeToggleClick: jasmine.createSpy('onThemeToggleClick'),
+    };
+    Object.assign(viewModel, callbacks);
+    viewModel.setIsSeller(true);
+    viewModel.setCategories([{ id: 'cat-1', name: 'Artesanía' }]);
+    viewModel.setUser({ username: 'seller', email: 'seller@example.com' });
+    const el = view.mount(container);
+
+    el.querySelector('.q-header-brand').click();
+    el.querySelector('.q-header-cart-btn').click();
+    el.querySelector('.q-header-theme-btn').click();
+    el.querySelector('[data-link-id="nav-tiendas"]').click();
+    expect(viewModel.navbarViewModel.activeLinkId).toBe('nav-tiendas');
+
+    viewModel.setUser(null);
+    expect(el.querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+    el.querySelector('.q-header-login-btn').click();
+    viewModel.setUser({ username: 'seller', email: 'seller@example.com' });
+
+    el.querySelector('.q-header-user-avatar').click();
+    el.querySelector('.q-header-profile-btn').click();
+    el.querySelector('.q-header-orders-btn').click();
+    el.querySelector('.q-header-seller-orders-btn').click();
+    el.querySelector('.q-header-seller-products-btn').click();
+    el.querySelector('.q-header-logout-btn').click();
+
+    expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+    expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+
+    const searchInput = el.querySelector('.q-header-search__input');
+    searchInput.value = 'zapatos';
+    el.querySelector('.q-header-search').dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+
+    expect(callbacks.onLoginClick).toHaveBeenCalled();
+    expect(callbacks.onLogoClick).toHaveBeenCalled();
+    expect(callbacks.onCartClick).toHaveBeenCalled();
+    expect(callbacks.onThemeToggleClick).toHaveBeenCalled();
+    expect(callbacks.onProfileClick).toHaveBeenCalledWith(
+      jasmine.objectContaining({ username: 'seller' })
+    );
+    expect(callbacks.onOrdersClick).toHaveBeenCalled();
+    expect(callbacks.onSellerOrdersClick).toHaveBeenCalled();
+    expect(callbacks.onSellerProductsClick).toHaveBeenCalled();
+    expect(callbacks.onLogoutClick).toHaveBeenCalled();
+    expect(callbacks.onCategoryClick).not.toHaveBeenCalled();
+    expect(callbacks.onSearch).toHaveBeenCalledWith('zapatos');
   });
 
   it('should mount into container correctly', () => {
@@ -171,6 +310,26 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('shows the signed-in role and inline icons for each dropdown action', () => {
+    viewModel.setUser({
+      username: 'seller',
+      full_name: 'Seller Name',
+      email: 'seller@example.qatu.pe',
+    });
+    viewModel.setIsSeller(true);
+    const el = view.render();
+    const dropdown = el.querySelector('.q-header-dropdown');
+
+    expect(dropdown.querySelector('.q-header-dropdown-name').textContent).toBe('Seller Name');
+    expect(dropdown.querySelector('.q-header-dropdown-role').textContent).toBe('Vendedor');
+    expect(dropdown.querySelectorAll('.q-header-dropdown-icon').length).toBeGreaterThan(0);
+    expect(dropdown.querySelector('.q-header-dropdown-separator')).not.toBeNull();
+    expect(dropdown.querySelector('.q-header-logout-btn .q-header-dropdown-icon')).not.toBeNull();
+
+    viewModel.setIsAdmin(true);
+    expect(dropdown.querySelector('.q-header-dropdown-role').textContent).toBe('Admin');
+  });
+
   it('clicking outside the header closes the dropdown', () => {
     const loggedInVM = new HeaderViewModel({
       user: { username: 'tomas', email: 'tomas@q.com' },
@@ -209,6 +368,22 @@ describe('HeaderView', () => {
     loggedInView.destroy();
   });
 
+  it('.q-header-profile-btn click calls viewModel.triggerProfile()', () => {
+    const loggedInVM = new HeaderViewModel({
+      user: { username: 'vera', email: 'vera@q.com' },
+    });
+    spyOn(loggedInVM, 'triggerProfile');
+    const loggedInView = new HeaderView(loggedInVM);
+    const el = loggedInView.render();
+
+    const profileBtn = el.querySelector('.q-header-profile-btn');
+    expect(profileBtn).not.toBeNull();
+    expect(profileBtn.textContent).toBe('Mi Perfil');
+    profileBtn.click();
+    expect(loggedInVM.triggerProfile).toHaveBeenCalled();
+    loggedInView.destroy();
+  });
+
   it('when user transitions null → object, avatar wrapper with dropdown is created', () => {
     const el = view.render();
     expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
@@ -229,6 +404,131 @@ describe('HeaderView', () => {
     viewModel.setUser(null);
     expect(el.querySelector('.q-header-avatar-wrapper')).toBeNull();
     expect(el.querySelector('.q-header-login-btn')).not.toBeNull();
+  });
+
+  describe('Seller links (dashboard)', () => {
+    const SELLER_ORDERS_LINK = '.q-header-seller-orders-btn';
+    const SELLER_PRODUCTS_LINK = '.q-header-seller-products-btn';
+
+    it('is hidden for a signed-in buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
+    });
+
+    it('is shown for a seller, with Mis Productos and Mis Ventas', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      const ordersLink = el.querySelector(SELLER_ORDERS_LINK);
+      expect(ordersLink).not.toBeNull();
+      expect(ordersLink.textContent).toBe('Mis Ventas');
+      expect(ordersLink.getAttribute('href')).toBe('/seller/orders');
+
+      const productsLink = el.querySelector(SELLER_PRODUCTS_LINK);
+      expect(productsLink).not.toBeNull();
+      expect(productsLink.textContent).toBe('Mis Productos');
+      expect(productsLink.getAttribute('href')).toBe('/seller/products');
+    });
+
+    it('seller dropdown distinguishes buyer orders from seller sales', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      const dropdown = el.querySelector('.q-header-dropdown');
+      expect(dropdown).not.toBeNull();
+
+      const ordersLink = dropdown.querySelector('.q-header-orders-btn');
+      const salesLink = dropdown.querySelector('.q-header-seller-orders-btn');
+      const productsLink = dropdown.querySelector('.q-header-seller-products-btn');
+
+      expect(ordersLink).not.toBeNull();
+      expect(salesLink).not.toBeNull();
+      expect(productsLink).not.toBeNull();
+      const conversationsLink = dropdown.querySelector('.q-header-conversations-btn');
+
+      expect(ordersLink.textContent).toBe('Mis Órdenes');
+      expect(conversationsLink.textContent).toBe('Mensajes');
+      expect(conversationsLink.getAttribute('href')).toBe('/conversations');
+      expect(salesLink.textContent).toBe('Mis Ventas');
+      expect(productsLink.textContent).toBe('Mis Productos');
+    });
+
+    it('clicking Mensajes calls triggerConversations without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerConversations');
+      const el = view.render();
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      el.querySelector('.q-header-conversations-btn').dispatchEvent(event);
+
+      expect(viewModel.triggerConversations).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('is not rendered for anonymous visitors, even if the flag is set', () => {
+      viewModel.setIsSeller(true);
+      const el = view.render();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
+      expect(el.querySelector('.q-header-dropdown')).toBeNull();
+    });
+
+    it('appears and disappears when the roles change for an already rendered user', () => {
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
+
+      viewModel.setIsSeller(true);
+      expect(el.querySelectorAll(SELLER_ORDERS_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_PRODUCTS_LINK).length).toBe(1);
+
+      viewModel.setIsSeller(false);
+      expect(el.querySelector(SELLER_ORDERS_LINK)).toBeNull();
+      expect(el.querySelector(SELLER_PRODUCTS_LINK)).toBeNull();
+    });
+
+    it('does not duplicate the link on repeated updates', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      const el = view.render();
+
+      viewModel.setCartCount(1);
+      viewModel.setCartCount(2);
+      expect(el.querySelectorAll(SELLER_ORDERS_LINK).length).toBe(1);
+      expect(el.querySelectorAll(SELLER_PRODUCTS_LINK).length).toBe(1);
+    });
+
+    it('clicking it calls viewModel.triggerSellerOrders() without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerSellerOrders');
+      const el = view.render();
+
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      el.querySelector(SELLER_ORDERS_LINK).dispatchEvent(event);
+
+      expect(viewModel.triggerSellerOrders).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('clicking Mis Productos calls viewModel.triggerSellerProducts() without a page reload', () => {
+      viewModel.setIsSeller(true);
+      viewModel.setUser({ username: 'sam' });
+      spyOn(viewModel, 'triggerSellerProducts');
+      const el = view.render();
+
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      el.querySelector(SELLER_PRODUCTS_LINK).dispatchEvent(event);
+
+      expect(viewModel.triggerSellerProducts).toHaveBeenCalled();
+      expect(event.defaultPrevented).toBe(true);
+    });
   });
 
   it('renders .q-header-theme-btn between cart and login', () => {
@@ -274,4 +574,805 @@ describe('HeaderView', () => {
     svg = themeBtn.querySelector('svg.q-header-theme-icon');
     expect(svg.getAttribute('data-icon')).toBe('system');
   });
+
+  it('updates the theme icon in one click in both directions', () => {
+    viewModel.setTheme('light');
+    viewModel.onThemeToggleClick = () => {
+      viewModel.setTheme(viewModel.theme === 'dark' ? 'light' : 'dark');
+    };
+    const el = view.render();
+    const themeBtn = el.querySelector('.q-header-theme-btn');
+
+    themeBtn.click();
+    expect(viewModel.theme).toBe('dark');
+    expect(themeBtn.querySelector('.q-header-theme-icon').getAttribute('data-icon')).toBe('moon');
+
+    themeBtn.click();
+    expect(viewModel.theme).toBe('light');
+    expect(themeBtn.querySelector('.q-header-theme-icon').getAttribute('data-icon')).toBe('sun');
+  });
+
+  describe('Categorías dropdown and search bar', () => {
+    it('with viewModel.categories = [{id:1,name:"Electrónica"}], the dropdown trigger exists and menu contains "Electrónica"', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
+
+      expect(viewModel.categories).toEqual([{ id: 1, name: 'Electrónica' }]);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+    });
+
+    it('clicking the trigger toggles the menu (hidden attribute)', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
+
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+    });
+
+    it('header does NOT render the categorias dropdown or nav item', () => {
+      viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+      const el = view.render();
+
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+    });
+
+    it('search form: submitting with text calls viewModel.triggerSearch', () => {
+      spyOn(viewModel, 'triggerSearch');
+      const el = view.render();
+
+      const input = el.querySelector('.q-header-search__input');
+      const form = el.querySelector('.q-header-search');
+      input.value = 'zapatos';
+
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+      expect(viewModel.triggerSearch).toHaveBeenCalled();
+      expect(viewModel.searchValue).toBe('zapatos');
+    });
+
+    it('search submit calls onSearch with the typed term', () => {
+      const onSearch = jasmine.createSpy('onSearch');
+      viewModel.onSearch = onSearch;
+      const el = view.render();
+      const input = el.querySelector('.q-header-search__input');
+      input.value = '  cerámica  ';
+
+      el.querySelector('.q-header-search').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+
+      expect(onSearch).toHaveBeenCalledWith('cerámica');
+    });
+
+    it('uses a text input with the mobile search keyboard hints', () => {
+      const el = view.render();
+      const input = el.querySelector('.q-header-search__input');
+
+      expect(el.querySelector('.q-header-search').getAttribute('role')).toBe('search');
+      expect(input.type).toBe('text');
+      expect(input.getAttribute('inputmode')).toBe('search');
+      expect(input.getAttribute('enterkeyhint')).toBe('search');
+    });
+
+    it('search toggle exposes the input and updates its expanded state', () => {
+      const el = view.render();
+      const form = el.querySelector('.q-header-search');
+      const pill = el.querySelector('.q-header__pill');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      expect(form.classList.contains('q-header-search--expanded')).toBe(true);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(form.firstElementChild).toBe(toggle);
+      expect(toggle.querySelector('[data-icon="collapse"]')).not.toBeNull();
+
+      toggle.click();
+      expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(false);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.querySelector('[data-icon="search"]')).not.toBeNull();
+    });
+
+    it('search toggle updates its label and focuses the expanded input', () => {
+      const el = view.mount(container);
+      const input = el.querySelector('.q-header-search__input');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      expect(toggle.getAttribute('aria-label')).toBe('Cerrar búsqueda');
+      expect(document.activeElement).toBe(input);
+
+      toggle.click();
+      expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+    });
+
+    it('clears the search term without collapsing the expanded search', () => {
+      const el = view.mount(container);
+      const form = el.querySelector('.q-header-search');
+      const input = el.querySelector('.q-header-search__input');
+      const clearButton = el.querySelector('.q-header-search__clear');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      input.value = 'cerámica';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(clearButton.hidden).toBe(false);
+      expect(viewModel.searchValue).toBe('cerámica');
+
+      clearButton.click();
+
+      expect(input.value).toBe('');
+      expect(viewModel.searchValue).toBe('');
+      expect(clearButton.hidden).toBe(true);
+      expect(form.classList.contains('q-header-search--expanded')).toBe(true);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(input);
+
+      input.value = 'volver';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      toggle.click();
+      expect(clearButton.hidden).toBe(true);
+
+      toggle.click();
+      expect(clearButton.hidden).toBe(false);
+      expect(input.value).toBe('volver');
+    });
+
+    it('closes the expanded search with Escape and returns focus to the toggle', () => {
+      const el = view.mount(container);
+      const form = el.querySelector('.q-header-search');
+      const pill = el.querySelector('.q-header__pill');
+      const input = el.querySelector('.q-header-search__input');
+      const toggle = el.querySelector('.q-header-search__toggle');
+
+      toggle.click();
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+      );
+
+      expect(form.classList.contains('q-header-search--expanded')).toBe(false);
+      expect(pill.classList.contains('q-header__pill--search-expanded')).toBe(false);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+      expect(document.activeElement).toBe(toggle);
+    });
+
+    describe('restored search checks', () => {
+      it('search toggle updates its label and focuses the expanded input', () => {
+        const el = view.mount(container);
+        const input = el.querySelector('.q-header-search__input');
+        const toggle = el.querySelector('.q-header-search__toggle');
+
+        toggle.click();
+        expect(toggle.getAttribute('aria-label')).toBe('Cerrar búsqueda');
+        expect(document.activeElement).toBe(input);
+
+        toggle.click();
+        expect(toggle.getAttribute('aria-label')).toBe('Abrir búsqueda');
+      });
+
+      it('updates category dropdown items when categories arrive after mounting', () => {
+        const onCategoryClick = jasmine.createSpy('onCategoryClick');
+        viewModel.onCategoryClick = onCategoryClick;
+        const el = view.mount(container);
+
+        viewModel.setCategories([{ id: 'cat-new', name: 'Cerámica' }]);
+        expect(viewModel.categories).toEqual([{ id: 'cat-new', name: 'Cerámica' }]);
+        expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+        expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+
+        expect(onCategoryClick).not.toHaveBeenCalled();
+      });
+    });
+
+    it('updates category dropdown items when categories arrive after mounting', () => {
+      const onCategoryClick = jasmine.createSpy('onCategoryClick');
+      viewModel.onCategoryClick = onCategoryClick;
+      const el = view.mount(container);
+
+      viewModel.setCategories([{ id: 'cat-new', name: 'Cerámica' }]);
+      expect(viewModel.categories).toEqual([{ id: 'cat-new', name: 'Cerámica' }]);
+      expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+
+      expect(onCategoryClick).not.toHaveBeenCalled();
+    });
+
+    it('search: empty submit does nothing', () => {
+      spyOn(viewModel, 'triggerSearch');
+      const el = view.render();
+
+      const input = el.querySelector('.q-header-search__input');
+      const form = el.querySelector('.q-header-search');
+      input.value = '   ';
+
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+      expect(viewModel.triggerSearch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('admin reports link', () => {
+    it('is shown only for an admin and points at /admin/reports', () => {
+      viewModel.setUser({ username: 'ada' });
+      const el = view.render();
+      expect(el.querySelector('.q-header-admin-reports-btn')).toBeNull();
+
+      viewModel.setIsAdmin(true);
+      const link = el.querySelector('.q-header-admin-reports-btn');
+
+      expect(link).not.toBeNull();
+      expect(el.querySelector('.q-header-conversations-btn').textContent).toBe('Mensajes');
+      expect(el.querySelector('.q-header-conversations-btn').getAttribute('href')).toBe(
+        '/conversations'
+      );
+      expect(link.textContent).toBe('Reportes');
+      expect(link.getAttribute('href')).toBe('/admin/reports');
+      expect(el.querySelectorAll('.q-header-admin-reports-btn').length).toBe(1);
+
+      viewModel.setIsAdmin(false);
+      expect(el.querySelector('.q-header-admin-reports-btn')).toBeNull();
+    });
+  });
+
+  describe('admin categories link (US-19)', () => {
+    it('is shown only for an admin and points at /admin/categories', () => {
+      viewModel.setUser({ username: 'ada' });
+      const el = view.render();
+      expect(el.querySelector('.q-header-admin-categories-btn')).toBeNull();
+
+      viewModel.setIsAdmin(true);
+      const link = el.querySelector('.q-header-admin-categories-btn');
+      expect(link).not.toBeNull();
+      expect(link.textContent).toBe('Categorías');
+      expect(link.getAttribute('href')).toBe('/admin/categories');
+      expect(link.getAttribute('data-route')).toBe('');
+      expect(el.querySelectorAll('.q-header-admin-categories-btn').length).toBe(1);
+
+      viewModel.setIsAdmin(false);
+      expect(el.querySelector('.q-header-admin-categories-btn')).toBeNull();
+    });
+
+    it('navigates through the view model callback and keeps the header route intact', () => {
+      viewModel.onAdminCategoriesClick = jasmine.createSpy('onAdminCategoriesClick');
+      viewModel.setUser({ username: 'ada' });
+      viewModel.setIsAdmin(true);
+      const link = view.render().querySelector('.q-header-admin-categories-btn');
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+      link.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(viewModel.onAdminCategoriesClick).toHaveBeenCalledTimes(1);
+      expect(link.getAttribute('href')).toBe('/admin/categories');
+    });
+  });
+
+  describe('role-based marketplace actions', () => {
+    const adminOnlyItems = [
+      '.q-header-admin-reports-btn',
+      '.q-header-admin-applications-btn',
+      '.q-header-admin-categories-btn',
+    ];
+    const sellerOnlyItems = [
+      '.q-header-orders-btn',
+      '.q-header-seller-apply-btn',
+      '.q-header-seller-products-btn',
+      '.q-header-seller-orders-btn',
+    ];
+
+    it('keeps only profile, messages, admin links, and logout for an admin', () => {
+      viewModel.setUser({ username: 'ada' });
+      viewModel.setIsAdmin(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      sellerOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).toBeNull());
+      [
+        '.q-header-profile-btn',
+        '.q-header-conversations-btn',
+        ...adminOnlyItems,
+        '.q-header-logout-btn',
+      ].forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+      expect(
+        Array.from(dropdown.children)
+          .slice(1)
+          .map((item) =>
+            item.classList.contains('q-header-dropdown-separator')
+              ? 'separator'
+              : item.classList.contains('q-header-logout-btn')
+                ? 'logout'
+                : item.textContent.trim()
+          )
+      ).toEqual([
+        'Mi Perfil',
+        'Mensajes',
+        'Reportes',
+        'Solicitudes de vendedores',
+        'Categorías',
+        'separator',
+        'logout',
+      ]);
+    });
+
+    it('admin overrides seller when both role flags are true', () => {
+      viewModel.setUser({ username: 'ada' });
+      viewModel.setIsSeller(true);
+      viewModel.setIsAdmin(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      sellerOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).toBeNull());
+      adminOnlyItems.forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+    });
+
+    it('shows buyer actions and no admin actions for a buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      ['.q-header-orders-btn', '.q-header-conversations-btn', '.q-header-seller-apply-btn'].forEach(
+        (selector) => expect(dropdown.querySelector(selector)).not.toBeNull()
+      );
+      ['.q-header-seller-products-btn', '.q-header-seller-orders-btn', ...adminOnlyItems].forEach(
+        (selector) => expect(dropdown.querySelector(selector)).toBeNull()
+      );
+    });
+
+    it('shows seller actions and no buyer-apply or admin actions for a seller', () => {
+      viewModel.setUser({ username: 'sam' });
+      viewModel.setIsSeller(true);
+      const el = view.render();
+      const dropdown = el.querySelector('.q-header-dropdown');
+
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      [
+        '.q-header-orders-btn',
+        '.q-header-conversations-btn',
+        '.q-header-seller-products-btn',
+        '.q-header-seller-orders-btn',
+      ].forEach((selector) => expect(dropdown.querySelector(selector)).not.toBeNull());
+      ['.q-header-seller-apply-btn', ...adminOnlyItems].forEach((selector) =>
+        expect(dropdown.querySelector(selector)).toBeNull()
+      );
+    });
+
+    it('removes cart and orders when a buyer becomes an admin, then restores them as a buyer', () => {
+      viewModel.setUser({ username: 'ana' });
+      const el = view.render();
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).not.toBeNull();
+
+      viewModel.setIsAdmin(true);
+      expect(el.querySelector('.q-header-cart-btn')).toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).toBeNull();
+
+      viewModel.setIsAdmin(false);
+      viewModel.setIsSeller(false);
+      expect(el.querySelector('.q-header-cart-btn')).not.toBeNull();
+      expect(el.querySelector('.q-header-orders-btn')).not.toBeNull();
+    });
+
+    it('updates canPurchase from the admin role', () => {
+      expect(viewModel.canPurchase).toBe(true);
+      viewModel.setIsAdmin(true);
+      expect(viewModel.canPurchase).toBe(false);
+      viewModel.setIsAdmin(false);
+      expect(viewModel.canPurchase).toBe(true);
+    });
+  });
 });
+
+// Recovered coverage from backup/pre-rebase-tests
+(() => {
+  describe('HeaderView (recovered 1)', () => {
+    let view;
+    let viewModel;
+    let container;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      document.body.appendChild(container);
+      viewModel = new HeaderViewModel();
+      view = new HeaderView(viewModel);
+    });
+
+    afterEach(() => {
+      view.destroy();
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+    });
+
+    it('login button text is "Iniciar sesión"', () => {
+      expect(view.render().querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+    });
+
+    describe('restored behavioral checks (recovered 2)', () => {
+      it('login button text is "Iniciar sesión"', () => {
+        expect(view.render().querySelector('.q-header-login-btn').textContent).toBe(
+          'Iniciar sesión'
+        );
+      });
+    });
+
+    // --- Dropdown tests ---
+
+    describe('Categorías dropdown and search bar (recovered 3)', () => {
+      it('with viewModel.categories = [{id:1,name:"Electrónica"}], the dropdown trigger exists and menu contains "Electrónica"', () => {
+        viewModel.setCategories([{ id: 1, name: 'Electrónica' }]);
+        const el = view.render();
+
+        expect(viewModel.categories).toEqual([{ id: 1, name: 'Electrónica' }]);
+        expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+        expect(el.querySelector('.q-header-cat-dropdown')).toBeNull();
+      });
+    });
+  });
+
+  (() => {
+    describe('HeaderView additional branches (recovered 4)', () => {
+      let container;
+      let viewModel;
+      let view;
+      let views;
+
+      const makeView = (vm) => {
+        const created = new HeaderView(vm);
+        views.push(created);
+        return created;
+      };
+
+      beforeEach(() => {
+        container = document.createElement('div');
+        document.body.appendChild(container);
+        views = [];
+        viewModel = new HeaderViewModel();
+        view = makeView(viewModel);
+      });
+
+      afterEach(() => {
+        views.forEach((created) => created.destroy());
+        views = [];
+        view = null;
+        document.querySelectorAll('.q-modal').forEach((el) => el.remove());
+        document.body.style.overflow = '';
+        container.remove();
+      });
+
+      it('renders the system theme icon initially and falls back to the sun for an unknown theme', () => {
+        const el = view.render();
+        expect(
+          el.querySelector('.q-header-theme-btn .q-header-theme-icon').getAttribute('data-icon')
+        ).toBe('system');
+
+        viewModel.setTheme('neon');
+        expect(
+          el.querySelector('.q-header-theme-btn .q-header-theme-icon').getAttribute('data-icon')
+        ).toBe('sun');
+
+        const invalidAtStart = makeView(new HeaderViewModel({ theme: 'neon' }));
+        expect(
+          invalidAtStart
+            .render()
+            .querySelector('.q-header-theme-btn .q-header-theme-icon')
+            .getAttribute('data-icon')
+        ).toBe('sun');
+      });
+
+      it('renders the initial cart badge text from cartCount 3', () => {
+        const vm = new HeaderViewModel({ cartCount: 3 });
+        const localView = makeView(vm);
+        const badge = localView.render().querySelector('.q-header-cart-badge');
+
+        expect(badge).not.toBeNull();
+        expect(badge.textContent).toBe('3');
+      });
+
+      it('renders without throwing when the navbarViewModel has no categories link', () => {
+        const navbarViewModel = new NavbarViewModel({
+          links: [{ id: 'nav-tiendas', label: 'Tiendas', href: '/stores' }],
+        });
+        const vm = new HeaderViewModel({ navbarViewModel });
+        const localView = makeView(vm);
+
+        let el;
+        expect(() => {
+          el = localView.render();
+        }).not.toThrow();
+        expect(el.querySelectorAll('.q-navbar-link').length).toBe(1);
+        expect(el.querySelector('[data-link-id="nav-categorias"]')).toBeNull();
+      });
+
+      it('prefills the search input when setSearchValue is called before render', () => {
+        viewModel.setSearchValue('cafe');
+        const input = view.render().querySelector('.q-header-search__input');
+
+        expect(input.value).toBe('cafe');
+      });
+
+      it('stores the untrimmed search term on submit while onSearch receives the trimmed term', () => {
+        const onSearch = jasmine.createSpy('onSearch');
+        viewModel.onSearch = onSearch;
+        const el = view.render();
+        const input = el.querySelector('.q-header-search__input');
+        input.value = '  cafe  ';
+
+        el.querySelector('.q-header-search').dispatchEvent(
+          new Event('submit', { bubbles: true, cancelable: true })
+        );
+
+        expect(viewModel.searchValue).toBe('  cafe  ');
+        expect(onSearch).toHaveBeenCalledTimes(1);
+        expect(onSearch).toHaveBeenCalledWith('cafe');
+      });
+
+      it('treats Escape while collapsed and non-Escape keys as no-ops and hides clear with an empty value', () => {
+        const el = view.render();
+        const input = el.querySelector('.q-header-search__input');
+        const toggle = el.querySelector('.q-header-search__toggle');
+        const clearButton = el.querySelector('.q-header-search__clear');
+
+        expect(clearButton.hidden).toBe(true);
+
+        const escapeCollapsed = new KeyboardEvent('keydown', {
+          key: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        });
+        input.dispatchEvent(escapeCollapsed);
+        expect(escapeCollapsed.defaultPrevented).toBe(false);
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        const letter = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+        input.dispatchEvent(letter);
+        expect(letter.defaultPrevented).toBe(false);
+        expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+        toggle.click();
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(clearButton.hidden).toBe(true);
+      });
+
+      it('falls back to Perfil de usuario / Usuario copy when the user has no name', () => {
+        const vm = new HeaderViewModel({
+          user: { email: 'anon@example.com', avatar_path: 'https://cdn.example/anon.png' },
+        });
+        const localView = makeView(vm);
+        const avatar = localView.render().querySelector('.q-header-user-avatar');
+
+        expect(avatar.getAttribute('aria-label')).toBe('Perfil de usuario');
+        expect(avatar.getAttribute('title')).toBe('Perfil de usuario');
+        expect(avatar.querySelector('.q-header-avatar-img').alt).toBe('Usuario');
+      });
+
+      it('uses full_name for the avatar label, title and dropdown name when username is absent', () => {
+        const vm = new HeaderViewModel({ user: { full_name: 'Lucía Torres' } });
+        const localView = makeView(vm);
+        const el = localView.render();
+
+        expect(el.querySelector('.q-header-user-avatar').getAttribute('aria-label')).toBe(
+          'Perfil de Lucía Torres'
+        );
+        expect(el.querySelector('.q-header-user-avatar').getAttribute('title')).toBe(
+          'Lucía Torres'
+        );
+        expect(el.querySelector('.q-header-dropdown-name').textContent).toBe('Lucía Torres');
+      });
+
+      it('accepts avatar_path, avatarPath and avatar_url as image source aliases', () => {
+        ['avatar_path', 'avatarPath', 'avatar_url'].forEach((alias) => {
+          const vm = new HeaderViewModel({
+            user: { username: 'ana', [alias]: 'https://cdn.example/ana.png' },
+          });
+          const localView = makeView(vm);
+          const img = localView.render().querySelector('.q-header-avatar-img');
+
+          expect(img).not.toBeNull();
+          expect(img.getAttribute('src')).toBe('https://cdn.example/ana.png');
+        });
+      });
+
+      it('removes src, hides the image and replaces it only on the first avatar error', () => {
+        const vm = new HeaderViewModel({
+          user: { username: 'ana', avatar_url: 'https://cdn.example/ana.png' },
+        });
+        const localView = makeView(vm);
+        const el = localView.render();
+        const img = el.querySelector('.q-header-avatar-img');
+
+        img.dispatchEvent(new Event('error'));
+
+        expect(img.hasAttribute('src')).toBe(false);
+        expect(img.style.display).toBe('none');
+        const avatar = el.querySelector('.q-header-user-avatar');
+        expect(avatar.querySelector('.q-header-avatar-img')).toBeNull();
+        expect(avatar.querySelectorAll('.q-header-avatar-placeholder').length).toBe(1);
+
+        expect(() => img.dispatchEvent(new Event('error'))).not.toThrow();
+        expect(avatar.querySelectorAll('.q-header-avatar-placeholder').length).toBe(1);
+      });
+
+      it('labels a plain user as Comprador', () => {
+        const vm = new HeaderViewModel({ user: { username: 'ana', email: 'ana@q.com' } });
+        const localView = makeView(vm);
+
+        expect(localView.render().querySelector('.q-header-dropdown-role').textContent).toBe(
+          'Comprador'
+        );
+      });
+
+      it('uses the email for both name and email spans when it is the only identity field', () => {
+        const vm = new HeaderViewModel({ user: { email: 'solo@example.com' } });
+        const localView = makeView(vm);
+        const el = localView.render();
+
+        expect(el.querySelector('.q-header-dropdown-name').textContent).toBe('solo@example.com');
+        expect(el.querySelector('.q-header-dropdown-email').textContent).toBe('solo@example.com');
+      });
+
+      it('renders all admin links on the first render when isAdmin is already true', () => {
+        const vm = new HeaderViewModel({
+          user: { username: 'ada', email: 'ada@q.com' },
+          isAdmin: true,
+        });
+        const localView = makeView(vm);
+        const el = localView.render();
+
+        expect(el.querySelector('.q-header-admin-reports-btn')).not.toBeNull();
+        expect(el.querySelector('.q-header-admin-applications-btn')).not.toBeNull();
+        expect(el.querySelector('.q-header-admin-categories-btn')).not.toBeNull();
+      });
+
+      it('wires the admin applications and admin categories links to their trigger callbacks', () => {
+        const onAdminSellerApplicationsClick = jasmine.createSpy('onAdminSellerApplicationsClick');
+        const onAdminCategoriesClick = jasmine.createSpy('onAdminCategoriesClick');
+        const vm = new HeaderViewModel({
+          user: { username: 'ada' },
+          isAdmin: true,
+          onAdminSellerApplicationsClick,
+          onAdminCategoriesClick,
+        });
+        const localView = makeView(vm);
+        const el = localView.render();
+
+        el.querySelector('.q-header-admin-applications-btn').click();
+        el.querySelector('.q-header-admin-categories-btn').click();
+
+        expect(onAdminSellerApplicationsClick).toHaveBeenCalledTimes(1);
+        expect(onAdminCategoriesClick).toHaveBeenCalledTimes(1);
+      });
+
+      it('wires the seller apply link to its trigger callback', () => {
+        const onSellerApplyClick = jasmine.createSpy('onSellerApplyClick');
+        const vm = new HeaderViewModel({ user: { username: 'ana' }, onSellerApplyClick });
+        const localView = makeView(vm);
+        const applyLink = localView.render().querySelector('.q-header-seller-apply-btn');
+
+        expect(applyLink).not.toBeNull();
+        applyLink.click();
+        expect(onSellerApplyClick).toHaveBeenCalledTimes(1);
+      });
+
+      it('keeps an open dropdown open for clicks inside the header', () => {
+        const vm = new HeaderViewModel({ user: { username: 'ana' } });
+        const localView = makeView(vm);
+        const el = localView.mount(container);
+        const closeDropdown = spyOn(vm, 'closeDropdown').and.callThrough();
+
+        vm.toggleDropdown();
+        expect(vm.isDropdownOpen).toBe(true);
+        // Cancelable so the brand link's own preventDefault stops a real navigation/reload.
+        const brandClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+        el.querySelector('.q-header-brand').dispatchEvent(brandClick);
+        expect(brandClick.defaultPrevented).toBe(true);
+
+        expect(vm.isDropdownOpen).toBe(true);
+        expect(closeDropdown).not.toHaveBeenCalled();
+      });
+
+      it('does not close a dropdown that is already closed on an outside click', () => {
+        const vm = new HeaderViewModel({ user: { username: 'ana' } });
+        const localView = makeView(vm);
+        localView.mount(container);
+        const closeDropdown = spyOn(vm, 'closeDropdown');
+        const outside = document.createElement('div');
+        document.body.appendChild(outside);
+
+        outside.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(closeDropdown).not.toHaveBeenCalled();
+        outside.remove();
+      });
+
+      it('stops closing the dropdown on outside clicks after destroy', () => {
+        const vm = new HeaderViewModel({ user: { username: 'ana' } });
+        const localView = makeView(vm);
+        localView.mount(container);
+        const closeDropdown = spyOn(vm, 'closeDropdown');
+
+        localView.destroy();
+        vm.isDropdownOpen = true;
+        document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(closeDropdown).not.toHaveBeenCalled();
+      });
+
+      it('unsubscribes and tears down the navbar on destroy, calling navbar destroy again on a second destroy', () => {
+        view.render();
+        const navbarDestroy = spyOn(view.navbarView, 'destroy').and.callThrough();
+        const realUnsubscribe = view._unsubscribe;
+        const unsubscribe = jasmine.createSpy('unsubscribe').and.callFake(realUnsubscribe);
+        view._unsubscribe = unsubscribe;
+
+        expect(viewModel._listeners.size).toBe(1);
+        view.destroy();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+        expect(view._unsubscribe).toBeNull();
+        expect(viewModel._listeners.size).toBe(0);
+        expect(navbarDestroy).toHaveBeenCalledTimes(1);
+        expect(view.element).toBeNull();
+
+        expect(() => view.destroy()).not.toThrow();
+        expect(navbarDestroy).toHaveBeenCalledTimes(2);
+      });
+
+      it('adds, changes and removes the avatar image in response to notifications', () => {
+        viewModel.setUser({ username: 'ana', email: 'ana@q.com' });
+        const el = view.render();
+        expect(el.querySelector('.q-header-avatar-img')).toBeNull();
+        expect(el.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+
+        viewModel.setUser({
+          username: 'ana',
+          email: 'ana@q.com',
+          avatar_path: 'https://cdn.example/first.png',
+        });
+        let img = el.querySelector('.q-header-avatar-img');
+        expect(img.getAttribute('src')).toBe('https://cdn.example/first.png');
+
+        viewModel.setUser({
+          username: 'ana',
+          email: 'ana@q.com',
+          avatar_url: 'https://cdn.example/second.png',
+        });
+        img = el.querySelector('.q-header-avatar-img');
+        expect(img.getAttribute('src')).toBe('https://cdn.example/second.png');
+
+        viewModel.setUser({ username: 'ana', email: 'ana@q.com' });
+        expect(el.querySelector('.q-header-avatar-img')).toBeNull();
+        expect(el.querySelector('.q-header-avatar-placeholder')).not.toBeNull();
+      });
+
+      it('refreshes the login button copy from the viewModel on notification', () => {
+        const el = view.render();
+        expect(el.querySelector('.q-header-login-btn').textContent).toBe('Iniciar sesión');
+
+        viewModel.loginText = 'Entrar';
+        viewModel.setCartCount(1);
+
+        expect(el.querySelector('.q-header-login-btn').textContent).toBe('Entrar');
+      });
+
+      it('omits aria-expanded on the avatar until the first state notification', () => {
+        const vm = new HeaderViewModel({ user: { username: 'ana' } });
+        const localView = makeView(vm);
+        const avatar = localView.render().querySelector('.q-header-user-avatar');
+
+        expect(avatar.hasAttribute('aria-expanded')).toBe(false);
+
+        vm.toggleDropdown();
+        expect(avatar.getAttribute('aria-expanded')).toBe('true');
+      });
+    });
+  })();
+})();

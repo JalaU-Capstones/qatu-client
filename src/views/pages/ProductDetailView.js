@@ -1,7 +1,10 @@
+import { authStore as realAuthStore } from '../../store/authStore.js';
 import { formatPrice } from '../../utils/formatCurrency.js';
+import { getProductImageUrl } from '../../utils/productImageUrl.js';
 import { ProductDetailViewModel } from '../../viewmodels/pages/ProductDetailViewModel.js';
+import { createImageWithFallback } from '../components/ImageWithFallback.js';
+import { ProductCardView } from '../components/ProductCardView.js';
 import { QuantitySelectorView } from '../components/QuantitySelectorView.js';
-import { RecommendationCardView } from '../components/RecommendationCardView.js';
 
 /**
  * Product detail page content view. Mounts INSIDE the persistent
@@ -15,19 +18,36 @@ export class ProductDetailView {
    * @param {Function} [options.onBuyNow] Called after a successful "Comprar ahora".
    * @param {Function} [options.onAuthRequired] Called when a guest tries to add
    *   the product to the cart — the shell redirects to `/login`.
+   * @param {Function} [options.onEditProduct] Opens the existing edit modal.
+   * @param {Function} [options.onDeleteProduct] Opens the existing delete confirmation.
+   * @param {Function} [options.onAddToCart] Adds a similar product to the cart.
+   * @param {Function} [options.onNavigate] Navigates to another SPA route.
+   * @param {Object} [options.authStore] Injectable for testing; defaults to the real singleton.
    */
   constructor({
     viewModel = new ProductDetailViewModel(),
     productSlug = null,
     onBuyNow = null,
     onAuthRequired = null,
+    onEditProduct = null,
+    onDeleteProduct = null,
+    onAddToCart = null,
+    onNavigate = null,
+    authStore = realAuthStore,
   } = {}) {
     this.viewModel = viewModel;
     this.productSlug = productSlug;
     this.onBuyNow = onBuyNow;
     this.onAuthRequired = onAuthRequired;
+    this.onEditProduct = onEditProduct;
+    this.onDeleteProduct = onDeleteProduct;
+    this.onAddToCart = onAddToCart;
+    this.onNavigate = onNavigate;
+    this.authStore = authStore;
+    this.contactSellerError = '';
     this.element = null;
     this._unsubscribe = null;
+    this._authUnsubscribe = null;
   }
 
   render() {
@@ -50,6 +70,10 @@ export class ProductDetailView {
     container.appendChild(el);
 
     this._unsubscribe = this.viewModel.subscribe(() => {
+      this._renderContent();
+    });
+
+    this._authUnsubscribe = this.authStore.subscribe(() => {
       this._renderContent();
     });
 
@@ -96,6 +120,7 @@ export class ProductDetailView {
         )
       );
     } else {
+      container.appendChild(this._renderProductContext());
       container.appendChild(this._renderMain());
       container.appendChild(this._renderTabs());
       container.appendChild(this._renderSellerCard());
@@ -137,6 +162,18 @@ export class ProductDetailView {
     nav.appendChild(this._renderBreadcrumbSeparator());
     nav.appendChild(current);
     return nav;
+  }
+
+  /**
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderProductContext() {
+    const context = document.createElement('p');
+    context.className = 'q-product-detail__context';
+    const category = this.viewModel.product?.category?.name;
+    context.textContent = category ? `PRODUCTOS / ${category}` : 'PRODUCTOS';
+    return context;
   }
 
   /**
@@ -251,58 +288,28 @@ export class ProductDetailView {
    * @private
    */
   _renderImageFrame(frame, large) {
-    if (frame?.path) {
-      const wrapper = document.createElement('div');
-      wrapper.className = large
-        ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
-        : 'q-product-detail__image-frame';
-
-      const photo = document.createElement('img');
-      photo.className = large
-        ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
-        : 'q-product-detail__image-photo';
-      photo.alt = frame.label;
-      photo.loading = 'lazy';
-      photo.addEventListener('error', () => {
-        wrapper.innerHTML = '';
-        wrapper.appendChild(this._renderImagePlaceholder(frame.label, large));
-      });
-      photo.src = frame.path;
-      wrapper.appendChild(photo);
-      return wrapper;
-    }
-
-    return this._renderImagePlaceholder(frame?.label || 'Imagen del producto', large);
-  }
-
-  /**
-   * @param {string} label
-   * @param {boolean} large
-   * @returns {HTMLElement}
-   * @private
-   */
-  _renderImagePlaceholder(label, large) {
     const wrapper = document.createElement('div');
     wrapper.className = large
-      ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
-      : 'q-product-detail__image-placeholder';
+      ? 'q-product-detail__image-frame q-product-detail__image-frame--large'
+      : 'q-product-detail__image-frame';
 
-    const mark = document.createElement('span');
-    mark.className = 'q-product-detail__image-mark';
+    wrapper.appendChild(
+      createImageWithFallback({
+        src: frame?.path,
+        alt: frame?.label || '',
+        size: large ? 160 : 56,
+        imageClassName: large
+          ? 'q-product-detail__image-photo q-product-detail__image-photo--large'
+          : 'q-product-detail__image-photo',
+        placeholderClassName: large
+          ? 'q-product-detail__image-placeholder q-product-detail__image-placeholder--large'
+          : 'q-product-detail__image-placeholder',
+        markClassName: 'q-product-detail__image-mark',
+        label: frame?.label || 'Imagen del producto',
+        labelClassName: 'q-product-detail__image-label',
+      })
+    );
 
-    const markImg = document.createElement('img');
-    markImg.src = new URL('../../assets/icons/placeholder-mark.svg', import.meta.url).href;
-    markImg.alt = '';
-    markImg.setAttribute('width', large ? '40' : '20');
-    markImg.setAttribute('height', large ? '40' : '20');
-    mark.appendChild(markImg);
-
-    const text = document.createElement('p');
-    text.className = 'q-product-detail__image-label';
-    text.textContent = label;
-
-    wrapper.appendChild(mark);
-    wrapper.appendChild(text);
     return wrapper;
   }
 
@@ -314,7 +321,7 @@ export class ProductDetailView {
     const vm = this.viewModel;
     const product = vm.product;
     const info = document.createElement('div');
-    info.className = 'q-product-detail__info';
+    info.className = 'q-product-detail__info q-glass-panel';
 
     const seller = document.createElement('p');
     seller.className = 'q-product-detail__seller-line';
@@ -351,72 +358,90 @@ export class ProductDetailView {
     description.textContent = product.description;
     info.appendChild(description);
 
-    const purchase = document.createElement('div');
-    purchase.className = 'q-product-detail__purchase';
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
+    const user = this.authStore.getUser();
+    const isOwn =
+      !isAdmin && Boolean(user && user.id && product.seller_id && user.id === product.seller_id);
 
-    const quantityRow = document.createElement('div');
-    quantityRow.className = 'q-product-detail__quantity-row';
+    if (!isAdmin) {
+      const purchase = document.createElement('div');
+      purchase.className = 'q-product-detail__purchase';
 
-    const quantityLabel = document.createElement('span');
-    quantityLabel.className = 'q-product-detail__quantity-label';
-    quantityLabel.textContent = 'Cantidad';
+      if (isOwn) {
+        purchase.appendChild(this._renderOwnerActions(product));
+      } else {
+        const quantityRow = document.createElement('div');
+        quantityRow.className = 'q-product-detail__quantity-row';
 
-    const quantitySelector = new QuantitySelectorView({
-      value: vm.quantity,
-      min: 1,
-      max: vm.getMaxQuantity(),
-      disabled: vm.isOutOfStock(),
-      onChange: (value) => vm.setQuantity(value),
-      label: 'Cantidad del producto',
-    });
+        const quantityLabel = document.createElement('span');
+        quantityLabel.className = 'q-product-detail__quantity-label';
+        quantityLabel.textContent = 'Cantidad';
 
-    quantityRow.appendChild(quantityLabel);
-    quantityRow.appendChild(quantitySelector.render());
-    purchase.appendChild(quantityRow);
+        const quantitySelector = new QuantitySelectorView({
+          value: vm.quantity,
+          min: 1,
+          max: vm.getMaxQuantity(),
+          disabled: vm.isOutOfStock(),
+          onChange: (value) => vm.setQuantity(value),
+          label: 'Cantidad del producto',
+        });
 
-    const actions = document.createElement('div');
-    actions.className = 'q-product-detail__actions';
+        quantityRow.appendChild(quantityLabel);
+        quantityRow.appendChild(quantitySelector.render());
+        purchase.appendChild(quantityRow);
 
-    const addButton = document.createElement('button');
-    addButton.type = 'button';
-    addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
-    addButton.textContent = vm.isOutOfStock()
-      ? 'Agotado'
-      : vm.isAdding
-        ? 'Añadiendo…'
-        : 'Agregar al carrito';
-    addButton.disabled = vm.isOutOfStock() || vm.isAdding;
-    addButton.addEventListener('click', () =>
-      vm.addToCart().then((result) => {
-        if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
-          this.onAuthRequired();
-        }
-      })
-    );
-    actions.appendChild(addButton);
+        const actions = document.createElement('div');
+        actions.className = 'q-product-detail__actions';
 
-    const buyButton = document.createElement('button');
-    buyButton.type = 'button';
-    buyButton.className = 'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
-    buyButton.textContent = 'Comprar ahora';
-    buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
-    buyButton.addEventListener('click', async () => {
-      const result = await vm.addToCart();
-      if (result.status === 'added' && typeof this.onBuyNow === 'function') {
-        this.onBuyNow();
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.className = 'q-btn q-btn--primary q-btn--block q-btn--lg q-product-detail__add';
+        addButton.textContent = vm.isOutOfStock()
+          ? 'Agotado'
+          : vm.isAdding
+            ? 'Añadiendo…'
+            : 'Agregar al carrito';
+        addButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        addButton.addEventListener('click', () =>
+          vm.addToCart().then((result) => {
+            if (result?.status === 'auth-required' && typeof this.onAuthRequired === 'function') {
+              this.onAuthRequired();
+            }
+          })
+        );
+        actions.appendChild(addButton);
+
+        const buyButton = document.createElement('button');
+        buyButton.type = 'button';
+        buyButton.className =
+          'q-btn q-btn--outline q-btn--block q-btn--lg q-product-detail__buy-now';
+        buyButton.textContent = 'Comprar ahora';
+        buyButton.disabled = vm.isOutOfStock() || vm.isAdding;
+        buyButton.addEventListener('click', async () => {
+          const result = await (typeof vm.buyNow === 'function' ? vm.buyNow() : vm.addToCart());
+          if (result.status === 'added' && typeof this.onBuyNow === 'function') {
+            this.onBuyNow();
+          } else if (
+            result.status === 'auth-required' &&
+            typeof this.onAuthRequired === 'function'
+          ) {
+            this.onAuthRequired();
+          }
+        });
+        actions.appendChild(buyButton);
+
+        purchase.appendChild(actions);
+
+        const shipping = document.createElement('p');
+        shipping.className = 'q-product-detail__shipping';
+        shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
+        purchase.appendChild(shipping);
       }
-    });
-    actions.appendChild(buyButton);
 
-    purchase.appendChild(actions);
-    info.appendChild(purchase);
+      info.appendChild(purchase);
+    }
 
-    const shipping = document.createElement('p');
-    shipping.className = 'q-product-detail__shipping';
-    shipping.textContent = 'Envío gratis en compras sobre US$ 50.';
-    info.appendChild(shipping);
-
-    if (vm.feedback) {
+    if (!isOwn && vm.feedback) {
       const feedback = document.createElement('p');
       feedback.className = 'q-product-detail__feedback';
       feedback.setAttribute('role', 'status');
@@ -425,6 +450,116 @@ export class ProductDetailView {
     }
 
     return info;
+  }
+
+  /**
+   * @param {Object} product
+   * @returns {HTMLElement}
+   * @private
+   */
+  _renderOwnerActions(product) {
+    const vm = this.viewModel;
+    const actions = document.createElement('section');
+    actions.className = 'q-product-detail__owner-actions';
+    actions.setAttribute('aria-label', 'Acciones del vendedor');
+
+    const heading = document.createElement('h2');
+    heading.className = 'q-product-detail__owner-title';
+    heading.textContent = 'Administrar producto';
+    actions.appendChild(heading);
+
+    const buttons = document.createElement('div');
+    buttons.className = 'q-product-detail__owner-buttons';
+
+    const editButton = this._createOwnerActionButton('edit', 'Editar', 'q-btn--outline');
+    editButton.addEventListener('click', () => this.onEditProduct?.(product.id));
+    buttons.appendChild(editButton);
+
+    const isUnpublished = product.state === 'unpublished';
+    const unpublishButton = this._createOwnerActionButton(
+      'unpublish',
+      vm.isUnpublishing ? 'Despublicando…' : isUnpublished ? 'Despublicado' : 'Despublicar',
+      'q-btn--outline'
+    );
+    unpublishButton.disabled = vm.isUnpublishing || isUnpublished || product.state !== 'published';
+    unpublishButton.addEventListener('click', () => {
+      void vm.unpublishProduct();
+    });
+    buttons.appendChild(unpublishButton);
+
+    const deleteButton = this._createOwnerActionButton(
+      'delete',
+      vm.isDeleting ? 'Eliminando…' : 'Eliminar',
+      'q-btn--danger'
+    );
+    deleteButton.disabled = vm.isDeleting;
+    deleteButton.addEventListener('click', () => this.onDeleteProduct?.(product.id));
+    buttons.appendChild(deleteButton);
+
+    actions.appendChild(buttons);
+
+    if (vm.ownerActionFeedback) {
+      const notice = document.createElement('div');
+      notice.className = `q-product-detail__owner-feedback q-product-detail__owner-feedback--${vm.ownerActionFeedbackType}`;
+      notice.setAttribute('role', vm.ownerActionFeedbackType === 'alert' ? 'alert' : 'status');
+
+      const message = document.createElement('p');
+      message.textContent = vm.ownerActionFeedback;
+      notice.appendChild(message);
+
+      if (vm.ownerActionFeedbackType !== 'alert') {
+        const productsLink = document.createElement('a');
+        productsLink.href = '/seller/products';
+        productsLink.dataset.route = '';
+        productsLink.textContent = 'Ir a Mis productos';
+        notice.appendChild(productsLink);
+      }
+
+      actions.appendChild(notice);
+    }
+
+    return actions;
+  }
+
+  /**
+   * @param {'edit'|'unpublish'|'delete'} action
+   * @param {string} label
+   * @param {string} buttonVariant
+   * @returns {HTMLButtonElement}
+   * @private
+   */
+  _createOwnerActionButton(action, label, buttonVariant) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `q-btn ${buttonVariant} q-product-detail__owner-button q-product-detail__owner-button--${action}`;
+    button.setAttribute('aria-label', label);
+
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('width', '18');
+    icon.setAttribute('height', '18');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.75');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    icon.setAttribute('aria-hidden', 'true');
+
+    const paths = {
+      edit: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z'],
+      unpublish: ['M3 5.5h18v14H3z', 'M3 9h5l2 3h4l2-3h5', 'M12 2.5v6', 'm9.5 6 2.5 2.5L14.5 6'],
+      delete: ['M3 6h18', 'M8 6V4h8v2', 'm19 6-1 14H6L5 6', 'M10 11v5', 'M14 11v5'],
+    };
+    paths[action].forEach((pathData) => {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathData);
+      icon.appendChild(path);
+    });
+
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.append(icon, text);
+    return button;
   }
 
   /**
@@ -562,6 +697,7 @@ export class ProductDetailView {
    */
   _renderSellerCard() {
     const vm = this.viewModel;
+    const product = vm.product;
     const section = document.createElement('section');
     section.className = 'q-product-detail__seller-card';
     section.setAttribute('aria-label', `Sobre ${vm.getSellerLine()}`);
@@ -594,15 +730,54 @@ export class ProductDetailView {
 
     info.appendChild(stats);
 
+    const actions = document.createElement('div');
+    actions.className = 'q-product-detail__seller-actions';
+
+    const user = this.authStore.getUser();
+    const sellerId = product?.seller_id || product?.seller?.id;
+    const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
+    const isOwn = !isAdmin && Boolean(user && user.id && sellerId && user.id === sellerId);
+
+    if (!isOwn && sellerId) {
+      const contactBtn = document.createElement('button');
+      contactBtn.type = 'button';
+      contactBtn.className = 'q-btn q-btn--primary q-product-detail__contact-seller';
+      contactBtn.textContent = 'Contactar vendedor';
+      contactBtn.addEventListener('click', async () => {
+        this.contactSellerError = '';
+        try {
+          const result = await vm.contactSeller();
+          if (result?.redirected) return;
+          if (result?.conversationId) {
+            this.onNavigate?.(`/conversations?active=${encodeURIComponent(result.conversationId)}`);
+          }
+        } catch (error) {
+          this.contactSellerError =
+            error instanceof Error ? error.message : 'No se pudo contactar al vendedor.';
+          this._renderContent();
+        }
+      });
+      actions.appendChild(contactBtn);
+    }
+
+    if (this.contactSellerError) {
+      const error = document.createElement('p');
+      error.className = 'q-product-detail__contact-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = this.contactSellerError;
+      actions.appendChild(error);
+    }
+
     const link = document.createElement('a');
-    link.className = 'q-product-detail__seller-link';
+    link.className = 'q-btn q-btn--outline q-product-detail__seller-link';
     link.href = '/products';
     link.dataset.route = '';
     link.textContent = 'Ver tienda';
+    actions.appendChild(link);
 
     section.appendChild(avatar);
     section.appendChild(info);
-    section.appendChild(link);
+    section.appendChild(actions);
     return section;
   }
 
@@ -640,19 +815,54 @@ export class ProductDetailView {
     }
 
     const grid = document.createElement('ul');
-    grid.className = 'q-product-detail__similar-grid';
+    grid.className = 'q-product-detail__similar-grid q-catalog__grid';
+    grid.setAttribute('role', 'list');
 
     this.viewModel.similarProducts.forEach((product) => {
-      const card = new RecommendationCardView({
-        id: product.id,
-        name: product.name,
-        ratingLabel: product.average_rating
-          ? `${Number(product.average_rating).toFixed(1)} (${product.ratings_count || 0})`
-          : undefined,
-        priceLabel: formatPrice(product.price, product.currency),
-        imageUrl: product.primary_image_path || null,
-        detailHref: `/products/${product.slug || product.id}`,
-      });
+      const rating = Number(product.average_rating || 0);
+      const ratingCount = Number(product.ratings_count) || 0;
+      const ratingLabel = product.average_rating
+        ? `${rating.toFixed(1)} (${ratingCount})`
+        : undefined;
+      const seller = product.seller || product.store;
+      const sellerLine =
+        (typeof seller === 'string' && seller) ||
+        seller?.full_name ||
+        seller?.store_name ||
+        seller?.username ||
+        seller?.name ||
+        product.seller_name ||
+        product.store_name ||
+        product.category?.name ||
+        product.category_name ||
+        '';
+      const user = this.authStore.getUser();
+      const isAdmin = typeof this.authStore.isAdmin === 'function' && this.authStore.isAdmin();
+      const isOwn = Boolean(user?.id && product.seller_id && user.id === product.seller_id);
+      const card = new ProductCardView(
+        {
+          id: product.id,
+          name: product.name,
+          sellerLine,
+          priceLabel: formatPrice(product.price, product.currency || 'BOB'),
+          ratingLabel,
+          ratingAccessible: ratingLabel
+            ? `Calificación ${rating.toFixed(1)} de 5, ${ratingCount} reseñas`
+            : undefined,
+          starsFilled: this.viewModel.getStarsForRating(rating),
+          imageUrl: getProductImageUrl(product),
+          isNew: Boolean(product.is_new || product.isNew),
+          badgeLabel: product.badge || product.tag || null,
+          stock: typeof product.stock === 'number' ? product.stock : null,
+          state: product.state || 'published',
+        },
+        {
+          variant: 'default',
+          onAddToCart: () => this.onAddToCart?.(product, 1),
+          detailHref: `/products/${encodeURIComponent(product.slug || product.id)}`,
+          hideCartButton: isAdmin || isOwn,
+        }
+      );
       grid.appendChild(card.render());
     });
 
@@ -665,6 +875,8 @@ export class ProductDetailView {
       this._unsubscribe();
       this._unsubscribe = null;
     }
+    this._authUnsubscribe?.();
+    this._authUnsubscribe = null;
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
