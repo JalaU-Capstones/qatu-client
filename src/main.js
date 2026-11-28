@@ -5,6 +5,7 @@ import './views/styles/fonts.css';
 import './views/styles/bulma-overrides.css';
 import './views/styles/main.css';
 import './views/components/header.css';
+import './views/components/notifications.css';
 import './views/components/brand-logo.css';
 import './views/components/navbar.css';
 import './views/components/hero.css';
@@ -40,6 +41,7 @@ import './views/pages/conversations.css';
 import { AuthApi } from './models/api/AuthApi.js';
 import { CategoriesApi } from './models/api/CategoriesApi.js';
 import { ConversationsApi } from './models/api/ConversationsApi.js';
+import { NotificationsApi } from './models/api/NotificationsApi.js';
 import { ProductsApi } from './models/api/ProductsApi.js';
 import { ProfilesApi } from './models/api/ProfilesApi.js';
 import { getAdminRouteAccess, getSellerRouteAccess } from './router/guards.js';
@@ -51,6 +53,7 @@ import { authStore } from './store/authStore.js';
 import { cartStore } from './store/cartStore.js';
 import { pendingCartActionStore } from './store/pendingCartActionStore.js';
 import { themeStore } from './store/themeStore.js';
+import { NotificationsViewModel } from './viewmodels/components/NotificationsViewModel.js';
 import { AdminCategoriesViewModel } from './viewmodels/pages/AdminCategoriesViewModel.js';
 import { CatalogViewModel } from './viewmodels/pages/CatalogViewModel.js';
 import { ProductDetailViewModel } from './viewmodels/pages/ProductDetailViewModel.js';
@@ -61,6 +64,7 @@ import { StoresViewModel } from './viewmodels/pages/StoresViewModel.js';
 import { DeleteConfirmModal } from './views/components/DeleteConfirmModal.js';
 import { FooterView } from './views/components/FooterView.js';
 import { HeaderView } from './views/components/HeaderView.js';
+import { NotificationBellView } from './views/components/NotificationBellView.js';
 import { AboutView } from './views/pages/AboutView.js';
 import { AdminCategoriesPageView } from './views/pages/AdminCategoriesPageView.js';
 import { AdminReportsPageView } from './views/pages/AdminReportsPageView.js';
@@ -114,6 +118,19 @@ if (app) {
   });
   header.viewModel.setTheme(themeStore.getResolved());
   header.viewModel.onThemeToggleClick = () => themeStore.cycle();
+
+  const notificationsViewModel = new NotificationsViewModel({
+    api: new NotificationsApi(),
+    onNavigate: (path) => router.navigate(path),
+    onOpen: () => header.viewModel.closeDropdown(),
+  });
+  const notificationBell = new NotificationBellView(notificationsViewModel);
+  header.attachNotifications(notificationBell.render());
+  header.viewModel.subscribe((vm) => {
+    if (vm.isDropdownOpen) notificationsViewModel.close();
+  });
+  notificationsViewModel.startPolling();
+  window.addEventListener('focus', () => void notificationsViewModel.refreshUnreadCount());
 
   let categories = [];
   const categoriesApi = new CategoriesApi();
@@ -739,10 +756,14 @@ if (app) {
     header.viewModel.setIsSeller(store.isSeller());
     header.viewModel.setIsAdmin(store.isAdmin());
     header.viewModel.setUser(buildHeaderUser(store));
+    notificationsViewModel.setAuthenticated(store.isAuthenticated());
     syncCartWithSession(store);
   });
 
   syncCartWithSession(authStore);
+  void sessionReady.then(() =>
+    notificationsViewModel.setAuthenticated(authStore.isAuthenticated())
+  );
 
   cartStore.subscribe((store) => {
     header.viewModel.setCartCount(store.getCount());

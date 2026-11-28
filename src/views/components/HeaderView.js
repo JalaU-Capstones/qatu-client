@@ -33,7 +33,26 @@ export class HeaderView {
     this.navbarView = new NavbarView(this.viewModel.navbarViewModel);
     this.element = null;
     this._unsubscribe = null;
+    this._notificationsElement = null;
     this._handleDocumentClick = this._handleDocumentClick.bind(this);
+  }
+
+  /** Bell in the actions bar, only when signed in */
+  attachNotifications(element) {
+    this._notificationsElement = element || null;
+    this._syncNotificationsSlot(this.viewModel);
+  }
+
+  _syncNotificationsSlot(vm) {
+    const slot = this._notificationsElement;
+    const actionsWrapper = this.element?.querySelector('.q-header-actions');
+    if (!slot || !actionsWrapper) return;
+
+    slot.hidden = !vm.user;
+    const themeButton = actionsWrapper.querySelector('.q-header-theme-btn');
+    if (slot.parentNode !== actionsWrapper || slot.nextElementSibling !== themeButton) {
+      actionsWrapper.insertBefore(slot, themeButton);
+    }
   }
 
   _createCartButton() {
@@ -688,9 +707,11 @@ export class HeaderView {
       cartBtn = null;
     } else if (!cartBtn && actionsWrapper) {
       cartBtn = this._createCartButton();
-      const themeButton = actionsWrapper.querySelector('.q-header-theme-btn');
-      if (themeButton) {
-        actionsWrapper.insertBefore(cartBtn, themeButton);
+      const anchor =
+        (this._notificationsElement?.parentNode === actionsWrapper && this._notificationsElement) ||
+        actionsWrapper.querySelector('.q-header-theme-btn');
+      if (anchor) {
+        actionsWrapper.insertBefore(cartBtn, anchor);
       } else {
         actionsWrapper.appendChild(cartBtn);
       }
@@ -779,6 +800,7 @@ export class HeaderView {
     }
 
     this._syncRoleBasedDropdownItems(vm);
+    this._syncNotificationsSlot(vm);
 
     // Update dropdown visibility
     const dropdown = this.element.querySelector('.q-header-dropdown');
