@@ -1,7 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Qatu Client — Docker Compose PROD override
 #
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Pulls the pre-built runtime image validated by CI/CD Quality Gates from
+# the GitLab Container Registry (no local build).
 #
 # Traffic flow:
 #   Host:${CLIENT_PORT:-8080} -> lb:80 (front-end) -> client:8080 (front-end + qatu-net)
@@ -10,14 +15,7 @@
 
 services:
   client:
-    build:
-      context: .
-      target: runtime
-      args:
-        VITE_API_BASE_URL: /v1
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-    image: qatu-client:prod
+    image: registry.gitlab.com/jala-university1/cohort-5/es.cssd-245.ga.t2.26.m2/sd/group-b/grupo-2/client:latest
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz']
